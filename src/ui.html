@@ -508,24 +508,38 @@ html:not([data-theme=angulaire]) body:not(.nofav) #bar{border-bottom-color:trans
 .ico.l img{position:absolute;opacity:0}
 /* --- page de favoris et bienvenue : maquettes designs/accueil (favoris-1, bienvenue-1) --- */
 @keyframes bin{from{opacity:0;transform:translateY(6px)}}
-#s-board{max-width:1040px}
+/* la section « Préférés » (#bvigs) occupe toute la largeur ; le reste (recherche, dossiers, favoris) dans une colonne centrée */
+#s-board{max-width:none}
+#s-board #bmain>.sec,#s-board #bmain>#bbody,#s-board #bmain>.foot,#s-board #bsort{max-width:1040px;margin-inline:auto}
 #s-board .srch{max-width:680px;margin:0 auto 26px}
-#s-board .sec{display:flex;align-items:center;gap:12px;margin:0 0 10px}
-#s-board .sec .cap{margin:0}
-#s-board .flt{margin-left:auto;position:relative}
+/* titres de la zone dossiers/favoris centrés (le contrôle à droite) ; les en-têtes des rangées de vignettes sont .vhead, pas touchés */
+#s-board .sec{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:0 0 10px}
+#s-board .sec .cap{margin:0;grid-column:2;text-align:center}
+#s-board .sec>:not(.cap){grid-column:3;justify-self:end}
+#s-board .flt{position:relative}
 #s-board .flt svg{position:absolute;left:10px;top:9px;color:var(--mu)}
 #s-board .flt input{width:240px;height:34px;padding:0 36px 0 34px;border-radius:8px;border:1px solid var(--bg3);background:var(--bg);color:var(--tx);font:inherit;outline:0}
 #s-board .flt input:focus{border-color:var(--a)}
 #s-board .flt kbd{position:absolute;right:8px;top:7px}
-#s-board .dirs{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin-bottom:22px}
+#s-board .dirs{display:grid;grid-template-columns:repeat(auto-fit,190px);justify-content:center;gap:12px;margin-bottom:22px}
 #s-board .dir{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;min-width:0;border-radius:var(--r);transition:background .15s}
 #s-board .dir:hover,#s-board .dir.on{background:var(--bg2)}
-#s-board .box{position:relative;width:64px;height:64px;border-radius:16px;display:grid;grid-template-columns:1fr 1fr;place-items:center;gap:5px;padding:11px;
-  background:color-mix(in srgb,var(--c) 16%,var(--bg2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent);transition:transform .15s}
+#s-board .box{position:relative;width:190px;height:116px;border-radius:16px;overflow:hidden;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--c) 26%,#0b0c10);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent);transition:transform .15s}
 #s-board .dir:hover .box{transform:translateY(-2px)}
 #s-board .dir.on .box{box-shadow:inset 0 0 0 2px var(--c)}
-#s-board .box .ico,#s-board .box .ico img{width:18px;height:18px;font-size:10px}
-#s-board .em{position:absolute;right:-6px;bottom:-6px;font-size:16px;line-height:1}
+/* vrais favicons des sites du dossier (fico), petites icônes nettes (40px, contain), grille fixe 3x2, ESTOMPÉES en fond */
+#s-board .box .mosaic{position:absolute;inset:0;z-index:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:2px;padding:8px;opacity:.5}
+#s-board .box .mosaic .ico{width:auto;height:auto;border-radius:0;display:grid;place-items:center;font-size:16px;background:none}
+#s-board .box .mosaic .ico img{width:40px;height:40px;object-fit:contain;border-radius:0}
+#s-board .box .mosaic .ico.l{color:#fff;font-weight:700;background:none}
+/* teinte diagonale du dossier par-dessus les logos */
+#s-board .box .veil{position:absolute;inset:0;z-index:1;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 42%,transparent),color-mix(in srgb,var(--c) 72%,#000))}
+/* icône du dossier : centrée, au-dessus, avec un halo doux de la couleur du dossier */
+#s-board .box>.ico{position:relative;z-index:2;width:46px;height:46px;font-size:30px;display:grid;place-items:center;filter:drop-shadow(0 2px 6px #000a)}
+#s-board .box>.ico::before{content:"";position:absolute;inset:-16px;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 85%,#000),transparent)}
+#s-board .box>.ico img{width:44px;height:44px;border-radius:10px}
+#s-board .box>.ico.fd svg{width:40px;height:40px;fill:#fff}
 #s-board .dir b{font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #s-board .dir small{color:var(--mu);font-size:12px;margin-top:-6px}
 #s-board .fd svg{stroke:none;fill:var(--c)}
@@ -536,7 +550,7 @@ html:not([data-theme=angulaire]) body:not(.nofav) #bar{border-bottom-color:trans
 #s-board .drawer .hd .x{margin-left:auto;width:28px;height:28px}
 #s-board .drawer .tiles{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));margin:0}
 #s-board .drawer .tl:hover{background:var(--bg3)}
-#s-board .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px;margin-bottom:24px}
+#s-board .tiles{display:grid;grid-template-columns:repeat(auto-fit,112px);justify-content:center;gap:4px;margin-bottom:24px}
 #s-board .tl{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;border-radius:var(--r);min-width:0;transition:background .15s}
 #s-board .tl:hover{background:var(--bg2)}
 #s-board .tl.k{background:var(--bg2);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 60%,transparent)}
@@ -578,6 +592,67 @@ html:not([data-theme=angulaire]) body:not(.nofav) #bar{border-bottom-color:trans
 #s-board .card input[type=checkbox]{width:15px;height:15px;flex:none;accent-color:var(--a)}
 #s-board .sbar{position:sticky;bottom:-28px;display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 0 28px;background:var(--bg)}
 #s-board .sbar span{margin-right:auto;color:var(--mu)}
+/* --- Préférés : bandeau pleine largeur ; le logo (ou l'image perso) remplit la carte ; deux rangées défilent en boucle (maquette designs/vignettes) --- */
+#bvigs{margin:0 0 26px}
+#bvigs .vhead{display:flex;align-items:center;gap:10px;margin:0 0 12px 2px}
+#bvigs .vhead .cap{margin:0}
+#bvigs .vadd{margin-left:auto;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--mu);background:color-mix(in srgb,var(--tx) 8%,transparent)}
+#bvigs .vadd:hover{color:var(--tx);background:color-mix(in srgb,var(--a) 24%,transparent)}
+#bvigs .vadd svg{width:18px;height:18px}
+#bvigs .rail{overflow:hidden;margin-bottom:14px}
+#bvigs .track{display:flex;width:max-content}
+/* 2 copies identiques : on translate d'EXACTEMENT une copie (--w, mesurée en JS) -> boucle sans couture, identique en haut et en
+   bas ; marge (pas gap) pour un motif périodique ; durée --d proportionnelle à la largeur (même vitesse px/s dans les 2 rangées) */
+#bvigs.run .rail.top .track{animation:vigR var(--d,60s) linear infinite}
+#bvigs.run .rail.bot .track{animation:vigL var(--d,60s) linear infinite}
+#bvigs .rail:hover .track{animation-play-state:paused}
+@keyframes vigR{from{transform:translateX(calc(-1 * var(--w,0px)))}to{transform:translateX(0)}}
+@keyframes vigL{from{transform:translateX(0)}to{transform:translateX(calc(-1 * var(--w,0px)))}}
+#bvigs .vig{position:relative;flex:none;width:280px;height:150px;margin-right:14px;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--bg2);border:0;padding:0;text-align:left;transition:box-shadow .18s}
+/* fond = dégradé de la couleur de la carte (--c : choisie par l'utilisateur, dérivée du logo, ou teinte du site) */
+#bvigs .vig::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(135deg,var(--c,#3a3e4d),color-mix(in srgb,var(--c,#3a3e4d) 40%,#000) 130%)}
+/* carte par défaut : LOGO net posé au centre sur le dégradé, jamais agrandi au-delà de sa taille (max 96px, contain) */
+#bvigs .vig .clogo{position:absolute;inset:0;z-index:1;display:grid;place-items:center;transition:transform .35s ease}
+#bvigs .vig:hover .clogo{transform:scale(1.07)} /* léger zoom du logo au survol */
+#bvigs .vig .clogo img{max-width:96px;max-height:96px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 14px #0008)}
+/* repli : initiale en grand sur le dégradé */
+#bvigs .vig .vli{position:absolute;inset:0;z-index:1;display:grid;place-items:center;font-size:56px;font-weight:800;color:#fff;opacity:.92;text-shadow:0 3px 16px #0009}
+/* carte avec image perso : l'image (nette, fournie par l'utilisateur) remplit le fond en cover */
+#bvigs .vig .vbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:0;transition:opacity .25s ease,transform .4s ease}
+#bvigs .vig .vbg.on{opacity:1}
+#bvigs .vig.img .vbg{filter:brightness(.72)} /* un peu assombrie pour lire le nom */
+#bvigs .vig.img:hover .vbg{transform:scale(1.06)}
+/* voile sombre en bas pour la lisibilité du nom */
+#bvigs .vig::after{content:"";position:absolute;inset:0;z-index:2;background:linear-gradient(0deg,#000c,#0003 30%,transparent 55%);pointer-events:none}
+#bvigs .vig:hover{box-shadow:0 12px 30px #0009,0 0 0 2px var(--a)}
+/* image perso : logo du site en petit badge translucide, coin haut-gauche */
+#bvigs .vig .badge{position:absolute;top:10px;left:10px;z-index:3;width:34px;height:34px;border-radius:9px;background:#0007;backdrop-filter:blur(4px);display:grid;place-items:center;overflow:hidden;box-shadow:0 2px 6px #0005}
+#bvigs .vig .badge img{width:100%;height:100%;object-fit:contain}
+#bvigs .vig .badge .bli{font-size:16px;font-weight:700;color:#fff}
+#bvigs .vig .meta{position:absolute;left:16px;right:16px;bottom:12px;z-index:3;pointer-events:none}
+#bvigs .vig .meta b{display:block;font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 6px #000b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#bvigs .vig .pen{position:absolute;top:8px;right:8px;z-index:4;width:30px;height:30px;border-radius:9px;background:#000a;color:#fff;display:grid;place-items:center;opacity:0;transition:opacity .15s}
+#bvigs .vig:hover .pen,#bvigs .vig:focus-within .pen{opacity:1}
+#bvigs .vig .pen svg{width:16px;height:16px}
+/* éditeur de vignette : recouvre l'écran (la page de favoris remplit déjà la fenêtre) */
+#ved{position:fixed;inset:0;z-index:30;background:#000b;display:grid;place-items:center}
+#ved[hidden]{display:none}
+#ved .box{width:420px;max-width:92vw;background:var(--bg2);border:1px solid color-mix(in srgb,var(--tx) 14%,transparent);border-radius:16px;padding:22px}
+#ved h3{font-size:16px;margin-bottom:14px}
+#ved label,#ved .vedl{display:block;font-size:12px;color:var(--mu);margin:14px 0 6px}
+#ved input[type=text]{width:100%;height:38px;border-radius:10px;border:1px solid color-mix(in srgb,var(--tx) 14%,transparent);background:var(--bg);color:var(--tx);padding:0 12px;font:inherit;outline:0}
+#ved input[type=text]:focus{border-color:var(--a)}
+#ved .prev{height:92px;border-radius:12px;background:center/cover no-repeat var(--bg3);display:grid;place-items:center;color:var(--mu);overflow:hidden}
+#ved .imgbtns{display:flex;gap:8px;margin-top:8px}
+#ved .imgbtns .btn{height:34px;padding:0 12px;font-weight:500}
+#ved .vedcol{display:flex;gap:10px;align-items:center}
+#ved .vedcol input[type=color]{width:46px;height:38px;border:1px solid color-mix(in srgb,var(--tx) 14%,transparent);border-radius:10px;background:var(--bg);padding:3px;cursor:pointer}
+#ved .vedcol .btn{height:38px;padding:0 14px;font-weight:500}
+#ved .vedcol .btn.on{background:var(--a);color:#fff}
+#ved .vedrow{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+#ved .del{color:#ff6b6b;height:34px;padding:0 10px;border-radius:8px}
+#ved .del:hover{background:color-mix(in srgb,#ff6b6b 16%,transparent)}
+@media (prefers-reduced-motion:reduce){#bvigs .track{animation:none!important;transform:none!important}#bvigs .vig,#bvigs .vig .vbg,#bvigs .vig .pen{transition:none}#bvigs .vig:hover .vbg{transform:none}}
 #s-hello.on{display:grid;grid-template-columns:minmax(0,360px) minmax(0,640px);justify-content:center;align-items:center;gap:56px;max-width:none;min-height:100%}
 #s-hello .hello{display:flex;flex-direction:column;align-items:flex-start;animation:bin .2s ease-out}
 #s-hello .volty{width:168px;height:168px;margin:0 0 22px -10px;--c:var(--a);--eye:var(--bg);display:grid;place-items:center;filter:drop-shadow(0 0 14px color-mix(in srgb,var(--c) 45%,transparent))}
@@ -812,6 +887,7 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
     <section id="s-board">
       <div id="bmain">
         <div class="srch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="bweb" spellcheck="false" aria-label="Rechercher sur le web ou saisir une adresse"></div>
+        <div id="bvigs"></div>
         <div class="sec"><h3 class="cap" id="bcap">Dossiers</h3><div class="flt"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="bq" spellcheck="false" placeholder="Filtrer les favoris" aria-label="Filtrer les favoris"><kbd>/</kbd></div></div>
         <div id="bbody"></div>
         <div class="foot"><div class="def" id="bdef"><button class="btn g defbtn">Faire de Volt le navigateur par défaut</button><small>Windows ouvre ses paramètres : choisissez Volt pour confirmer.</small></div>
@@ -932,6 +1008,17 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
     </section>
   </main>
 </div>
+<div id="ved" hidden><div class="box">
+  <h3 id="vedh">Modifier la vignette</h3>
+  <label for="vedN">Nom</label><input type="text" id="vedN" placeholder="YouTube">
+  <label for="vedU">Lien</label><input type="text" id="vedU" placeholder="https://www.youtube.com">
+  <span class="vedl">Image</span>
+  <div class="prev" id="vedImg"><small>aucune image : couleurs du site</small></div>
+  <div class="imgbtns"><button class="btn g" id="vedPic">Choisir une image…</button><button class="btn g" id="vedClr">Retirer l'image</button></div>
+  <span class="vedl">Couleur de la carte</span>
+  <div class="vedcol"><input type="color" id="vedC" aria-label="Couleur de la carte"><button class="btn g" id="vedAuto">Auto (d'après le logo)</button></div>
+  <div class="vedrow"><button class="del" id="vedDel">Supprimer</button><span><button class="btn g" id="vedCancel">Annuler</button> <button class="btn" id="vedOk">Enregistrer</button></span></div>
+</div></div>
 <div id="toast"></div>
 <div id="pwbar" hidden></div>
 <div id="pwpick" hidden></div>
@@ -1399,6 +1486,16 @@ function pickImage(done){
     r.readAsDataURL(file)};
   f.click();
 }
+// image perso d'une vignette -> JPEG paysage ~320x164 (couvre la carte, reste léger dans settings.json ;
+// séparé de pickImage pour ne pas dégrader les icônes de dossiers, qui restent en PNG 32 px)
+function pickVignette(done){
+  const f=$("#picfile");f.value="";
+  f.onchange=()=>{const file=f.files[0];if(!file)return;const r=new FileReader();
+    r.onload=()=>{const i=new Image();i.onload=()=>{const W=320,H=164,c=document.createElement("canvas");c.width=W;c.height=H;
+      const k=Math.max(W/i.width,H/i.height),w=i.width*k,hh=i.height*k;c.getContext("2d").drawImage(i,(W-w)/2,(H-hh)/2,w,hh);done(c.toDataURL("image/jpeg",0.82))};i.src=r.result};
+    r.readAsDataURL(file)};
+  f.click();
+}
 function field(cls,val,ph,ch){const i=document.createElement("input");i.type="text";i.className=cls;i.value=val||"";i.placeholder=ph;i.onchange=()=>ch(i.value.trim());return i}
 function delBtn(fn){const b=document.createElement("button");b.className="x";b.title="Supprimer";b.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';b.onclick=fn;return b}
 function picBtn(fn){const b=document.createElement("button");b.className="pic";b.title="Image perso";b.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 7"/></svg>';b.onclick=()=>pickImage(fn);return b}
@@ -1609,8 +1706,127 @@ function boardDir(id){
   $$("#s-board .dir").forEach(b=>b.classList.toggle("on",b.dataset.id===bOpen));
   const d=S.folders.find(d=>d.id===bOpen);if(d)$("#s-board .dirs").after(drawer(d));
 }
-// appelé à chaque render : ne reconstruit que si favoris ou dossiers ont changé
-function drawBoard(){const k=JSON.stringify([S.favs,S.folders]);if(k!==bKey){bKey=k;boardBody()}}
+// ===== Préférés : bandeau pleine largeur ; le logo (ou l'image perso) remplit la carte ; deux rangées défilent en boucle =====
+const PEN='<svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m13.5 6.5 3 3"/></svg>';
+// teinte stable dérivée de l'hôte : couleur de repli de la carte avant que la couleur du logo n'arrive
+const vigHue=u=>{const s=host(u);let n=0;for(let i=0;i<s.length;i++)n=(n*31+s.charCodeAt(i))>>>0;return n%360};
+const hueColor=u=>`hsl(${vigHue(u)} 44% 32%)`;
+// sources du logo pour l'affichage immédiat (repli rapide) ; le vrai logo (icône déclarée par la page, souvent 512px) et la
+// couleur dominante sont trouvés par Rust à partir du lien (vicon.rs) et arrivent par viconReady. UNIQUEMENT l'origine du site.
+const logoSources=u=>{try{const o=new URL(u).origin;return [o+"/apple-touch-icon.png",o+"/apple-touch-icon-precomposed.png",o+"/favicon.ico"]}catch{return[]}};
+// résout la première source qui charge (repli en cascade, jamais d'image cassée) : onFound(url), sinon onFail().
+function resolveLogo(srcs,onFound,onFail){
+  if(!srcs.length)return onFail();
+  let i=0;const p=new Image();p.decoding="async";
+  p.onload=()=>p.naturalWidth>1?onFound(srcs[i]):p.onerror();
+  p.onerror=()=>{if(++i<srcs.length)p.src=srcs[i];else onFail()};
+  p.src=srcs[0];
+}
+// applique la couleur dérivée du logo à la carte, sauf si l'utilisateur a fixé sa propre couleur (data-uc)
+function vigSetColor(c,col){if(!c.dataset.uc)c.style.setProperty("--c",col)}
+// carte : div porteur (data-u, data-j) ; aucun gestionnaire propre, tout en délégation sur #bvigs (les copies du défilement
+// restent cliquables). Dégradé coloré en fond + logo net centré (ou image perso + badge) ; l'initiale/couleur s'affiche d'abord.
+function vigCard(v,j){
+  const userImg=v.image&&/^data:image\//.test(v.image),c=h("div","vig"+(userImg?" img":""));
+  c.dataset.j=j;c.dataset.u=v.url;c.title=(v.name?v.name+"\n":"")+v.url;
+  c.dataset.uc=v.color?"1":""; // couleur fixée par l'utilisateur : la couleur du logo ne l'écrase pas
+  c.style.setProperty("--c",v.color||hueColor(v.url)); // couleur de départ (utilisateur, sinon teinte du site)
+  const pen=h("button","pen");pen.innerHTML=PEN;pen.title="Modifier";pen.setAttribute("aria-label","Modifier la vignette");
+  const meta=h("div","meta");meta.append(h("b",null,v.name||host(v.url)));
+  const initial=(host(v.url)[0]||"?").toUpperCase(),logo=s=>{const i=new Image();i.alt="";i.decoding="async";i.src=s;return i};
+  if(userImg){
+    const bg=h("img","vbg");bg.alt="";bg.decoding="async";bg.src=v.image;bg.classList.add("on");
+    const badge=h("span","badge");badge.append(h("span","bli",initial));
+    resolveLogo(logoSources(v.url),src=>badge.replaceChildren(logo(src)),()=>{});
+    c.append(bg,badge);
+  }else{
+    const clogo=h("span","clogo");c.append(h("span","vli",initial),clogo);
+    resolveLogo(logoSources(v.url),src=>{clogo.replaceChildren(logo(src));c.querySelector(".vli")?.remove()},()=>{}); // repli apple-touch/favicon, upgrade HD + couleur par viconReady
+  }
+  c.append(pen,meta);
+  return c;
+}
+$("#bvigs").addEventListener("click",e=>{
+  if(e.target.closest(".vadd"))return openVigEd(-1);
+  const c=e.target.closest(".vig");if(!c)return;
+  if(e.target.closest(".pen"))openVigEd(+c.dataset.j);else goFav(c.dataset.u,e.ctrlKey);
+});
+$("#bvigs").addEventListener("auxclick",e=>{const c=e.target.closest(".vig");if(c&&e.button===1)goFav(c.dataset.u,1)});
+$("#bvigs").addEventListener("mousedown",e=>{if(e.button===1)e.preventDefault()});
+function vigRow(items,cls){
+  const rail=h("div","rail "+cls),track=h("div","track");
+  // deux copies identiques à la suite : translateX(-50%) = une copie -> boucle sans couture (cartes reconstruites, pas clonées,
+  // pour que chaque copie charge son logo)
+  const fill=hidden=>items.forEach(it=>{const c=vigCard(it.v,it.j);if(hidden)c.setAttribute("aria-hidden","true");track.append(c)});
+  fill(false);fill(true);
+  rail.append(track);return rail;
+}
+let vigKey="";
+function drawVigs(){
+  const V=S.vignettes||[],k=JSON.stringify(V);if(k===vigKey)return;vigKey=k;
+  const mid=Math.ceil(V.length/2),top=V.slice(0,mid).map((v,j)=>({v,j})),bot=V.slice(mid).map((v,j)=>({v,j:mid+j}));
+  const head=h("div","vhead"),add=h("button","vadd");add.setAttribute("aria-label","Ajouter une vignette");add.title="Ajouter une vignette";
+  add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';head.append(h("h3","cap","Préférés"),add); // « + » dans l'en-tête, hors du ruban
+  $("#bvigs").replaceChildren(head,vigRow(top,"top"),vigRow(bot,"bot"));
+  sizeVigs();
+  // logo haute résolution (manifeste du site) résolu côté Rust ; l'affichage ne l'attend pas (initiale/apple-touch d'abord)
+  V.forEach(v=>{if(!(v.image&&/^data:image\//.test(v.image)))send({cmd:"vicon",url:v.url})});
+  updateVigsScroll(); // pose/retire la classe `run` selon la visibilité de la page
+}
+const VIG_SPEED=70; // px/s : même vitesse dans les deux rangées (durée proportionnelle à la largeur)
+// largeur d'UNE copie = scrollWidth/2 ; on translate d'exactement --w, durée --d = largeur/vitesse (boucle sans saut, même allure)
+function sizeVigs(){$$("#bvigs .track").forEach(t=>{const w=t.scrollWidth/2;if(w>4){t.style.setProperty("--w",w+"px");t.style.setProperty("--d",(w/VIG_SPEED)+"s")}})}
+// logo (icône déclarée par la page, souvent 512px) + couleur dominante renvoyés par Rust : met à jour les deux copies de la carte
+function viconReady(url,icon,color){
+  $$("#bvigs .vig").forEach(c=>{
+    if(c.dataset.u!==url)return;
+    if(color)vigSetColor(c,color); // couleur dominante calculée par Rust (sauf si l'utilisateur a fixé la sienne)
+    if(!icon)return;
+    const probe=new Image();
+    probe.onload=()=>{if(probe.naturalWidth<=1)return;const i=new Image();i.alt="";i.decoding="async";i.src=icon;
+      const slot=c.querySelector(c.classList.contains("img")?".badge":".clogo");if(slot){slot.replaceChildren(i);c.querySelector(".vli")?.remove()}};
+    probe.src=icon;
+  });
+}
+// Défilement : rangée du haut vers la droite, rangée du bas vers la gauche (animation CSS translate, boucle). UNIQUEMENT quand la
+// page de favoris est affichée : la classe `run` (donc l'animation) n'est posée que là, sinon document.getAnimations() revient à 0.
+// Pause au survol (CSS), coupé par prefers-reduced-motion (CSS).
+const vigsActive=()=>panel&&cur==="board"&&!RM.matches&&!document.hidden;
+function updateVigsScroll(){$("#bvigs").classList.toggle("run",vigsActive())}
+document.addEventListener("visibilitychange",updateVigsScroll);
+RM.addEventListener("change",updateVigsScroll);
+// éditeur de vignette : j = index, -1 = nouvelle carte ; image et couleur choisies attendent l'enregistrement
+let vigJ=-1,vigImg="",vigColor="";
+function vigPrev(){const p=$("#vedImg");if(vigImg){p.style.background=`center/cover no-repeat url('${vigImg}')`;p.replaceChildren()}else{p.style.background="var(--bg3)";p.replaceChildren(h("small",null,"aucune image : couleurs du site"))}}
+// couleur vide = « Auto (d'après le logo) » : bouton surligné, sinon le sélecteur montre la couleur choisie
+function vigColUI(){$("#vedAuto").classList.toggle("on",!vigColor);if(vigColor)$("#vedC").value=vigColor}
+function openVigEd(j){
+  vigJ=j;const v=j<0?{name:"",url:"",image:"",color:""}:(S.vignettes[j]||{name:"",url:"",image:"",color:""});
+  vigImg=v.image||"";vigColor=v.color||"";$("#vedN").value=v.name||"";$("#vedU").value=v.url||"";$("#vedC").value=v.color||"#5b6b9a";
+  $("#vedh").textContent=j<0?"Ajouter une vignette":"Modifier la vignette";
+  $("#vedDel").hidden=j<0;vigPrev();vigColUI();$("#ved").hidden=false;$("#vedN").focus();
+}
+function closeVigEd(){$("#ved").hidden=true}
+function saveVigs(){closeVigEd();save({vignettes:S.vignettes});drawVigs()} // drawVigs : mise à jour immédiate (le render est retenu pendant le clic)
+$("#vedCancel").onclick=closeVigEd;
+$("#ved").onclick=e=>{if(e.target===$("#ved"))closeVigEd()};
+$("#vedPic").onclick=()=>pickVignette(d=>{vigImg=d;vigPrev()});
+$("#vedClr").onclick=()=>{vigImg="";vigPrev()};
+$("#vedC").oninput=()=>{vigColor=$("#vedC").value;vigColUI()}; // choisir une couleur quitte le mode Auto
+$("#vedAuto").onclick=()=>{vigColor="";vigColUI()}; // Auto : couleur dérivée du logo
+$("#vedDel").onclick=()=>{if(vigJ>=0)S.vignettes.splice(vigJ,1);saveVigs()};
+$("#vedOk").onclick=()=>{
+  let u=$("#vedU").value.trim();
+  if(u&&!u.includes("://"))u="https://"+u; // domaine seul : complété en https
+  // lien valide : http(s), un vrai hôte (un point, ou localhost), pas d'espace ; sinon rien n'est enregistré
+  let ok="";try{const p=new URL(u);if(/^https?:$/.test(p.protocol)&&!/\s/.test(u)&&(p.hostname.includes(".")||p.hostname==="localhost"))ok=p.hostname}catch{}
+  if(!ok)return toast("Entrez un lien valide, par exemple https://exemple.fr");
+  const v={name:$("#vedN").value.trim()||host(u),url:u,image:vigImg,color:vigColor};
+  (S.vignettes||=[]);if(vigJ<0)S.vignettes.push(v);else S.vignettes[vigJ]=v;
+  saveVigs();
+};
+// appelé à chaque render : ne reconstruit que si favoris ou dossiers ont changé (vignettes : clé à part)
+function drawBoard(){drawVigs();const k=JSON.stringify([S.favs,S.folders]);if(k!==bKey){bKey=k;boardBody()}}
 function boardBody(){
   const q=$("#bq").value.trim(),out=[],loose=fbLoose();
   $("#s-board .flt").hidden=!S.favs.length;
@@ -1628,9 +1844,11 @@ function boardBody(){
     if(S.folders.length){
       const g=h("div","dirs");
       g.append(...S.folders.map(d=>{
-        const b=h("button","dir"+(d.id===bOpen?" on":"")),box=h("span","box");b.dataset.id=d.id;b.style.setProperty("--c",dcol(d));
-        box.append(...fbIn(d).slice(0,4).map(fico));if(d.icon&&!d.icon.startsWith("data:"))box.append(h("span","em",d.icon));
-        b.append(box,h("b",null,d.name),h("small",null,fbIn(d).length+" sites"));b.onclick=()=>boardDir(d.id);return b;
+        const b=h("button","dir"+(d.id===bOpen?" on":"")),box=h("span","box"+(fbIn(d).length?"":" empty")),mem=fbIn(d);b.dataset.id=d.id;b.style.setProperty("--c",dcol(d));
+        // fond : vrais favicons estompés (fico) ; par-dessus un voile teinté ; icône du dossier centrée avec halo devant
+        if(mem.length){const m=h("span","mosaic");m.append(...mem.slice(0,6).map(fico));box.append(m,h("span","veil"))}
+        box.append(dirIco(d));
+        b.append(box,h("b",null,d.name),h("small",null,mem.length+" site"+(mem.length>1?"s":"")));b.onclick=()=>boardDir(d.id);return b;
       }));
       out.push(g);const d=S.folders.find(d=>d.id===bOpen);if(d)out.push(drawer(d));
     }
@@ -1777,12 +1995,13 @@ function openSection(id){
   if(id==="pass"){pwHelp("");pwForm();send({cmd:"pw_list"})}
   if(id==="board"){boardSort(false);drawBoard();if(!S.favs.length)send({cmd:"browsers"})}
   if(id==="hello")send({cmd:"browsers"});
+  updateVigsScroll(); // démarre le défilement sur la page de favoris, l'arrête ailleurs
 }
 let tt;
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
 function focusUrl(){const u=$("#url");u.focus();u.select()}
 function save(p){Object.assign(S,p);send({cmd:"save",s:S})}
-function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o})}
+function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o});updateVigsScroll()}
 
 $("#add").onclick=()=>send({cmd:"new"});
 // zone vide de la barre d'onglets = poignée de la fenêtre
@@ -1805,7 +2024,7 @@ $$("section:not(#s-home,#s-board,#s-hello)").forEach(sec=>{const b=document.crea
 $("#star").onclick=()=>window.ipc.postMessage("cd");
 $("#favtoggle").onclick=()=>save({favbar:!S.favbar});
 $("#favbar").oncontextmenu=e=>{e.preventDefault();openSection("favs")};
-addEventListener("resize",()=>{if(S.favs)renderFavbar()}); // largeur changée : « +N » et pages à recalculer
+addEventListener("resize",()=>{if(S.favs)renderFavbar();if(panel&&cur==="board")sizeVigs()}); // largeur changée : « +N », pages, et durée/longueur du défilement
 $("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:"Dossier",color:"",icon:"📁"});save({folders:S.folders})};
 $("#hq").oninput=()=>histFull();
 $("#hclear").onclick=()=>send({cmd:"hist_clear"});
@@ -1925,6 +2144,7 @@ addEventListener("keydown",e=>{
   if(["ct","cw","cl","ctab","cstab","cst"].includes(k)){e.preventDefault();k==="cl"?focusUrl():window.ipc.postMessage(k)}
   if(k==="cd"){e.preventDefault();window.ipc.postMessage("cd")}
   if(k==="ch"){e.preventDefault();toggleDrawer()}
+  if(e.key==="Escape"&&!$("#ved").hidden){closeVigEd();return}
   if(e.key==="Escape"&&dOpen&&!panel){if(dConfirm)DACT.cancel();else toggleDrawer(false);return}
   if(e.key==="/"&&panel&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();if(cur==="board"){boardSort(false);return $("#bq").focus()}if(cur!=="home")openSection("home");$("#sq").focus()}
   if(e.key==="Escape"&&!panel&&openDir)favDir(openDir);

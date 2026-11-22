@@ -12,6 +12,7 @@ mod tabmenu;
 mod translate;
 mod update;
 mod vault;
+mod vicon;
 
 use std::{
     collections::HashSet,
@@ -127,6 +128,40 @@ struct Folder {
     icon: String,
 }
 
+// Carte « Préférés » de la page de favoris, modifiable par l'utilisateur.
+#[derive(Serialize, Deserialize, Clone)]
+struct Vignette {
+    name: String,
+    url: String,
+    // image perso : vide, ou data:image/...;base64,... (stockée telle quelle, comme les icônes perso de dossiers)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    image: String,
+    // couleur de la carte choisie par l'utilisateur ; vide = « Auto » (dérivée du logo, sinon teinte du site)
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    color: String,
+}
+
+/// Cartes « Préférés » par défaut (sites connus, sans image) ; l'utilisateur les modifie ensuite.
+fn default_vignettes() -> Vec<Vignette> {
+    [
+        ("YouTube", "https://www.youtube.com"),
+        ("Netflix", "https://www.netflix.com"),
+        ("Twitch", "https://www.twitch.tv"),
+        ("Spotify", "https://open.spotify.com"),
+        ("GitHub", "https://github.com"),
+        ("Reddit", "https://www.reddit.com"),
+        ("Steam", "https://store.steampowered.com"),
+        ("Discord", "https://discord.com"),
+        ("Wikipédia", "https://fr.wikipedia.org"),
+        ("Amazon", "https://www.amazon.fr"),
+        ("X", "https://x.com"),
+        ("Instagram", "https://www.instagram.com"),
+    ]
+    .iter()
+    .map(|(n, u)| Vignette { name: (*n).into(), url: (*u).into(), image: String::new(), color: String::new() })
+    .collect()
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 struct Settings {
@@ -148,6 +183,7 @@ struct Settings {
     pinned: u32, // les `pinned` premiers onglets de la session sont épinglés (toujours en tête)
     favs: Vec<Page>,
     folders: Vec<Folder>,
+    vignettes: Vec<Vignette>, // cartes « Préférés » en haut de la page de favoris
     favbar: bool,
     favbar_style: String, // "etageres" (défaut), "ruban" ou "icones" ; lu par l'interface seulement
     save_passwords: bool, // le moteur propose d'enregistrer les identifiants à la connexion
@@ -180,6 +216,7 @@ impl Default for Settings {
             pinned: 0,
             favs: vec![],
             folders: vec![],
+            vignettes: default_vignettes(),
             favbar: true,
             favbar_style: "etageres".into(),
             save_passwords: true,
@@ -216,6 +253,7 @@ enum Ev {
     PwForm(u32), // un formulaire de connexion a été repéré sur l'onglet (signal, sans donnée)
     PwSave(u32, String), // formulaire envoyé : {u,p} en JSON ; le mot de passe ne va qu'ici, jamais journalisé
     Hello(Value, bool), // Windows Hello terminé pour l'action `cmd` : vrai = validé
+    Vicon(String, String, String), // logo résolu pour une vignette : (url de la vignette, url de l'icône, couleur dominante)
 }
 
 struct Tab {
@@ -1113,6 +1151,10 @@ fn main() {
                         toast(&m);
                         return;
                     }
+                    Ev::Vicon(url, icon, color) => {
+                        let _ = ui.evaluate_script(&format!("viconReady({},{},{})", json!(url), json!(icon), json!(color)));
+                        return;
+                    }
                     Ev::Update(v) => {
                         let _ = ui.evaluate_script(&format!("upd({v})"));
                         return;
@@ -1198,6 +1240,17 @@ fn main() {
                         match v["cmd"].as_str().unwrap_or_default() {
                             "ready" => ext_list(), // icônes de la barre d'adresse dès le démarrage
                             "sync" => {}
+                            // logo haute résolution d'une vignette : résolu hors du fil UI (réseau), renvoyé par Ev::Vicon
+                            "vicon" => {
+                                let (u, p, d) = (str_of("url"), proxy.clone(), dir.clone());
+                                std::thread::spawn(move || {
+                                    let mut dim = 0u32;
+                                    if let Some((icon, color)) = vicon::best(&d, &u, &mut dim) {
+                                        let _ = p.send_event(Ev::Vicon(u, icon, color));
+                                    }
+                                });
+                                return;
+                            }
                             // l'interface reprend le focus : seul le bloc « navigateur par défaut » est relu
                             "def" => {
                                 let _ = ui.evaluate_script(&format!("setDef({})", defaults::is_default()));
@@ -1762,6 +1815,14 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"home":"https://x.fr","game_mode":false}"#).unwrap();
         assert_eq!(s.home, "https://x.fr");
         assert!(!s.game_mode && s.favs.is_empty() && s.search == "google");
+        // pas de `vignettes` dans l'ancien profil : la liste par défaut (sites connus), images et couleurs vides
+        assert!(!s.vignettes.is_empty() && s.vignettes[0].name == "YouTube" && s.vignettes[0].image.is_empty() && s.vignettes[0].color.is_empty());
+        // image et couleur vides : non sérialisées (settings.json propre)
+        let j0 = serde_json::to_string(&s.vignettes[0]).unwrap();
+        assert!(!j0.contains("image") && !j0.contains("color"));
+        // une vignette d'un ancien profil sans `color` se charge (défaut vide)
+        let vg: Vignette = serde_json::from_str(r#"{"name":"A","url":"https://a.fr","image":"data:x"}"#).unwrap();
+        assert!(vg.color.is_empty() && vg.image == "data:x");
         assert!(s.keep_loaded == 7 && !s.volty_anim && s.save_passwords && s.exts_open);
         assert!(!s.welcomed); // un profil d'avant la page de bienvenue la voit une fois
         // traduction et bandeaux : désactivés par défaut, réponse « refuser », listes vides ; script vide tant que c'est coupé
