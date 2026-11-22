@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Réglages : tableau de bord</title>
+<link rel="stylesheet" href="base.css">
+<style>
+main{height:calc(100% - 76px);overflow:auto;padding:28px 24px 48px}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:22px;font-weight:600;margin-bottom:14px}
+.search{position:relative;margin-bottom:26px}
+.search svg{position:absolute;left:14px;top:12px;color:var(--mu)}
+.search input{width:100%;height:44px;padding:0 44px;font-size:15px;border-radius:12px;background:var(--s1)}
+.search kbd{position:absolute;right:12px;top:11px}
+h2{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin:0 0 10px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+.q{display:flex;flex-direction:column;gap:10px;padding:14px;text-align:left;border-radius:12px;background:var(--s1);border:1px solid var(--line);transition:border-color .15s,background .15s}
+.q:hover{background:var(--s2)}
+.q.on{border-color:color-mix(in srgb,var(--a) 60%,transparent);background:color-mix(in srgb,var(--a) 10%,var(--s1))}
+.q .t{display:flex;justify-content:space-between;align-items:center;color:var(--mu)}
+.q.on .t{color:var(--a)}
+.q b{font-weight:600}
+.q small{color:var(--mu)}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cat{display:flex;gap:12px;padding:16px;text-align:left;border-radius:12px;background:var(--s1);border:1px solid var(--line)}
+.cat:hover{background:var(--s2)}
+.cat .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--s3);color:var(--a);flex:none}
+.cat b{display:block;font-weight:600}
+.cat small{display:block;color:var(--mu)}
+.cat em{display:block;font-style:normal;font-size:12px;color:var(--tx);opacity:.7;margin-top:6px}
+.crumb{display:flex;align-items:center;gap:8px;margin-bottom:16px;color:var(--mu)}
+.crumb button{display:flex;align-items:center;gap:4px;padding:6px 10px 6px 6px;border-radius:8px;color:var(--tx)}
+.crumb button:hover{background:var(--s2)}
+.res h3{font-size:12px;color:var(--mu);font-weight:600;margin:16px 0 6px}
+#restart{margin-bottom:16px}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<main><div class="wrap" id="app"></div></main>
+<script>
+let view="home",q="";
+const app=document.getElementById("app");
+function draw(){
+  if(view==="home"){
+    app.innerHTML=`<h1>Réglages</h1><div class="search">${ico("search")}<input type="search" id="q" placeholder="Rechercher un réglage (ex. veille, sombre, pubs)" value="${esc(q)}" aria-label="Rechercher un réglage"><kbd>/</kbd></div>${restartBar()}<div id="body"></div>`;
+    const inp=document.getElementById("q");inp.oninput=()=>{q=inp.value;body()};body();
+    document.getElementById("restart").classList.toggle("on",needRestart);
+  }else{
+    const s=SECTIONS.find(x=>x.id===view);
+    app.innerHTML=`<div class="crumb"><button id="back">${ico("back")}Réglages</button><span>›</span><span>${s.name}</span></div><h1>${s.name}</h1>${restartBar()}<div class="card" id="rows"></div>`;
+    document.getElementById("back").onclick=()=>{view="home";draw()};
+    document.getElementById("rows").append(...s.items.map(it=>row(it)));
+    document.getElementById("restart").classList.toggle("on",needRestart);
+  }
+}
+function body(){
+  const b=document.getElementById("body");
+  if(q.trim()){
+    const r=find(q);
+    if(!r.length){b.innerHTML=`<div class="card empty">Aucun réglage pour « ${esc(q)} »</div>`;return}
+    b.innerHTML='<div class="res"></div>';
+    SECTIONS.forEach(s=>{const its=r.filter(x=>x.sec===s);if(!its.length)return;
+      const h=document.createElement("h3");h.textContent=s.name;const c=document.createElement("div");c.className="card";c.append(...its.map(x=>row(x.it,q)));
+      b.firstChild.append(h,c)});
+    return;
+  }
+  const quick=ALL.filter(x=>x.it.quick);
+  b.innerHTML=`<h2>Accès rapide</h2><div class="quick">${quick.map(({it})=>`<button class="q ${STATE[it.k]?"on":""}" data-k="${it.k}"><span class="t">${ico(it.k==="game_mode"?"jeu":it.k==="adblock"?"priv":it.k==="night"?"look":"star")}<span>${STATE[it.k]?"Activé":"Désactivé"}</span></span><b>${it.label}</b><small>${it.hint}</small></button>`).join("")}</div>
+  <h2>Toutes les catégories</h2><div class="cats">${SECTIONS.map(s=>`<button class="cat" data-s="${s.id}"><span class="ic">${ico(s.id)}</span><span><b>${s.name}</b><small>${s.desc}</small>${summary(s)?`<em>${summary(s)}</em>`:""}</span></button>`).join("")}</div>`;
+  b.querySelectorAll(".q").forEach(x=>x.onclick=()=>{set(x.dataset.k,!STATE[x.dataset.k]);body()});
+  b.querySelectorAll(".cat").forEach(x=>x.onclick=()=>{view=x.dataset.s;draw()});
+}
+addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement.tagName!=="INPUT"){e.preventDefault();if(view!=="home"){view="home";draw()}document.getElementById("q").focus()}
+  if(e.key==="Escape"&&view!=="home"){view="home";draw()}});
+draw();
+</script>
+</body></html>

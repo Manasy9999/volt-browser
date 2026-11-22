@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Accueil Volt : maquettes</title>
+<link rel="stylesheet" href="base.css">
+<style>
+html,body{overflow:auto;user-select:text}
+body{font-size:14px;line-height:1.5}
+.page{max-width:1320px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;font-weight:600}
+p.sub{color:var(--mu);margin:6px 0 8px;max-width:860px}
+.part{margin-top:44px;padding-top:20px;border-top:1px solid var(--bg3)}
+.part>h2{font-size:22px;margin-bottom:4px}
+.m{margin-top:32px}
+.m h3{font-size:18px;font-weight:600;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.m h3 a{font-size:13px;font-weight:400;color:var(--a)}
+.m h3 .tag{font-size:10px}
+.m ul{color:var(--mu);margin:6px 0 12px 18px;max-width:960px}
+.m ul b{color:var(--tx);font-weight:500}
+.frame{width:100%;aspect-ratio:16/10;max-height:820px;border:1px solid var(--bg3);border-radius:12px;overflow:hidden;background:var(--bg)}
+.frame iframe{width:100%;height:100%;border:0;display:block}
+.states{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.states a{color:var(--mu);font-size:13px;text-decoration:none}
+.states img{display:block;width:100%;border-radius:8px;border:1px solid var(--bg3);margin-bottom:6px}
+.states a:hover{color:var(--tx)}
+code{font:12.5px Consolas,monospace;color:var(--tx)}
+</style></head><body><div class="page">
+<h1>Page de favoris et page de bienvenue : 5 propositions</h1>
+<p class="sub">Chaque maquette est dans son contexte (onglets et barre d'adresse de Volt, fenêtre 1280 × 800) et n'utilise que les variables de thème. Tout est cliquable : filtre, dossiers, import, bouton « par défaut », étapes. Pour voir un autre thème, ajoutez <code>?theme=pastel</code> (ou classique, verre, esport, angulaire) à l'adresse d'une maquette.</p>
+
+<div class="part"><h2>Écran 1 · Page de favoris</h2>
+<p class="sub">S'ouvre au clic sur Volty et au démarrage quand il n'y a pas de session à restaurer. Données de démonstration : 140 favoris, 9 dossiers, 15 hors dossier. Les pastilles de couleur figurent les favicons ; une pastille à l'accent de Volt avec une initiale, c'est le secours quand le site n'a pas d'icône.</p>
+
+<div class="m"><h3>1. Tuiles et dossiers <a href="favoris-1-tuiles.html" target="_blank">Plein écran ↗</a> <a href="favoris-1-tuiles.html?dossier=jeux" target="_blank">Dossier ouvert ↗</a></h3>
+<ul><li><b>Parti pris :</b> un écran d'accueil façon téléphone : les 9 dossiers en grosses tuiles avec un aperçu de 4 icônes, un clic ouvre le dossier en tiroir juste en dessous ; les favoris hors dossier en tuiles.</li>
+<li><b>Gain / perte :</b> le plus visuel et le plus calme, tout tient sans défiler quand aucun dossier n'est ouvert. En revanche deux clics pour un favori rangé, et on ne voit qu'un dossier à la fois.</li></ul>
+<div class="frame"><iframe src="favoris-1-tuiles.html" title="Tuiles et dossiers" loading="lazy"></iframe></div></div>
+
+<div class="m"><h3>2. Dossiers à gauche <span class="tag">Recommandée</span> <a href="favoris-2-dossiers.html" target="_blank">Plein écran ↗</a></h3>
+<ul><li><b>Parti pris :</b> la même mise en page que les Réglages : dossiers en colonne à gauche avec leur nombre de favoris, contenu à droite ; « Tous les favoris » les montre groupés par dossier.</li>
+<li><b>Gain / perte :</b> familier, chaque dossier est à un clic, et le filtre (touche <kbd>/</kbd> ou n'importe quelle lettre) cherche dans les 140 avec le dossier affiché. On perd en spectacle, et la vue « Tous » demande de défiler.</li></ul>
+<div class="frame"><iframe src="favoris-2-dossiers.html" title="Dossiers à gauche" loading="lazy"></iframe></div>
+<div class="states">
+  <a href="favoris-2-dossiers.html?etat=vide" target="_blank"><img src="shots/favoris-2-vide.png" alt="État vide : proposition d'import depuis Opera GX, Chrome et Edge">État vide : import proposé ↗</a>
+  <a href="favoris-2-dossiers.html?defaut=1&amp;q=st" target="_blank"><img src="shots/favoris-2-defaut.png" alt="Filtre « st » et Volt déjà navigateur par défaut">Déjà navigateur par défaut, filtre « st » ↗</a>
+  <a href="favoris-2-dossiers.html?theme=pastel&amp;q=st" target="_blank"><img src="shots/favoris-2-theme-pastel.png" alt="Même écran avec le thème Pastel">Thème Pastel ↗</a>
+</div></div>
+
+<div class="m"><h3>3. Lanceur clavier <a href="favoris-3-lanceur.html" target="_blank">Plein écran ↗</a> <a href="favoris-3-lanceur.html?q=steam" target="_blank">Avec une recherche ↗</a></h3>
+<ul><li><b>Parti pris :</b> un seul grand champ : on tape, la liste se réduit aux favoris correspondants, puis « Rechercher sur Google » en dernière ligne ; <kbd>↑</kbd><kbd>↓</kbd> et <kbd>Entrée</kbd>. Au repos, les 140 favoris en 5 colonnes denses groupées par dossier.</li>
+<li><b>Gain / perte :</b> le plus rapide au clavier, et un seul champ pour les favoris et le web. Au repos, la liste est dense, avec peu d'air, et un dossier peut se couper d'une colonne à l'autre.</li></ul>
+<div class="frame"><iframe src="favoris-3-lanceur.html" title="Lanceur clavier" loading="lazy"></iframe></div></div>
+</div>
+
+<div class="part"><h2>Écran 2 · Bienvenue (premier lancement)</h2>
+<p class="sub">Affichée une seule fois. Ordre : importer, navigateur par défaut, apparence. La ligne « Mots de passe et comptes » a sa place réservée. Le thème choisi s'applique tout de suite à la maquette entière.</p>
+
+<div class="m"><h3>1. Page unique <span class="tag">Recommandée</span> <a href="bienvenue-1-page.html" target="_blank">Plein écran ↗</a> <a href="bienvenue-1-page.html?importe=1&amp;defaut=1" target="_blank">Import fait, déjà par défaut ↗</a></h3>
+<ul><li><b>Parti pris :</b> Volty et « Commencer » à gauche, toutes les options à droite en lignes de réglages, visibles d'un coup.</li>
+<li><b>Gain / perte :</b> on voit tout, on règle ce qu'on veut et on part ; « Commencer » ne bouge jamais. La page est chargée pour un premier contact, et Volty y parle moins.</li></ul>
+<div class="frame"><iframe src="bienvenue-1-page.html" title="Bienvenue page unique" loading="lazy"></iframe></div></div>
+
+<div class="m"><h3>2. En étapes <a href="bienvenue-2-etapes.html" target="_blank">Plein écran ↗</a> <a href="bienvenue-2-etapes.html?etape=3" target="_blank">Étape 3 ↗</a></h3>
+<ul><li><b>Parti pris :</b> trois étapes (Importer, Navigateur par défaut, Apparence), une chose à la fois, Volty commente chaque étape dans une bulle ; « Passer et commencer » toujours en haut à droite.</li>
+<li><b>Gain / perte :</b> plus accueillant et plus lisible, Volty a de la présence. Trois clics minimum pour finir si on veut tout voir, et l'étape 2 est presque vide.</li></ul>
+<div class="frame"><iframe src="bienvenue-2-etapes.html" title="Bienvenue en étapes" loading="lazy"></iframe></div></div>
+</div>
+</div></body></html>

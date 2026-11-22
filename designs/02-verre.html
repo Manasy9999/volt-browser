@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+:root{--a:#9b5cff;--bg:#0b0c10;--bg2:#13151c;--bg3:#1b1e28;--tx:#e8e9f0;--mu:#7d8296;--r:10px}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font:13px "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* --- onglets --- */
+#tabs{height:38px;display:flex;align-items:flex-end;gap:4px;padding:0 8px;background:var(--bg)}
+#logo{width:30px;height:30px;margin:0 6px 4px 0;display:grid;place-items:center;color:var(--a);filter:drop-shadow(0 0 6px var(--a))}
+#logo svg{width:20px;height:20px;fill:var(--a);stroke:none}
+.tab{position:relative;height:32px;min-width:60px;max-width:220px;flex:1;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;
+  background:var(--bg2);border-radius:var(--r) var(--r) 0 0;color:var(--mu);transition:background .15s,color .15s}
+.tab:hover{background:var(--bg3);color:var(--tx)}
+.tab.on{background:var(--bg3);color:var(--tx)}
+.tab.on::before{content:"";position:absolute;left:10px;right:10px;top:0;height:2px;border-radius:2px;background:var(--a);box-shadow:0 0 10px var(--a)}
+.tab span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mu);flex:none}
+.tab.on .dot{background:var(--a)}
+.tab.ld .dot{animation:p .8s infinite alternate}
+@keyframes p{to{opacity:.2;transform:scale(.6)}}
+.x{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;opacity:.6}
+.x:hover{opacity:1;background:#ffffff14}
+.x svg{width:12px;height:12px}
+#add{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
+#add:hover{color:var(--a);background:var(--bg2)}
+
+/* --- barre d'adresse --- */
+#bar{height:46px;display:flex;align-items:center;gap:4px;padding:0 8px;background:var(--bg3);border-bottom:1px solid #000}
+.ib{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--mu);transition:.15s}
+.ib:hover{color:var(--tx);background:#ffffff0f}
+.ib.on{color:var(--a)}
+#url{flex:1;height:32px;margin:0 6px;padding:0 14px;border-radius:16px;border:1px solid transparent;background:var(--bg);color:var(--tx);font:inherit;outline:0;transition:.15s}
+#url:focus{border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 25%,transparent)}
+
+/* --- réglages --- */
+#panel{display:none;position:fixed;inset:84px 0 0 0;background:var(--bg)}
+body.panel #panel{display:flex}
+nav{width:220px;padding:18px 10px;border-right:1px solid var(--bg3);display:flex;flex-direction:column;gap:2px}
+nav button{text-align:left;padding:10px 14px;border-radius:8px;color:var(--mu)}
+nav button:hover{background:var(--bg2);color:var(--tx)}
+nav button.on{background:var(--bg2);color:var(--tx);box-shadow:inset 3px 0 0 var(--a)}
+main{flex:1;overflow:auto;padding:28px 40px}
+section{display:none;max-width:680px}
+section.on{display:block}
+h2{font-size:20px;font-weight:600;margin-bottom:18px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;background:var(--bg2);border-radius:var(--r);margin-bottom:8px}
+.row b{font-weight:500}
+.row small{display:block;color:var(--mu);margin-top:2px}
+input[type=text],select{height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--bg3);background:var(--bg);color:var(--tx);font:inherit;outline:0;min-width:260px}
+input[type=text]:focus,select:focus{border-color:var(--a)}
+.sw{appearance:none;width:40px;height:22px;border-radius:11px;background:var(--bg3);position:relative;cursor:pointer;transition:.2s;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--mu);transition:.2s}
+.sw:checked{background:var(--a)}
+.sw:checked::after{left:21px;background:#fff}
+.btn{height:34px;padding:0 16px;border-radius:8px;background:var(--a);color:#fff;font-weight:600}
+.btn:hover{filter:brightness(1.15)}
+.btn.g{background:var(--bg3);color:var(--tx)}
+.sw-c{display:flex;gap:8px}
+.sw-c button{width:28px;height:28px;border-radius:50%;border:2px solid transparent}
+.sw-c button.on{border-color:#fff}
+.ext{display:flex;align-items:center;gap:12px}
+#star.on svg{fill:var(--a);stroke:var(--a)}
+.pg{cursor:pointer;margin-bottom:4px;padding:10px 16px}
+.pg:hover{background:var(--bg3)}
+.pg .n small{display:inline;margin-left:8px}
+.ext .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+#toast{position:fixed;right:16px;bottom:16px;padding:12px 18px;border-radius:var(--r);background:var(--bg3);border-left:3px solid var(--a);opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
+#toast.on{opacity:1;transform:none}
+/* --- design verre --- */
+:root{--a:#7aa2ff;--bg:#0c0e1b;--bg2:rgba(255,255,255,.06);--bg3:rgba(255,255,255,.12);--tx:#eef1ff;--mu:#98a1c4;--r:16px}
+html{background:#0c0e1b}
+body{font:13px "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;background:radial-gradient(520px 160px at 8% -40px,color-mix(in srgb,var(--a) 55%,transparent),transparent 70%),radial-gradient(480px 150px at 78% -50px,#ff7ad966,transparent 70%),#0c0e1b}
+#tabs{height:42px;align-items:center;gap:6px;padding:0 10px;background:transparent}
+#logo{margin:0 4px 0 0;filter:none;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+#logo svg{width:15px;height:15px}
+.tab{height:28px;max-width:200px;border-radius:999px;padding:0 6px 0 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(14px)}
+.tab:hover{background:rgba(255,255,255,.09)}
+.tab.on{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.24);box-shadow:0 6px 20px -8px var(--a),inset 0 1px 0 rgba(255,255,255,.28)}
+.tab.on::before{display:none}
+.dot{width:6px;height:6px;background:rgba(255,255,255,.3)}
+.tab.on .dot{box-shadow:0 0 8px var(--a)}
+.x{border-radius:50%}
+#add{width:28px;height:28px;margin:0;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+#add:hover{background:rgba(255,255,255,.1)}
+#bar{height:42px;padding:0 10px;background:rgba(255,255,255,.05);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.08)}
+.ib{width:30px;height:30px;border-radius:50%}
+.ib:hover{background:rgba(255,255,255,.1)}
+.ib.on{color:var(--a);background:color-mix(in srgb,var(--a) 15%,transparent)}
+#url{height:30px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);text-align:center}
+#url:focus{text-align:left;border-color:color-mix(in srgb,var(--a) 70%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 18%,transparent)}
+#panel{background:radial-gradient(700px 400px at 85% 10%,color-mix(in srgb,var(--a) 22%,transparent),transparent 70%),radial-gradient(600px 400px at 0 100%,#ff7ad926,transparent 70%),#0c0e1b}
+nav{margin:14px 0 14px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);backdrop-filter:blur(20px)}
+nav button{border-radius:12px}
+nav button:hover{background:rgba(255,255,255,.06)}
+nav button.on{background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+h2{font-weight:300;font-size:28px;letter-spacing:-.01em}
+.row{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:18px;backdrop-filter:blur(20px);padding:16px 18px}
+input[type=text],select{border-radius:12px;background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.1)}
+select option{background:#1a1d30}
+.sw{background:rgba(255,255,255,.12)}
+.sw:checked{box-shadow:0 0 14px -2px var(--a)}
+.btn{border-radius:999px;color:#0c0e1b}
+.btn.g{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12)}
+.sw-c button.on{box-shadow:0 0 0 3px rgba(255,255,255,.15)}
+#toast{border-radius:999px;border:1px solid rgba(255,255,255,.14);border-left:1px solid rgba(255,255,255,.14);background:rgba(30,34,58,.75);backdrop-filter:blur(20px);padding:10px 20px}
+</style>
+</head>
+<body>
+<script>if(!window.ipc){window.ipc={postMessage(){}};window.__demo=1}</script>
+<div id="tabs">
+  <div id="logo"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
+  <div id="list" style="display:contents"></div>
+  <button id="add" title="Nouvel onglet (Ctrl+T)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+<div id="bar">
+  <button class="ib" data-c="back" title="Précédent"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+  <button class="ib" data-c="fwd" title="Suivant"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  <button class="ib" data-c="reload" title="Actualiser (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
+  <button class="ib" data-c="home" title="Accueil"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3z"/></svg></button>
+  <input id="url" spellcheck="false" placeholder="Rechercher ou saisir une adresse">
+  <button class="ib" id="star" title="Ajouter aux favoris (Ctrl+D)"><svg viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
+  <button class="ib" id="game" title="Mode Jeu"><svg viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg></button>
+  <button class="ib" id="gear" title="Paramètres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</div>
+
+<div id="panel">
+  <nav>
+    <button data-s="favs">Favoris</button>
+    <button data-s="hist">Historique</button>
+    <button data-s="start" class="on">Au démarrage</button>
+    <button data-s="search">Moteur de recherche</button>
+    <button data-s="look">Apparence</button>
+    <button data-s="gamer">Mode Jeu</button>
+    <button data-s="exts">Extensions</button>
+    <button data-s="priv">Confidentialité</button>
+  </nav>
+  <main>
+    <section id="s-favs">
+      <h2>Favoris</h2>
+      <div id="favlist"></div>
+    </section>
+    <section id="s-hist">
+      <h2>Historique</h2>
+      <div class="row"><input type="text" id="hq" style="flex:1" placeholder="Rechercher dans l'historique"><button class="btn g" id="hclear">Tout effacer</button></div>
+      <div id="histlist"></div>
+    </section>
+    <section id="s-start" class="on">
+      <h2>Au démarrage</h2>
+      <div class="row"><div><b>Continuer là où vous en étiez</b><small>Rouvre les onglets de la dernière session</small></div><input type="checkbox" class="sw" data-k="restore"></div>
+      <div class="row"><div><b>Page d'accueil</b><small>Ouverte par les nouveaux onglets et le bouton Accueil</small></div><input type="text" data-k="home"></div>
+    </section>
+    <section id="s-search">
+      <h2>Moteur de recherche</h2>
+      <div class="row"><div><b>Moteur utilisé dans la barre d'adresse</b></div>
+        <select data-k="search"><option value="google">Google</option><option value="duckduckgo">DuckDuckGo</option><option value="bing">Bing</option><option value="brave">Brave Search</option></select></div>
+    </section>
+    <section id="s-look">
+      <h2>Apparence</h2>
+      <div class="row"><div><b>Couleur d'accent</b></div><div class="sw-c" id="colors"></div></div>
+      <div class="row"><div><b>Thème sombre pour les sites</b><small>Les sites compatibles passent en mode sombre</small></div><input type="checkbox" class="sw" data-k="dark_web"></div>
+    </section>
+    <section id="s-gamer">
+      <h2>Mode Jeu</h2>
+      <div class="row"><div><b>Limiteur de RAM</b><small>Les onglets en arrière-plan passent en mémoire minimale pour laisser la place à vos jeux</small></div><input type="checkbox" class="sw" data-k="game_mode"></div>
+    </section>
+    <section id="s-exts">
+      <h2>Extensions</h2>
+      <div class="row"><div><b>Ajouter depuis le Chrome Web Store</b><small>Collez le lien de la page de l'extension ou son ID</small></div></div>
+      <div class="row"><input type="text" id="extid" style="flex:1" placeholder="https://chromewebstore.google.com/detail/…"><button class="btn" id="extadd">Installer</button></div>
+      <div id="extlist"></div>
+    </section>
+    <section id="s-priv">
+      <h2>Confidentialité et sécurité</h2>
+      <div class="row"><div><b>Effacer les données de navigation</b><small>Historique, cookies, cache et données des sites</small></div><button class="btn g" id="clear">Effacer</button></div>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+const $=q=>document.querySelector(q), $$=q=>[...document.querySelectorAll(q)];
+const send=o=>window.ipc.postMessage(JSON.stringify(o));
+const COLORS=["#9b5cff","#00e5ff","#2bff88","#ff3b5c","#ff8a00","#ff4fd8"];
+let S={}, panel=false;
+
+function render(st){
+  S=st.s;
+  document.documentElement.style.setProperty("--a",S.accent);
+  $("#list").replaceChildren(...st.tabs.map(t=>{
+    const b=document.createElement("div");
+    b.className="tab"+(t.id===st.active?" on":"")+(t.loading?" ld":"");
+    b.title=t.title;
+    b.innerHTML='<i class="dot"></i><span></span><button class="x"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    b.querySelector("span").textContent=t.title||t.url;
+    b.onmousedown=e=>{if(e.button===1){send({cmd:"close",id:t.id});e.preventDefault()}};
+    b.onclick=e=>send(e.target.closest(".x")?{cmd:"close",id:t.id}:{cmd:"select",id:t.id});
+    return b;
+  }));
+  const a=st.tabs.find(t=>t.id===st.active);
+  if(a&&!panel&&document.activeElement!==$("#url")) $("#url").value=a.url.startsWith("data:")?"":a.url;
+  $("#star").classList.toggle("on",!!a&&S.favs.some(f=>f.url===a.url));
+  $("#favlist").replaceChildren(...S.favs.map(f=>pageRow(f,()=>send({cmd:"fav_rm",url:f.url}))));
+  $("#game").classList.toggle("on",S.game_mode);
+  $$("[data-k]").forEach(el=>{const v=S[el.dataset.k]; if(el.type==="checkbox")el.checked=v; else if(document.activeElement!==el)el.value=v});
+  $("#colors").replaceChildren(...COLORS.map(c=>{
+    const b=document.createElement("button");b.style.background=c;b.className=c===S.accent?"on":"";
+    b.onclick=()=>save({accent:c});return b;
+  }));
+}
+function renderExts(list){
+  $("#extlist").replaceChildren(...list.map(e=>{
+    const r=document.createElement("div");r.className="row ext";
+    r.innerHTML='<span class="n"></span><button class="btn g" data-a="open">Ouvrir</button><button class="btn g" data-a="rm">Retirer</button><input type="checkbox" class="sw">';
+    r.querySelector(".n").textContent=e.name;
+    const sw=r.querySelector(".sw");sw.checked=e.on;
+    sw.onchange=()=>send({cmd:"ext_toggle",id:e.id,on:sw.checked});
+    r.querySelector('[data-a=open]').onclick=()=>{setPanel(false);send({cmd:"ext_open",id:e.id})};
+    r.querySelector('[data-a=rm]').onclick=()=>send({cmd:"ext_remove",id:e.id});
+    return r;
+  }));
+}
+function pageRow(p,rm){
+  const r=document.createElement("div");r.className="row ext pg";
+  r.innerHTML='<span class="n"><b></b><small></small></span><button class="x" title="Retirer"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  if(!rm)r.querySelector(".x").remove();
+  r.querySelector("b").textContent=p.title||p.url;r.querySelector("small").textContent=p.url;
+  r.onclick=e=>{if(e.target.closest(".x"))rm();else{setPanel(false);send({cmd:"go",url:p.url})}};
+  return r;
+}
+let H=[];
+function renderHist(h){H=h;const q=$("#hq").value.toLowerCase();
+  $("#histlist").replaceChildren(...H.filter(p=>(p.title+p.url).toLowerCase().includes(q)).slice(0,300).map(p=>pageRow(p)));}
+// volt://… affiché dans la barre quand le panneau est ouvert
+const VOLT={favs:"favorites",hist:"history",start:"settings",search:"settings/search",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy"};
+function openSection(id){
+  $$("nav button,section").forEach(x=>x.classList.toggle("on",x.dataset.s===id||x.id==="s-"+id));
+  if(!panel)setPanel(true);
+  $("#url").value="volt://"+VOLT[id];
+  if(id==="hist")send({cmd:"hist"});
+}
+let tt;
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
+function focusUrl(){const u=$("#url");u.focus();u.select()}
+function save(p){Object.assign(S,p);send({cmd:"save",s:S})}
+function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o})}
+
+$("#add").onclick=()=>send({cmd:"new"});
+$$("[data-c]").forEach(b=>b.onclick=()=>send({cmd:b.dataset.c}));
+$("#url").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim()){send({cmd:"nav",url:e.target.value});if(panel)setPanel(false)}};
+$("#url").onfocus=e=>e.target.select();
+$("#gear").onclick=()=>panel?setPanel(false):openSection("start");
+$("#star").onclick=()=>send({cmd:"fav"});
+$("#hq").oninput=()=>renderHist(H);
+$("#hclear").onclick=()=>send({cmd:"hist_clear"});
+$("#game").onclick=()=>{save({game_mode:!S.game_mode});toast(S.game_mode?"Mode Jeu activé : RAM limitée en arrière-plan":"Mode Jeu désactivé")};
+$$("nav button").forEach(b=>b.onclick=()=>openSection(b.dataset.s));
+$$("[data-k]").forEach(el=>el.onchange=()=>save({[el.dataset.k]:el.type==="checkbox"?el.checked:el.value}));
+$("#extadd").onclick=()=>{const v=$("#extid").value.trim();if(v){send({cmd:"ext_install",id:v});$("#extid").value=""}};
+$("#clear").onclick=()=>send({cmd:"clear"});
+addEventListener("keydown",e=>{
+  const k=(e.ctrlKey?"c":"")+(e.shiftKey?"s":"")+e.key.toLowerCase();
+  if(["ct","cw","cl","ctab","cstab"].includes(k)){e.preventDefault();k==="cl"?focusUrl():send({cmd:"key",k})}
+  if(k==="cd"){e.preventDefault();send({cmd:"fav"})}
+  if(k==="ch"){e.preventDefault();openSection("hist")}
+  if(e.key==="Escape"&&panel)setPanel(false);
+});
+addEventListener("contextmenu",e=>{if(e.target.tagName!=="INPUT")e.preventDefault()});
+send({cmd:"ready"});
+</script>
+<script>if(window.__demo){render({tabs:[{id:1,title:"YouTube",url:"https://www.youtube.com/"},{id:2,title:"Twitch – en direct",url:"https://www.twitch.tv",loading:true},{id:3,title:"Steam",url:"https://store.steampowered.com/"}],active:2,s:{home:"https://www.google.com",search:"google",accent:"#7aa2ff",restore:true,game_mode:true,dark_web:true,favs:[{url:"https://www.twitch.tv",title:"Twitch"},{url:"https://store.steampowered.com",title:"Steam"}]}});if(location.hash.length>1)openSection(location.hash==="#panel"?"start":location.hash.slice(1))}</script>
+</body>
+</html>

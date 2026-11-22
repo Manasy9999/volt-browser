@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Réglages : page unique</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.lay{height:calc(100% - 76px);display:grid;grid-template-columns:220px 1fr}
+.idx{padding:24px 12px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.idx a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--mu);text-decoration:none;position:relative}
+.idx a:hover{color:var(--tx)}
+.idx a.on{color:var(--tx)}
+.idx a.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--a)}
+.idx a.gone{opacity:.3}
+#scroll{overflow:auto;scroll-behavior:smooth}
+.top{position:sticky;top:0;z-index:2;background:var(--bg);padding:20px 40px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.top .search{position:relative;flex:1;max-width:520px}
+.top .search svg{position:absolute;left:12px;top:8px;color:var(--mu)}
+.top input{width:100%;padding-left:38px}
+.chip{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line);color:var(--mu);display:flex;align-items:center;gap:6px}
+.chip.on{border-color:var(--a);color:var(--tx);background:color-mix(in srgb,var(--a) 14%,transparent)}
+.content{padding:8px 40px 60vh;max-width:820px}
+.content section{padding-top:24px}
+.content h2{font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px}
+.content h2 svg{color:var(--a)}
+.content p.d{color:var(--mu);margin:2px 0 10px 28px}
+.rs{font-size:12px;color:var(--a);margin-right:4px}
+#restart{margin:16px 0 0}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<div class="lay">
+  <nav class="idx" id="idx"></nav>
+  <div id="scroll">
+    <div class="top"><div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="q" placeholder="Filtrer les réglages" aria-label="Filtrer les réglages"></div>
+      <button class="chip" id="onlymod" aria-pressed="false"><i class="mod" style="margin:0"></i>Modifiés seulement</button></div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<script>
+let q="",onlyMod=false;
+const content=document.getElementById("content"),idx=document.getElementById("idx"),sc=document.getElementById("scroll");
+function draw(){
+  const hits=q.trim()?new Set(find(q).map(x=>x.it)):null;
+  const keep=it=>(!hits||hits.has(it))&&(!onlyMod||changed(it.k));
+  content.innerHTML=restartBar();
+  let any=false;
+  SECTIONS.forEach(s=>{
+    const its=s.items.filter(keep);
+    if(!its.length)return;any=true;
+    const sec=document.createElement("section");sec.id="s-"+s.id;
+    sec.innerHTML=`<h2>${ico(s.id)}${s.name}</h2><p class="d">${s.desc}</p>`;
+    const c=document.createElement("div");c.className="card";
+    its.forEach(it=>{const r=row(it,q);if(changed(it.k)){const b=document.createElement("button");b.className="rs";b.textContent="Réinitialiser";b.onclick=()=>{set(it.k,DEF[it.k]);draw()};r.querySelector(".c").prepend(b)}c.append(r)});
+    sec.append(c);content.append(sec);
+  });
+  if(!any)content.insertAdjacentHTML("beforeend",`<div class="card empty" style="margin-top:24px">Aucun réglage ${onlyMod?"modifié":""} ${q?`pour « ${esc(q)} »`:""}</div>`);
+  document.getElementById("restart").classList.toggle("on",needRestart);
+  idx.innerHTML=SECTIONS.map(s=>`<a href="#s-${s.id}" data-s="${s.id}" class="${document.getElementById("s-"+s.id)?"":"gone"}">${ico(s.id)}${s.name}</a>`).join("");
+  spy();
+}
+function spy(){
+  let on=null;
+  SECTIONS.forEach(s=>{const el=document.getElementById("s-"+s.id);if(el&&el.getBoundingClientRect().top<sc.getBoundingClientRect().top+140)on=s.id});
+  on=on||SECTIONS.find(s=>document.getElementById("s-"+s.id))?.id;
+  idx.querySelectorAll("a").forEach(a=>a.classList.toggle("on",a.dataset.s===on));
+}
+idx.addEventListener("click",e=>{const a=e.target.closest("a");if(!a)return;e.preventDefault();document.getElementById("s-"+a.dataset.s)?.scrollIntoView({block:"start"})});
+sc.addEventListener("scroll",spy);
+document.getElementById("q").oninput=e=>{q=e.target.value;draw()};
+document.getElementById("onlymod").onclick=e=>{onlyMod=!onlyMod;e.currentTarget.classList.toggle("on",onlyMod);e.currentTarget.setAttribute("aria-pressed",onlyMod);draw()};
+addEventListener("volt-change",e=>{if(e.detail!=="home")draw()});
+draw();
+</script>
+</body></html>

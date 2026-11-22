@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Bienvenue : en étapes</title>
+<link rel="stylesheet" href="base.css">
+<style>
+main{position:relative;display:grid;grid-template-columns:300px 600px;justify-content:center;align-items:center;gap:64px;padding:0 40px;overflow:hidden}
+.skip{position:absolute;top:18px;right:24px}
+.host{display:flex;flex-direction:column;align-items:center;gap:22px}
+.host .volty{width:200px;height:200px}
+.say{position:relative;max-width:280px;padding:12px 16px;border-radius:var(--r);background:var(--bg2);color:var(--tx);line-height:1.45;text-align:center;text-wrap:balance}
+.say::before{content:"";position:absolute;left:50%;top:-6px;width:12px;height:12px;margin-left:-6px;background:var(--bg2);transform:rotate(45deg)}
+.card{display:flex;flex-direction:column;min-height:470px}
+.steps{display:flex;align-items:center;gap:10px;margin-bottom:22px;color:var(--mu);font-size:12px}
+.steps .bars{display:flex;gap:6px}
+.steps .bars button{width:44px;height:4px;border-radius:2px;background:var(--bg3);padding:0;transition:background .2s}
+.steps .bars button.on{background:var(--a)}
+h1{font-size:26px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.card h1+p{color:var(--mu);font-size:14px;line-height:1.5;margin-bottom:22px;max-width:520px;text-wrap:pretty}
+.row{min-height:58px;padding:10px 16px}
+.row>div:not(.sw-c){flex:1;min-width:0}
+.imp,.pw{justify-content:flex-start}
+.pw .gi{width:24px;height:24px;display:grid;place-items:center;color:var(--mu);flex:none}
+.pw small{font-style:italic}
+.th span{font-size:12px}
+.themes{margin-bottom:8px}
+.nav{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:22px}
+.nav .btn{height:38px;padding:0 22px}
+.nav .sp{flex:1}
+.nav small{color:var(--mu)}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome("Bienvenue"))</script>
+<div id="panel"><main>
+  <button class="lnk skip" id="skip">Passer et commencer</button>
+  <div class="host"><div class="volty" id="vy"></div><div class="say" id="say"></div></div>
+  <div class="card" id="card"></div>
+</main></div>
+<script>
+$("#vy").innerHTML=voltySvg("",false);
+let step=+(P.get("etape")||1);
+const STEPS=[
+  {t:"Importer vos favoris",p:"Volt a trouvé ces navigateurs sur votre PC. Un clic copie leurs favoris dans Volt, sans rien changer à l'original.",
+   say:"Salut, moi c'est Volty. Je change de tête selon la charge de votre processeur.",
+   body:()=>`<div id="imp">${BROWSERS.map(importRow).join("")}</div><div class="row pw"><span class="gi">${ic("key")}</span><div><b>Mots de passe et comptes</b><small>Mots de passe : à venir</small></div></div>`},
+  {t:"Navigateur par défaut",p:"Les liens ouverts depuis Discord, vos mails ou Windows arriveront dans Volt.",
+   say:"Facultatif : vous pourrez le faire plus tard dans les Réglages.",
+   body:()=>`<div id="def">${defRow()}</div>`},
+  {t:"Apparence",p:"Choisissez un thème et une couleur. Le changement s'applique tout de suite, essayez.",
+   say:"Je prends la couleur que vous choisissez.",
+   body:()=>`<div id="look"><div class="themes"></div><div class="row"><div><b>Couleur d'accent</b></div><div class="sw-c"></div></div></div>`},
+];
+function draw(){
+  const s=STEPS[step-1],last=step===STEPS.length;
+  $("#say").textContent=s.say;
+  $("#vy").classList.toggle("wink",last);
+  $("#card").innerHTML=`<div class="steps"><span class="bars">${STEPS.map((x,i)=>`<button class="${i<step?"on":""}" data-s="${i+1}" title="${x.t}"></button>`).join("")}</span>Étape ${step} sur ${STEPS.length}</div>
+    <div class="in" style="display:contents"><h1>${s.t}</h1><p>${s.p}</p>${s.body()}</div>
+    <div class="nav">${step>1?`<button class="btn g" id="prev">Retour</button>`:""}<span class="sp"></span>${last?"":`<small>Tout est facultatif</small>`}<button class="btn" id="next">${last?"Commencer":"Suivant"}</button></div>`;
+  $$(".bars button").forEach(b=>b.onclick=()=>{step=+b.dataset.s;draw()});
+  $("#prev")&&($("#prev").onclick=()=>{step--;draw()});
+  $("#next").onclick=()=>{if(last)return finish();step++;draw()};
+  if(step===1)wireImport($("#imp"),()=>$("#vy").classList.add("wink"));
+  if(step===2)wireDefault($("#def"),draw);
+  if(step===3)looks($("#look"));
+  if(step===1&&P.get("importe"))$("#imp .btn").click();
+}
+const finish=()=>toast("La bienvenue se ferme, la page de favoris s'ouvre.");
+$("#skip").onclick=finish;
+draw();
+</script>
+</body></html>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Volty animé</title>
+<style>
+:root{--bg:#0e0b16;--card:#17121f;--line:#2a2236;--txt:#ece6f7;--mut:#9a8fb0;--acc:#9b5cff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,Segoe UI,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:32px 16px 64px}
+h1{margin:0;font-size:28px}
+h2{font-size:18px;margin:48px 0 6px}
+p.sub{color:var(--mut);margin:4px 0 0}
+.controls{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:14px 0;margin-top:20px;display:grid;gap:10px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.row b{min-width:84px;color:var(--mut);font-weight:500}
+button{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
+button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+input[type=range]{width:160px;accent-color:var(--acc)}
+#pct{font-variant-numeric:tabular-nums;width:44px}
+.stage{display:grid;grid-template-columns:minmax(0,460px);justify-content:center;gap:16px;margin-top:24px}
+.grid{display:grid;gap:10px}
+.g5{grid-template-columns:repeat(5,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+.rowlbl{color:var(--mut);font-size:13px;margin:14px 0 6px}
+@media (max-width:640px){.g5,.g3{grid-template-columns:repeat(2,1fr)}}
+
+/* carte + volty */
+.card{--c:#9b5cff;--eye:var(--card);--g:0px;--amp:-2px;position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 10px 12px;display:grid;justify-items:center;gap:6px}
+.card svg.v{width:84px;height:84px;overflow:visible;filter:drop-shadow(0 0 var(--g) color-mix(in srgb,var(--c) 75%,transparent));transition:filter .4s}
+.stage .card svg.v{width:170px;height:170px;margin:10px 0}
+.lbl{font-size:13px;text-align:center}.lbl small{display:block;color:var(--mut)}
+.stage .lbl{font-size:15px}
+.v *{transition:fill .4s}
+.bob,.eye,.bolt,.spark,.z,.sweat{transform-box:fill-box;transform-origin:center}
+.z,.sweat,.spark{opacity:0}
+
+.card[data-season=halloween]{--c:#ff7a1a;--eye:#ffd23f}
+.card[data-season=halloween] .eyes{filter:drop-shadow(0 0 2px #ffd23f)}
+.card[data-season=valentin]{--c:#ff5c9a}
+.card[data-season=paques]{--c:#b49cff}
+.card[data-season=ete]{--c:#22d3c5}
+.card[data-season=nouvelan]{--c:#ffc933}
+
+/* charge de travail */
+[data-load=idle]{--g:0px}
+[data-load=idle] .bob{animation:breathe 4s ease-in-out infinite}
+[data-load=idle] .eye{transform:scaleY(.22)}
+[data-load=idle] .bolt{opacity:.4}
+[data-load=idle] .z{animation:zfloat 3s ease-out infinite}
+[data-load=idle] .z2{animation-delay:1s}[data-load=idle] .z3{animation-delay:2s}
+[data-load=low]{--g:3px;--amp:-2px}
+[data-load=low] .bob{animation:bob 3s ease-in-out infinite}
+[data-load=low] .eye{animation:blink 5s infinite}
+[data-load=mid]{--g:8px;--amp:-3px}
+[data-load=mid] .bob{animation:bob 1.5s ease-in-out infinite}
+[data-load=mid] .eye{animation:blink 4s infinite}
+[data-load=mid] .bolt{animation:pulse 1.5s ease-in-out infinite}
+[data-load=high]{--g:14px;--amp:-4px}
+[data-load=high] .bob{animation:bob .6s ease-in-out infinite}
+[data-load=high] .eye{animation:blink 3s infinite}
+[data-load=high] .bolt{animation:flicker .3s steps(2) infinite}
+[data-load=high] .spark{animation:flicker .4s steps(2) infinite}
+[data-load=high] .s2{animation-delay:.2s}
+[data-load=high] .sweat{animation:drip 1.3s ease-in infinite}
+[data-load=max]{--c:#ff3b3b !important;--g:22px}
+[data-load=max] .bob{animation:shake .12s linear infinite}
+[data-load=max] .bolt{animation:flicker .15s steps(2) infinite}
+[data-load=max] .spark{animation:flicker .2s steps(2) infinite}
+[data-load=max] .s2{animation-delay:.1s}
+[data-load=max] .sweat{animation:drip .8s ease-in infinite}
+
+/* gaming */
+.rgb{animation:rgb 2.4s linear infinite}
+
+@keyframes breathe{50%{transform:scale(1.03,.97)}}
+@keyframes bob{50%{transform:translateY(var(--amp))}}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes pulse{50%{opacity:.55}}
+@keyframes flicker{0%{opacity:1}100%{opacity:.25}}
+@keyframes shake{25%{transform:translate(-1px,.6px)}50%{transform:translate(1px,-.6px)}75%{transform:translate(-.6px,-1px)}}
+@keyframes zfloat{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(6px,-14px) scale(1.1)}}
+@keyframes drip{0%{opacity:0;transform:translateY(-3px)}30%{opacity:1}100%{opacity:0;transform:translateY(9px)}}
+@keyframes rgb{0%,100%{color:#ff2e63}20%{color:#ffb800}40%{color:#2bff88}60%{color:#00c8ff}80%{color:#9b5cff}}
+
+/* particules de période */
+.fx{position:absolute;inset:0;pointer-events:none}
+.p{position:absolute;top:-12%;left:var(--x);animation:fall var(--d) linear var(--dl) infinite}
+.p.rise{top:auto;bottom:-12%;animation-name:rise}
+.p.fly{left:-15%;top:var(--y);animation-name:fly}
+.snow{width:5px;height:5px;border-radius:50%;background:#fff;opacity:.85}
+.heart{color:#ff5c9a;font-size:14px;line-height:1}
+.confetti{width:5px;height:9px;background:var(--h)}
+.bat{width:22px;color:#b98cff}
+@keyframes fall{to{top:112%;transform:translateX(var(--dx)) rotate(var(--r))}}
+@keyframes rise{to{bottom:112%;transform:translateX(var(--dx))}}
+@keyframes fly{25%{transform:translateY(-8px)}50%{transform:translateY(6px)}75%{transform:translateY(-6px)}to{left:115%;transform:translateY(0)}}
+
+/* expressions de Volty : auto = normal, clin d'œil de temps en temps, déterminé quand ça chauffe */
+.ex{display:none}
+[data-expr=normal] .ex-normal,[data-expr=det] .ex-det,[data-expr=wink] .ex-normal{display:inline}
+[data-expr=auto] .ex-normal{display:inline}
+[data-expr=auto]:is([data-load=high],[data-load=max]) .ex-normal{display:none}
+[data-expr=auto]:is([data-load=high],[data-load=max]) .ex-det{display:inline}
+[data-expr=wink]{--wk:3s !important}
+/* clin d'œil auto : l'œil droit se ferme, l'arc apparaît avec un petit rebond, la tête penche, l'œil gauche plisse */
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]){--wk:6s}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .ex-wink{display:inline}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .ex-wink path:first-child{display:none}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .ex-wink path:nth-child(2){opacity:0;animation:winkArc var(--wk) ease-out infinite}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .ex-normal .eye:nth-child(2){animation:winkShut var(--wk) ease-in-out infinite}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .ex-normal .eye:first-child{animation:winkSquint var(--wk) ease-in-out infinite}
+:is([data-expr=auto]:is([data-load=low],[data-load=mid]),[data-expr=wink]) .eyes{transform-box:fill-box;transform-origin:center;animation:winkTilt var(--wk) ease-in-out infinite}
+@keyframes winkShut{0%,38%,44%,78%{transform:scaleY(1);opacity:1}41%{transform:scaleY(.1)}81%{transform:scaleY(.12);opacity:1}81.5%,93%{transform:scaleY(.12);opacity:0}93.5%{transform:scaleY(.12);opacity:1}97%,100%{transform:scaleY(1);opacity:1}}
+@keyframes winkArc{0%,81%{opacity:0;transform:scale(.4)}83.5%{opacity:1;transform:scale(1.2)}86%,92%{opacity:1;transform:scale(1)}93.5%,100%{opacity:0;transform:scale(.5)}}
+@keyframes winkSquint{0%,38%,44%,79%,97%,100%{transform:scaleY(1)}41%{transform:scaleY(.1)}84%,92%{transform:scaleY(.8)}}
+@keyframes winkTilt{0%,79%,97%,100%{transform:none}84%,92%{transform:translate(.6px,-.6px) rotate(-6deg)}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Volty animé</h1>
+  <p class="sub">Volty (expressions normal, déterminé et clin d'œil) réagit à la charge de travail, change de tenue selon la période et met le casque en mode gaming. Les trois réglages se combinent.</p>
+
+  <div class="controls">
+    <div class="row" id="loadBtns"><b>Charge</b>
+      <button data-p="5">Repos</button><button data-p="25">Léger</button><button data-p="50">Moyen</button><button data-p="80">Intense</button><button data-p="100">Surcharge</button>
+      <input type="range" id="range" min="0" max="100" value="50" aria-label="Charge en pourcentage"><span id="pct">50 %</span>
+      <button id="demo" aria-pressed="false">Démo auto</button>
+    </div>
+    <div class="row" id="seasonBtns"><b>Période</b></div>
+    <div class="row" id="exprBtns"><b>Expression</b><button data-e="auto">Auto</button><button data-e="normal">Normal</button><button data-e="det">Déterminé</button><button data-e="wink">Clin d'œil</button></div>
+    <div class="row"><b>Gaming</b><button id="gaming" aria-pressed="false">Casque gaming</button></div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <h2>Expressions de Volty</h2>
+  <p class="sub">En « Auto » : yeux normaux avec un clin d'œil de temps en temps, regard déterminé quand la charge devient intense.</p>
+  <div class="grid g3" id="exprs" style="margin-top:14px"></div>
+
+  <h2>Charge de travail</h2>
+  <p class="sub">Repos : il dort. Léger : il respire. Moyen : l'éclair pulse. Intense : étincelles et sueur. Surcharge : rouge et tremblements.</p>
+  <div id="loads"></div>
+
+  <h2>Périodes</h2>
+  <p class="sub">En mode « Auto », la période est choisie selon la date du jour.</p>
+  <div id="seasons"></div>
+
+  <h2>Mode gaming</h2>
+  <p class="sub">Casque avec micro et LED RGB qui tournent.</p>
+  <div id="gamingRow"></div>
+</main>
+
+<script>
+const BOLT='M39 0L24 15h8l-4 10 15-15h-8z';
+const RBODY='M22 22h20a14 14 0 0 1 14 14v8a14 14 0 0 1-14 14H22A14 14 0 0 1 8 44v-8a14 14 0 0 1 14-14z';
+const TYPES={
+  // un seul Volty, trois expressions : normal, déterminé, clin d'œil
+  1:{name:'Volty',body:`<path d="${RBODY}"/>`,top:22,glasses:[13,32,17,12,34],expr:{
+    normal:['M17 37.5a4.5 4.5 0 0 1 9 0v4a4.5 4.5 0 0 1-9 0z','M38 37.5a4.5 4.5 0 0 1 9 0v4a4.5 4.5 0 0 1-9 0z'],
+    // même ovale que "normal" : déterminé = haut coupé en biais, clin d'œil = un œil fermé en arc
+    det:['M17 34.5l9 3.5v3.5a4.5 4.5 0 0 1-9 0z','M47 34.5l-9 3.5v3.5a4.5 4.5 0 0 0 9 0z'],
+    wink:['M17 37.5a4.5 4.5 0 0 1 9 0v4a4.5 4.5 0 0 1-9 0z','M36.5 44a6 6 0 0 1 12 0h-3.6a2.4 2.4 0 0 0-4.8 0z']}},
+};
+const SEASONS={aucune:'Aucune',halloween:'Halloween',noel:'Noël',valentin:'Saint-Valentin',paques:'Pâques',ete:'Été',nouvelan:'Nouvel an'};
+const LOADS={idle:'Repos',low:'Léger',mid:'Moyen',high:'Intense',max:'Surcharge'};
+const loadOf=p=>p<10?'idle':p<35?'low':p<65?'mid':p<90?'high':'max';
+
+function seasonFor(d){
+  const m=d.getMonth()+1,j=d.getDate(),k=m*100+j;
+  if(k>=1230||k<=102)return'nouvelan';
+  if(k>=1201||k<=106)return'noel';
+  if(k>=1015&&k<=1102)return'halloween';
+  if(k>=207&&k<=215)return'valentin';
+  if(k>=320&&k<=420)return'paques';
+  if(k>=621&&k<=831)return'ete';
+  return'aucune';
+}
+
+function hat(s){
+  if(s==='noel')return`<path d="M10 20Q22-6 44-6Q57-4 59 9L53 11Q51 4 44 6L54 20Z" fill="#e23b3b"/><circle cx="56" cy="10" r="5" fill="#fff"/><rect x="6" y="16" width="52" height="9" rx="4.5" fill="#fff"/>`;
+  if(s==='halloween')return`<path d="M18 19L29-9Q33-15 38-8L46 19Z" fill="#3b1f5c"/><rect x="19" y="12" width="26" height="5" fill="#ff7a1a"/><rect x="29" y="11" width="6" height="7" fill="none" stroke="#ffd23f" stroke-width="1.5"/><ellipse cx="32" cy="20" rx="29" ry="5" fill="#2a1740"/>`;
+  if(s==='nouvelan')return`<g transform="rotate(14 32 20)"><path d="M21 22L32-8 43 22Z" fill="#ff5c9a"/><path d="M25 11l11 5M28 3l6 3M23 17l16 4" stroke="#fff" stroke-width="2.5"/><circle cx="32" cy="-8" r="4" fill="#fff"/></g>`;
+  return'';
+}
+
+function svg(t,o){
+  const T=TYPES[t],s=o.season,dy=T.top-22,hides=['halloween','noel','nouvelan'].includes(s);
+  let back='',front='';
+  if(o.gaming){
+    const band='M3 36v-5a29 27 0 0 1 58 0v5';
+    back+=`<path d="${band}" fill="none" stroke="#3d3552" stroke-width="5"/><path class="rgb" d="${band}" fill="none" stroke="currentColor" stroke-width="1.4"/>`;
+  }
+  if(s==='paques')back+=`<g transform="translate(0 ${dy})"><ellipse cx="19" cy="6" rx="6" ry="17" transform="rotate(-16 19 6)" fill="var(--c)"/><ellipse cx="19" cy="7" rx="3" ry="12" transform="rotate(-16 19 7)" fill="#ffc2dc"/><ellipse cx="45" cy="6" rx="6" ry="17" transform="rotate(16 45 6)" fill="var(--c)"/><ellipse cx="45" cy="7" rx="3" ry="12" transform="rotate(16 45 7)" fill="#ffc2dc"/></g>`;
+  if(s==='ete'){const[x,y,w,h,x2]=T.glasses;front+=`<g fill="#111"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/><rect x="${x2}" y="${y}" width="${w}" height="${h}" rx="3"/><rect x="${x+w}" y="${y+3}" width="${x2-x-w}" height="2.5"/></g><path d="M${x+3} ${y+3}l4 0M${x2+3} ${y+3}l4 0" stroke="#fff" stroke-width="1.5" opacity=".7"/>`;}
+  if(s==='valentin')front+=`<ellipse cx="13" cy="51" rx="4" ry="2.5" fill="#fff" opacity=".35"/><ellipse cx="51" cy="51" rx="4" ry="2.5" fill="#fff" opacity=".35"/>`;
+  front+=`<g transform="translate(0 ${dy})">${hat(s)}</g>`;
+  if(o.gaming)front+=`<g fill="#3d3552"><rect x="-2" y="28" width="11" height="22" rx="4"/><rect x="55" y="28" width="11" height="22" rx="4"/></g><g class="rgb" fill="currentColor"><rect x="0" y="33" width="2.5" height="12" rx="1"/><rect x="61.5" y="33" width="2.5" height="12" rx="1"/><circle cx="21" cy="59" r="2.6"/></g><path d="M3 49c0 8 6 10 15 10" fill="none" stroke="#3d3552" stroke-width="3" stroke-linecap="round"/>`;
+  // indicateurs de charge
+  front+=`<g fill="var(--c)" font-weight="700" font-family="system-ui"><text class="z" x="50" y="${T.top-6}" font-size="8">z</text><text class="z z2" x="55" y="${T.top-10}" font-size="10">z</text><text class="z z3" x="60" y="${T.top-15}" font-size="12">Z</text></g>`;
+  front+=`<path class="sweat" d="M57 ${T.top+1}c3 4 4 6 4 8a4 4 0 0 1-8 0c0-2 1-4 4-8z" fill="#7fd8ff"/>`;
+  front+=`<path class="spark" d="${BOLT}" fill="#ffe14d" transform="translate(-6 10) scale(.38)"/><path class="spark s2" d="${BOLT}" fill="#ffe14d" transform="translate(52 0) scale(.32)"/>`;
+  const paths=a=>a.map((d,i)=>`<path class="${i<2?'eye':''}" d="${d}"/>`).join('');
+  const eyes=`<g class="eyes" fill="var(--eye)">${T.expr?Object.entries(T.expr).map(([k,a])=>`<g class="ex ex-${k}">${paths(a)}</g>`).join(''):paths(T.eyes)+(T.mouth?`<path d="${T.mouth}"/>`:'')}</g>`;
+  return`<svg class="v" viewBox="0 0 64 64" role="img" aria-label="${T.name}"><g class="bob">${back}${hides?'':`<path class="bolt" d="${BOLT}" fill="var(--c)"/>`}<g fill="var(--c)">${T.body}</g>${eyes}${front}</g></svg>`;
+}
+
+function fx(s,n){
+  const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(2);
+  const one={
+    noel:()=>`<i class="p snow" style="--x:${r(0,100)}%;--d:${r(4,8)}s;--dl:-${r(0,8)}s;--dx:${r(-20,20)}px;--r:0deg"></i>`,
+    nouvelan:()=>`<i class="p confetti" style="--x:${r(0,100)}%;--d:${r(3,6)}s;--dl:-${r(0,6)}s;--dx:${r(-30,30)}px;--r:${r(180,720)}deg;--h:hsl(${r(0,360)} 90% 60%)"></i>`,
+    valentin:()=>`<i class="p rise heart" style="--x:${r(0,95)}%;--d:${r(4,7)}s;--dl:-${r(0,7)}s;--dx:${r(-20,20)}px">♥</i>`,
+    halloween:()=>`<i class="p fly bat" style="--y:${r(5,55)}%;--d:${r(5,9)}s;--dl:-${r(0,9)}s"><svg viewBox="0 0 24 12" fill="currentColor"><path d="M12 3c1-2 2-2 3 0 2-2 5-3 9-1-2 1-3 3-3 6-2-2-4-1-5 1-1-1-2-2-4-2s-3 1-4 2c-1-2-3-3-5-1 0-3-1-5-3-6 4-2 7-1 9 1 1-2 2-2 3 0z"/></svg></i>`
+  }[s];
+  if(!one)return'';
+  const k={noel:1,nouvelan:1.2,valentin:.5,halloween:.3}[s];
+  return Array.from({length:Math.round(n*k)},one).join('');
+}
+
+function card(t,o,big){
+  return`<div class="card" data-load="${o.load}" data-season="${o.season}" data-expr="${o.expr||'auto'}"><div class="fx">${fx(o.season,big?16:8)}</div>${svg(t,o)}<div class="lbl">${o.title||TYPES[t].name}<small>${o.sub||LOADS[o.load]}</small></div></div>`;
+}
+
+// galeries statiques
+document.getElementById('loads').innerHTML=`<div class="grid g5" style="margin-top:14px">${Object.entries(LOADS).map(([l,lbl])=>card(1,{load:l,season:'aucune',title:lbl,sub:' '})).join('')}</div>`;
+document.getElementById('seasons').innerHTML=`<div class="grid g3" style="margin-top:14px">${Object.entries(SEASONS).filter(([s])=>s!=='aucune').map(([s,lbl])=>card(1,{load:'mid',season:s,title:lbl,sub:' '})).join('')}</div>`;
+document.getElementById('gamingRow').innerHTML=`<div class="grid g3" style="margin-top:14px">${['low','high','max'].map(l=>card(1,{load:l,season:'aucune',gaming:true,title:LOADS[l],sub:' '})).join('')}</div>`;
+document.getElementById('exprs').innerHTML=[['normal','Normal'],['det','Déterminé'],['wink',"Clin d'œil"]].map(([e,l])=>card(1,{load:'mid',season:'aucune',expr:e,title:l,sub:' '})).join('');
+
+// scène interactive
+const st={pct:50,season:'auto',gaming:false,expr:'auto',timer:null};
+const stage=document.getElementById('stage'),range=document.getElementById('range'),pct=document.getElementById('pct');
+const sb=document.getElementById('seasonBtns');
+sb.innerHTML+=`<button data-s="auto">Auto (${SEASONS[seasonFor(new Date())]})</button>`+Object.entries(SEASONS).map(([s,l])=>`<button data-s="${s}">${l}</button>`).join('');
+
+function renderStage(){
+  const season=st.season==='auto'?seasonFor(new Date()):st.season;
+  stage.innerHTML=[1].map(t=>card(t,{load:loadOf(st.pct),season,gaming:st.gaming,expr:st.expr},true)).join('');
+  document.querySelectorAll('#exprBtns button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.e===st.expr));
+  sb.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===st.season));
+  setLoad(st.pct);
+}
+function setLoad(p){
+  st.pct=p;range.value=p;pct.textContent=Math.round(p)+' %';
+  const l=loadOf(p);
+  stage.querySelectorAll('.card').forEach(c=>{c.dataset.load=l;c.querySelector('small').textContent=LOADS[l]+' · '+Math.round(p)+' %'});
+  document.querySelectorAll('#loadBtns [data-p]').forEach(b=>b.setAttribute('aria-pressed',loadOf(+b.dataset.p)===l));
+}
+document.getElementById('loadBtns').addEventListener('click',e=>{if(e.target.dataset.p)setLoad(+e.target.dataset.p)});
+range.addEventListener('input',()=>setLoad(+range.value));
+sb.addEventListener('click',e=>{if(e.target.dataset.s){st.season=e.target.dataset.s;renderStage()}});
+document.getElementById('exprBtns').addEventListener('click',e=>{if(e.target.dataset.e){st.expr=e.target.dataset.e;renderStage()}});
+document.getElementById('gaming').addEventListener('click',e=>{st.gaming=!st.gaming;e.target.setAttribute('aria-pressed',st.gaming);renderStage()});
+document.getElementById('demo').addEventListener('click',e=>{
+  const on=!st.timer;e.target.setAttribute('aria-pressed',on);
+  if(on)st.timer=setInterval(()=>setLoad(Math.max(0,Math.min(100,st.pct+(Math.random()-.45)*30))),900);
+  else{clearInterval(st.timer);st.timer=null}
+});
+renderStage();
+</script>
+</body>
+</html>

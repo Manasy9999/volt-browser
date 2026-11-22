@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Réglages : palette clavier</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.page{height:calc(100% - 76px);padding:24px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.page div{background:var(--s1);border-radius:12px}
+.page .v{display:grid;place-items:center;color:var(--mu)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:flex-start;padding-top:110px}
+.scrim[hidden]{display:none}
+.pal{width:640px;max-height:calc(100% - 150px);display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.pal .in{display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line)}
+.pal .in svg{color:var(--mu)}
+.pal .in input:focus-visible{outline:none}.pal .in input{flex:1;height:54px;border:0;background:none;font-size:16px;padding:0}
+.pal .list{overflow:auto;padding:6px}
+.pal h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);font-weight:600;padding:10px 10px 4px}
+.it{border-radius:9px;cursor:pointer}
+.it .row{border:0!important;padding:8px 10px;min-height:48px}
+.it .path{font-size:11.5px;color:var(--mu)}
+.it.sel{background:var(--s2);box-shadow:inset 2px 0 0 var(--a)}
+.it .row .c select,.it .row .c input[type=text]{width:190px}
+.foot{display:flex;gap:16px;padding:10px 16px;border-top:1px solid var(--line);color:var(--mu);font-size:12px}
+.foot span{display:flex;align-items:center;gap:6px}
+.hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 16px;border-radius:10px;background:var(--s2);color:var(--mu)}
+#restart{margin:6px}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome("youtube.com/watch?v=…","Vidéo"))</script>
+<div class="page"><div class="v">Page en cours (vidéo, jeu…)</div><div></div></div>
+<div class="hint">Appuyez sur <kbd>Ctrl</kbd> <kbd>,</kbd> pour ouvrir les réglages</div>
+<div class="scrim" id="scrim">
+  <div class="pal" role="dialog" aria-label="Réglages">
+    <div class="in"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" placeholder="Tapez un réglage : veille, nuit, moteur…" aria-label="Rechercher un réglage" autocomplete="off"><kbd>Échap</kbd></div>
+    <div class="list" id="list"></div>
+    <div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>Entrée</kbd> activer</span><span><kbd>←</kbd><kbd>→</kbd> changer la valeur</span><span><kbd>Tab</kbd> modifier le champ</span></div>
+  </div>
+</div>
+<script>
+let sel=0,items=[];
+const list=document.getElementById("list"),inp=document.getElementById("q"),scrim=document.getElementById("scrim");
+const RECENT=["game_mode","sleep_min","night"];
+function draw(){
+  const q=inp.value;
+  let groups;
+  if(q.trim())groups=[["Résultats",find(q)]];
+  else groups=[["Récents",RECENT.map(k=>ALL.find(x=>x.it.k===k))],["Accès rapide",ALL.filter(x=>x.it.quick&&!RECENT.includes(x.it.k))]];
+  list.innerHTML=restartBar();
+  items=[];
+  groups.forEach(([t,xs])=>{
+    if(!xs.length)return;
+    list.insertAdjacentHTML("beforeend",`<h3>${t}</h3>`);
+    xs.forEach(x=>{
+      const d=document.createElement("div");d.className="it";
+      const r=row(x.it,q);r.querySelector(".l")?.insertAdjacentHTML("beforeend",`<div class="path">${x.sec.name}</div>`);
+      d.append(r);d.onmouseenter=()=>{sel=items.indexOf(d);markSel()};d.onclick=e=>{if(!e.target.closest(".c"))act(0)};
+      list.append(d);items.push(d);d._it=x.it;
+    });
+  });
+  if(!items.length)list.insertAdjacentHTML("beforeend",`<div class="empty">Aucun réglage pour « ${esc(q)} »</div>`);
+  sel=Math.min(sel,Math.max(items.length-1,0));markSel();
+  document.getElementById("restart").classList.toggle("on",needRestart);
+}
+function markSel(){items.forEach((d,i)=>d.classList.toggle("sel",i===sel));items[sel]?.scrollIntoView({block:"nearest"})}
+function act(dir){
+  const it=items[sel]?._it;if(!it)return;
+  if(it.t==="toggle"&&!dir)set(it.k,!STATE[it.k]);
+  else if(it.t==="select"){const i=it.opts.indexOf(STATE[it.k]);set(it.k,it.opts[(i+(dir||1)+it.opts.length)%it.opts.length])}
+  else items[sel].querySelector("input,select,button")?.focus();
+  const keep=sel;draw();sel=keep;markSel();
+}
+inp.oninput=()=>{sel=0;draw()};
+addEventListener("keydown",e=>{
+  if(e.ctrlKey&&e.key===","){e.preventDefault();scrim.hidden=false;inp.focus();return}
+  if(scrim.hidden)return;
+  if(e.key==="Escape"){scrim.hidden=true;return}
+  if(document.activeElement!==inp)return;
+  if(e.key==="ArrowDown"){e.preventDefault();sel=Math.min(sel+1,items.length-1);markSel()}
+  else if(e.key==="ArrowUp"){e.preventDefault();sel=Math.max(sel-1,0);markSel()}
+  else if(e.key==="Enter"){e.preventDefault();act(0)}
+  else if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&items[sel]?._it.t==="select"){e.preventDefault();act(e.key==="ArrowLeft"?-1:1)}
+});
+scrim.onclick=e=>{if(e.target===scrim)scrim.hidden=true};
+draw();inp.focus();
+</script>
+</body></html>

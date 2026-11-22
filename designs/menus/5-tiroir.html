@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Réglages : tiroir rapide</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.page{height:calc(100% - 76px);padding:24px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.page div{background:var(--s1);border-radius:12px}
+.page .v{display:grid;place-items:center;color:var(--mu)}
+.drawer{position:fixed;top:76px;right:0;bottom:0;width:380px;background:var(--s1);border-left:1px solid var(--line);box-shadow:-20px 0 60px rgba(0,0,0,.45);display:flex;flex-direction:column;transition:transform .2s ease}
+.drawer.off{transform:translateX(100%)}
+.dh{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.dh b{font-size:16px}
+.dh button{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
+.dh button:hover{background:var(--s2);color:var(--tx)}
+.db{flex:1;overflow:auto;padding:0 18px 18px;display:flex;flex-direction:column;gap:16px}
+h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);font-weight:600;margin-bottom:8px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:12px;background:var(--bg)}
+.seg button{padding:10px 6px;border-radius:9px;color:var(--mu);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:500}
+.seg button.on{background:var(--s2);color:var(--tx);box-shadow:inset 0 0 0 1px var(--line)}
+.seg button.on svg{color:var(--a)}
+.does{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.does span{font-size:12px;padding:3px 9px;border-radius:10px;background:var(--s2);color:var(--mu)}
+.db .card{background:var(--bg)}
+.db .row{padding:10px 12px;min-height:52px}
+.db .row .c select{width:150px}
+.all{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);color:var(--tx);width:100%}
+.all:hover{border-color:var(--a)}
+.all span{color:var(--mu)}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome("store.steampowered.com","Steam"))</script>
+<div class="page"><div class="v">Page en cours : le tiroir s'ouvre par-dessus, sans quitter l'onglet</div><div></div></div>
+<aside class="drawer" id="dr" aria-label="Réglages rapides">
+  <div class="dh"><b>Réglages rapides</b><button id="close" title="Fermer (Échap)"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db" id="db"></div>
+</aside>
+<script>
+const PROFILES={
+  normal:{name:"Normal",icon:"general",set:{game_mode:false,sleep_min:"Après 10 min",night:false},does:["Tout par défaut"]},
+  jeu:{name:"Jeu",icon:"jeu",set:{game_mode:true,sleep_min:"Après 5 min",adblock:true},does:["Mode Jeu","Veille après 5 min","Bloqueur actif"]},
+  nuit:{name:"Nuit",icon:"look",set:{night:true,dark_web:true,game_mode:false},does:["Mode nuit","Sites en sombre"]},
+};
+const cur=()=>Object.entries(PROFILES).find(([,p])=>Object.entries(p.set).every(([k,v])=>STATE[k]===v))?.[0];
+const db=document.getElementById("db"),dr=document.getElementById("dr");
+function draw(){
+  const c=cur();
+  db.innerHTML=`<div><h4>Profil</h4><div class="seg">${Object.entries(PROFILES).map(([id,p])=>`<button data-p="${id}" class="${c===id?"on":""}" aria-pressed="${c===id}">${ico(p.icon)}${p.name}</button>`).join("")}</div>
+    <div class="does">${c?PROFILES[c].does.map(d=>`<span>${d}</span>`).join(""):"<span>Profil personnalisé</span>"}</div></div>
+    ${restartBar()}
+    <div><h4>Essentiels</h4><div class="card" id="ess"></div></div>
+    <button class="all"><b>Tous les réglages</b><span><kbd>Ctrl</kbd> <kbd>,</kbd></span></button>`;
+  const ess=["game_mode","sleep_min","adblock","night","favbar"].map(k=>ALL.find(x=>x.it.k===k).it);
+  document.getElementById("ess").append(...ess.map(it=>row(it)));
+  db.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{Object.entries(PROFILES[b.dataset.p].set).forEach(([k,v])=>set(k,v));draw()});
+  document.getElementById("restart").classList.toggle("on",needRestart);
+}
+addEventListener("volt-change",()=>draw());
+document.getElementById("close").onclick=()=>dr.classList.add("off");
+document.querySelector(".chrome .ib:last-child").onclick=()=>dr.classList.toggle("off");
+addEventListener("keydown",e=>{if(e.key==="Escape")dr.classList.add("off")});
+draw();
+</script>
+</body></html>

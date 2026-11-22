@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Barre de favoris</title>
+<link rel="stylesheet" href="base.css">
+<style>
+html{scrollbar-width:auto}
+main{max-width:1320px;margin:0 auto;padding:32px 16px 64px;line-height:1.5}
+h1{font-size:26px;font-weight:600}
+p.sub{color:var(--mu);margin:6px 0 8px;max-width:860px}
+.m{margin-top:40px}
+.m h2{font-size:18px;font-weight:600;display:flex;align-items:baseline;gap:12px}
+.m h2 a{font-size:13px;font-weight:400;color:var(--a)}
+.m ul{color:var(--mu);margin:6px 0 12px 18px;max-width:960px}
+.m ul b{color:var(--tx);font-weight:500}
+.frame{width:1282px;max-width:100%;height:720px;border:1px solid var(--bg3);border-radius:12px;overflow:hidden}
+.frame iframe{width:1280px;height:100%;border:0;display:block}
+</style></head><body><main>
+<h1>Barre de favoris : 3 propositions</h1>
+<p class="sub">Mêmes données partout : 9 dossiers, 14 favoris hors dossier, 138 en tout. Les trois affichent la vraie icône du site (lettre neutre en secours), donnent accès à tout ce qui ne tient pas sans rien faire déborder sur la page, et retirent les cadres colorés. Le bouton « 138 » / « Tout voir » ouvre la page de favoris.</p>
+
+<div class="m"><h2>1. Ruban <a href="1-ruban.html" target="_blank">Ouvrir en plein écran ↗</a></h2>
+<ul><li><b>Parti pris :</b> la barre actuelle, épurée. Une seule rangée de 30 px qui défile à la molette, avec flèches et fondu aux bords seulement quand il reste quelque chose de caché. Un dossier remplace le contenu, comme aujourd'hui, et un filet de sa couleur sous la bande indique où l'on est.</li>
+<li><b>Gain / perte :</b> le changement le plus simple à intégrer et à comprendre, rien de nouveau à apprendre. En revanche, les 9 dossiers occupent la moitié de la bande : à 1280 px on ne voit que 5 favoris, le reste demande de défiler.</li></ul>
+<div class="frame"><iframe src="1-ruban.html" title="Ruban"></iframe></div></div>
+
+<div class="m"><h2>2. Icônes <a href="2-icones.html" target="_blank">Ouvrir en plein écran ↗</a></h2>
+<ul><li><b>Parti pris :</b> icônes seules (28 px chacune), le nom et l'adresse du site survolé s'affichent à droite dans la bande. Un dossier se déplie sur place, à côté de lui, sur un fond légèrement teinté. Ce qui ne tient pas passe en pages (molette ou ‹ 1/2 ›).</li>
+<li><b>Gain / perte :</b> c'est la plus dense : les 23 éléments de la racine tiennent sur une seule page à 1280 px, et la bande reste à 30 px. En revanche, il faut reconnaître les sites à leur icône : un favori sans favicon n'a plus qu'une lettre, et deux dossiers sans icône ne se distinguent que par leur couleur.</li></ul>
+<div class="frame"><iframe src="2-icones.html" title="Icônes"></iframe></div></div>
+
+<div class="m"><h2>3. Étagères <a href="3-etageres.html" target="_blank">Ouvrir en plein écran ↗</a></h2>
+<ul><li><b>Parti pris :</b> deux rangées. En haut, les dossiers en onglets avec leur nombre de favoris (les favoris hors dossier ont leur onglet « Favoris ») ; en bas, le contenu de l'onglet choisi. Ce qui ne tient pas se résume en « +N » qui affiche la suite à la place.</li>
+<li><b>Gain / perte :</b> chaque dossier reste à un clic, sans bouton Retour, et on voit toujours où l'on est. En revanche, la bande passe de 30 à 56 px, soit 26 px de moins pour la page, et ces 26 px se payent aussi en plein jeu si la barre reste affichée.</li></ul>
+<div class="frame"><iframe src="3-etageres.html" title="Étagères"></iframe></div></div>
+</main></body></html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Favoris : lanceur clavier</title>
+<link rel="stylesheet" href="base.css">
+<style>
+main{display:flex;flex-direction:column;padding:0;overflow:hidden}
+.head{padding:26px 40px 14px}
+.field{position:relative;max-width:720px;margin:0 auto}
+.field>svg{position:absolute;left:16px;top:16px;width:20px;height:20px;color:var(--mu)}
+.field input{width:100%;height:52px;padding:0 16px 0 48px;border-radius:14px;border:1px solid var(--bg3);background:var(--bg2);color:var(--tx);font:inherit;font-size:16px;outline:0}
+.field input:focus{border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 20%,transparent)}
+.field .chip{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 8px;border-radius:8px;background:color-mix(in srgb,var(--c) 18%,var(--bg3));font-size:12.5px}
+.field .chip .x{width:20px;height:20px}
+.keys{max-width:720px;margin:8px auto 0;display:flex;gap:16px;color:var(--mu);font-size:12px}
+.keys span{display:flex;align-items:center;gap:5px}
+.scroll{flex:1;overflow:auto;padding:10px 40px 18px}
+/* vue « tout » : 140 favoris en colonnes, groupés par dossier */
+.cols{columns:5 190px;column-gap:28px}
+.cols h4{display:flex;align-items:center;gap:8px;margin:14px 0 4px;padding:4px 6px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);break-after:avoid;width:100%;text-align:left}
+.cols h4:first-child{margin-top:0}
+.cols h4:hover{background:var(--bg2);color:var(--tx)}
+.cols h4 i{width:8px;height:8px;border-radius:2px;background:var(--c);flex:none}
+.cols h4 .n{margin-left:auto;font-weight:400;letter-spacing:0}
+.li{display:flex;align-items:center;gap:9px;width:100%;height:25px;padding:0 6px;border-radius:6px;text-align:left;break-inside:avoid}
+.li:hover{background:var(--bg2)}
+.li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* vue filtrée : liste pilotée au clavier */
+.res{max-width:720px;margin:0 auto}
+.r{display:flex;align-items:center;gap:12px;width:100%;height:40px;padding:0 12px;border-radius:8px;text-align:left}
+.r:hover{background:var(--bg2)}
+.r.k{background:var(--bg3);box-shadow:inset 3px 0 0 var(--a)}
+.r .nm{font-weight:500;white-space:nowrap}
+.r .u{color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.r .dn{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px;white-space:nowrap}
+.r .dn i{width:8px;height:8px;border-radius:2px;background:var(--c)}
+.r .ent{opacity:0}
+.r.k .ent{opacity:1}
+.r .gi{width:24px;height:24px;display:grid;place-items:center;color:var(--mu);flex:none}
+.sep{height:1px;background:var(--bg3);margin:6px 12px}
+.foot{display:flex;align-items:center;gap:14px;padding:10px 40px;border-top:1px solid var(--bg3)}
+.foot .def{display:flex;align-items:center;gap:12px}
+.foot .def .btn{height:30px;padding:0 12px;font-size:12.5px}
+.foot .def small{font-size:12px}
+.foot .lnk{margin-left:auto}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<div id="panel"><main>
+  <div class="head"><div class="field" id="fieldbox"></div>
+    <div class="keys"><span><kbd>↑</kbd><kbd>↓</kbd> choisir</span><span><kbd>Entrée</kbd> ouvrir</span><span><kbd>Ctrl</kbd><kbd>Entrée</kbd> nouvel onglet</span><span><kbd>Échap</kbd> effacer</span></div></div>
+  <div class="scroll" id="scroll"></div>
+  <div class="foot" id="foot"></div>
+</main></div>
+<script>
+let q=P.get("q")||"",dirF=P.get("dossier")||"",k=0,list=[];
+$("#fieldbox").innerHTML=`${ic("search")}<input id="f" autocomplete="off" placeholder="Tapez le nom d'un favori, ou une recherche web" aria-label="Favori ou recherche web"><span id="chip"></span>`;
+const f=$("#f");f.value=q;
+function draw(){
+  const d=FOLDERS.find(x=>x.id===dirF);
+  $("#chip").innerHTML=d?`<span class="chip" style="--c:${d.c}">${esc(d.name)}<button class="x" id="unchip" title="Retirer le dossier">${'<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>'}</button></span>`:"";
+  $("#unchip")&&($("#unchip").onclick=()=>{dirF="";draw();f.focus()});
+  if(!q&&!d){
+    $("#scroll").innerHTML=`<div class="cols in">${[[null,LOOSE_FAVS],...FOLDERS.map(x=>[x,x.items])].map(([x,items])=>
+      `<h4 ${x?`data-d="${x.id}" style="--c:${x.c}"`:`style="--c:var(--mu)"`} role="button" title="${x?"Ne montrer que ce dossier":""}"><i></i>${x?esc(x.name):"Sans dossier"}<span class="n">${items.length}</span></h4>`
+      +items.map(f=>`<button class="li" data-u="${f.u}" title="${esc(f.u)}">${fav(f)}<span>${esc(f.n)}</span></button>`).join("")).join("")}</div>`;
+    $$(".cols h4[data-d]").forEach(h=>h.onclick=()=>{dirF=h.dataset.d;k=0;draw();f.focus()});
+    $$(".li").forEach(b=>b.onclick=()=>open(FAVS.find(x=>x.u===b.dataset.u)));
+    list=[];return;
+  }
+  const pool=d?d.items:FAVS;
+  list=pool.filter(x=>!q||match(x,q)).map(x=>({fav:x}));
+  if(q){
+    if(/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(q))list.push({go:q});
+    list.push({web:q});
+  }
+  k=Math.min(k,list.length-1);
+  const row=(it,i)=>{
+    if(it.web)return`<button class="r" data-i="${i}"><span class="gi">${ic("search")}</span><span class="nm">Rechercher « ${esc(it.web)} » sur Google</span><span class="u"></span><kbd class="ent">Entrée</kbd></button>`;
+    if(it.go)return`<button class="r" data-i="${i}"><span class="gi">${ic("globe")}</span><span class="nm">Aller à ${esc(it.go)}</span><span class="u"></span><kbd class="ent">Entrée</kbd></button>`;
+    const x=it.fav,dd=dirOf(x);
+    return`<button class="r" data-i="${i}">${fav(x,"m")}<span class="nm">${hl(x.n,q)}</span><span class="u">${esc(x.u)}</span>${dd&&!d?`<span class="dn" style="--c:${dd.c}"><i></i>${esc(dd.name)}</span>`:""}<kbd class="ent">Entrée</kbd></button>`;
+  };
+  const nf=list.filter(x=>x.fav).length;
+  $("#scroll").innerHTML=`<div class="res">${list.map((it,i)=>(i===nf&&nf?'<div class="sep"></div>':"")+row(it,i)).join("")}</div>`;
+  $$(".r").forEach(b=>{b.onclick=()=>{k=+b.dataset.i;go()};b.onmousemove=()=>{if(k!==+b.dataset.i){k=+b.dataset.i;mark()}}});
+  mark();
+}
+function mark(){$$(".r").forEach(b=>b.classList.toggle("k",+b.dataset.i===k));$(".r.k")?.scrollIntoView({block:"nearest"})}
+function go(){const it=list[k];if(!it)return;it.fav?open(it.fav):it.go?toast(`Ouverture de ${it.go}`):toast(`Recherche Google : ${it.web}`)}
+f.oninput=()=>{q=f.value.trim();k=0;draw()};
+f.onkeydown=e=>{
+  if(e.key==="ArrowDown"){k=Math.min(k+1,list.length-1);mark();e.preventDefault()}
+  if(e.key==="ArrowUp"){k=Math.max(k-1,0);mark();e.preventDefault()}
+  if(e.key==="Enter"){if(!q&&!dirF)return;go()}
+  if(e.key==="Escape"){f.value="";q="";dirF="";draw()}
+  if(e.key==="Backspace"&&!f.value&&dirF){dirF="";draw()}
+};
+function foot(){$("#foot").innerHTML=`${defBlock()}<button class="lnk" id="manage">${ic("gear")}Gérer les favoris</button>`;
+  $("#manage").onclick=()=>toast("Ouvre Réglages › Favoris");wireDefault($("#foot"),foot)}
+foot();draw();f.focus();
+</script>
+</body></html>

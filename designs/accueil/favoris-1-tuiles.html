@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Favoris : tuiles et dossiers</title>
+<link rel="stylesheet" href="base.css">
+<style>
+main{padding:26px 40px 32px}
+.wrap{max-width:1040px;margin:0 auto}
+.srch{max-width:680px;margin:0 auto 26px}
+.sec{display:flex;align-items:center;gap:12px;margin:0 0 10px}
+.sec .cap{margin:0}
+.sec .flt{margin-left:auto;position:relative}
+.sec .flt svg{position:absolute;left:10px;top:9px;color:var(--mu)}
+.sec .flt input{width:240px;padding-left:34px;padding-right:36px}
+.sec .flt kbd{position:absolute;right:8px;top:7px}
+.dirs{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;margin-bottom:22px}
+.dir{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;border-radius:var(--r);transition:background .15s}
+.dir:hover{background:var(--bg2)}
+.dir .box{position:relative;width:64px;height:64px;border-radius:16px;display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:11px;
+  background:color-mix(in srgb,var(--c) 16%,var(--bg2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent);transition:transform .15s}
+.dir:hover .box{transform:translateY(-2px)}
+.dir .box .fi{width:18px;height:18px;font-size:10px}
+.dir .box .fi svg{width:11px;height:11px}
+.dir .em{position:absolute;right:-6px;bottom:-6px;font-size:16px;line-height:1}
+.dir b{font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dir small{color:var(--mu);font-size:12px;margin-top:-6px}
+.dir.on{background:var(--bg2)}
+.dir.on .box{box-shadow:inset 0 0 0 2px var(--c)}
+.drawer{margin:0 0 22px;padding:14px 14px 10px;border-radius:var(--r);background:var(--bg2);border-top:2px solid var(--c)}
+.dirs+.drawer{margin-top:-14px}
+.drawer .hd{display:flex;align-items:center;gap:10px;margin:0 4px 8px}
+.drawer .hd b{font-weight:600;font-size:14px}
+.drawer .hd .n{color:var(--mu)}
+.drawer .hd .x{margin-left:auto;width:28px;height:28px}
+.drawer .tiles{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+.drawer .tl:hover{background:var(--bg3)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px;margin-bottom:24px}
+.tl{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;border-radius:var(--r);min-width:0;transition:background .15s}
+.tl:hover{background:var(--bg2)}
+.tl.k{background:var(--bg2);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 60%,transparent)}
+.tl span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.tl small{display:block;color:var(--mu);font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.foot{display:flex;align-items:center;gap:14px;padding-top:14px;border-top:1px solid var(--bg3)}
+.foot .def{display:flex;align-items:center;gap:12px}
+.foot .def .btn{height:30px;padding:0 12px;font-size:12.5px}
+.foot .def small{font-size:12px}
+.foot .lnk{margin-left:auto}
+.none{padding:40px;text-align:center;color:var(--mu);background:var(--bg2);border-radius:var(--r);margin-bottom:24px}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<div id="panel"><main><div class="wrap" id="app"></div></main></div>
+<script>
+let openD=P.get("dossier")||"",q=P.get("q")||"";
+const tl=(f,dir)=>`<button class="tl" data-u="${f.u}" title="${esc(f.n)} · ${esc(f.u)}">${fav(f,"g")}<span>${hl(f.n,q)}${dir&&dirOf(f)?`<small>${esc(dirOf(f).name)}</small>`:""}</span></button>`;
+function draw(){
+  const d=FOLDERS.find(x=>x.id===openD);
+  let body;
+  if(q){
+    const r=FAVS.filter(f=>match(f,q));
+    body=`<div class="sec"><h3 class="cap">${r.length} favori${r.length>1?"s":""} pour « ${esc(q)} »</h3>${flt()}</div>`
+      +(r.length?`<div class="tiles in">${r.map(f=>tl(f,true)).join("")}</div>`:`<div class="none">Aucun favori ne correspond. <kbd>Entrée</kbd> cherche « ${esc(q)} » sur Google.</div>`);
+  }else{
+    body=`<div class="sec"><h3 class="cap">Dossiers</h3>${flt()}</div>
+    <div class="dirs">${FOLDERS.map(x=>`<button class="dir ${x.id===openD?"on":""}" data-d="${x.id}" style="--c:${x.c}"><span class="box">${x.items.slice(0,4).map(f=>fav(f)).join("")}${x.e?`<span class="em">${x.e}</span>`:""}</span><b>${esc(x.name)}</b><small>${x.items.length} sites</small></button>`).join("")}</div>
+    ${d?`<div class="drawer in" style="--c:${d.c}"><div class="hd">${dico(d)}<b>${esc(d.name)}</b><span class="n">${d.items.length}</span><button class="x" id="cl" title="Fermer le dossier"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="tiles" style="margin:0">${d.items.map(f=>tl(f)).join("")}</div></div>`:""}
+    <div class="sec"><h3 class="cap">Sans dossier</h3></div>
+    <div class="tiles">${LOOSE_FAVS.map(f=>tl(f)).join("")}</div>`;
+  }
+  $("#app").innerHTML=`<div class="srch">${ic("search")}<input type="search" id="web" placeholder="Rechercher sur Google ou saisir une adresse" aria-label="Rechercher sur le web"></div>`
+    +body+`<div class="foot">${defBlock()}<button class="lnk" id="manage">${ic("gear")}Gérer les favoris</button></div>`;
+  $$(".dir").forEach(b=>b.onclick=()=>{openD=openD===b.dataset.d?"":b.dataset.d;draw()});
+  $("#cl")&&($("#cl").onclick=()=>{openD="";draw()});
+  $$(".tl").forEach((b,i)=>{b.classList.toggle("k",!!q&&i===0);b.onclick=()=>open(FAVS.find(f=>f.u===b.dataset.u))});
+  $("#manage").onclick=()=>toast("Ouvre Réglages › Favoris");
+  wireDefault($("#app"),draw);
+  const fl=$("#flt");fl.oninput=()=>{q=fl.value.trim();draw();const n=$("#flt");n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+  fl.onkeydown=e=>{if(e.key==="Escape"){q="";draw()}if(e.key==="Enter"){const r=FAVS.filter(f=>match(f,q));r.length?open(r[0]):toast(`Recherche Google : ${q}`)}};
+  const w=$("#web");w.onkeydown=e=>{if(e.key==="Enter"&&w.value.trim())toast(`Recherche Google : ${w.value}`)};
+}
+const flt=()=>`<div class="flt">${ic("search")}<input type="search" id="flt" placeholder="Filtrer les favoris" aria-label="Filtrer les favoris" value="${esc(q)}"><kbd>/</kbd></div>`;
+addEventListener("keydown",e=>{const a=document.activeElement;if(a&&a.tagName==="INPUT")return;
+  if(e.key==="/"||(e.key.length===1&&/\w/.test(e.key)&&!e.ctrlKey)){e.preventDefault();const f=$("#flt");f.focus();if(e.key!=="/"){f.value=e.key;f.oninput()}}});
+draw();
+</script>
+</body></html>

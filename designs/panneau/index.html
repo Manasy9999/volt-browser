@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Panneau Historique et Cookies</title>
+<meta name="viewport" content="width=1280">
+<style>
+/* Variables recopiées de src/ui.html (thème par défaut). Couleurs et rayons : uniquement ces variables. */
+:root{--a:#9b5cff;--bg:#0b0c10;--bg2:#13151c;--bg3:#1b1e28;--tx:#e8e9f0;--mu:#7d8296;--r:10px}
+*{box-sizing:border-box;margin:0}
+html{scrollbar-width:none;overflow-x:hidden}
+html,body{background:var(--bg);color:var(--tx);font:13px "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:2px solid var(--a);outline-offset:-2px}
+.line{border-color:color-mix(in srgb,var(--tx) 7%,transparent)}
+
+/* --- sélecteur de maquette (hors fenêtre) --- */
+.sel{height:96px;padding:10px 16px 0;background:var(--bg2);border-bottom:1px solid var(--bg3);width:1280px}
+.sel .top{display:flex;align-items:center;gap:6px;height:32px}
+.sel h1{font-size:13px;font-weight:600;margin-right:10px;color:var(--mu)}
+.dz{height:30px;display:flex;align-items:center;gap:8px;padding:0 12px 0 4px;border-radius:8px;color:var(--mu);transition:background .15s,color .15s}
+.dz b{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:var(--bg3);color:var(--tx);font-weight:700;font-variant-numeric:tabular-nums}
+.dz:hover{color:var(--tx);background:var(--bg3)}
+.dz.on{color:var(--tx);background:color-mix(in srgb,var(--a) 18%,transparent)}
+.dz.on b{background:var(--a);color:#fff}
+.st{margin-left:auto;display:flex;gap:2px}
+.st button{height:26px;padding:0 10px;border-radius:6px;color:var(--mu);transition:background .15s,color .15s}
+.st button:hover{color:var(--tx);background:var(--bg3)}
+.st button.on{color:var(--tx);background:var(--bg3)}
+.sel p{line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel p:first-of-type{margin-top:6px}
+.sel p i{font-style:normal;color:var(--mu);display:inline-block;width:74px}
+.sel .gp{color:var(--mu)}
+.sel .gp em{font-style:normal;color:var(--tx)}
+
+/* --- fenêtre : onglets + barre d'adresse fidèles à ui.html --- */
+.win{width:1280px;height:800px;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#tabs{height:38px;flex:none;display:flex;align-items:flex-end;gap:4px;padding:0 8px;background:var(--bg)}
+#logo{width:30px;height:30px;margin:0 6px 4px 0;display:grid;place-items:center;filter:drop-shadow(0 0 6px var(--a))}
+#logo svg{width:20px;height:20px;fill:var(--a);stroke:none}
+#list{flex:1;min-width:0;height:100%;display:flex;align-items:flex-end;gap:inherit;overflow:hidden}
+.tab{position:relative;height:32px;min-width:110px;flex-shrink:0;max-width:220px;flex:1;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;color:var(--mu)}
+.tab.on{background:var(--bg3);color:var(--tx)}
+.tab.on::before{content:"";position:absolute;left:10px;right:10px;top:0;height:2px;border-radius:2px;background:var(--a);box-shadow:0 0 10px var(--a)}
+.tab span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mu);flex:none}
+.tab.on .dot{background:var(--a)}
+.x{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--mu);flex:none;transition:background .15s,color .15s}
+.x svg{width:12px;height:12px}
+.x:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 10%,transparent)}
+.tab .x{opacity:.6}
+#add{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
+.wc{display:flex;align-self:stretch;margin:0 -8px 0 6px}
+.wc button{width:46px;display:grid;place-items:center;color:var(--mu)}
+.wc svg{width:14px;height:14px;stroke-width:1.5}
+#bar{height:46px;flex:none;display:flex;align-items:center;gap:4px;padding:0 8px;background:var(--bg3);border-bottom:1px solid var(--bg)}
+.ib{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--mu);transition:background .15s,color .15s}
+.ib:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 6%,transparent)}
+.ib.on{color:var(--a);background:color-mix(in srgb,var(--a) 14%,transparent)}
+.ib:active{transform:translateY(1px)}
+.vsep{width:1px;height:18px;background:var(--mu);opacity:.3;margin:0 4px;flex:none}
+#url{flex:1;height:32px;margin:0 6px;padding:0 14px;border-radius:16px;border:1px solid transparent;background:var(--bg);color:var(--tx);outline:0}
+/* icône Historique dans la bande d'onglets (design 3) */
+.tb-h{width:30px;height:30px;margin:0 2px 4px -2px;border-radius:8px;display:grid;place-items:center;color:var(--mu);flex:none;transition:background .15s,color .15s}
+.tb-h:hover{color:var(--tx);background:var(--bg2)}
+.tb-h.on{color:var(--a);background:color-mix(in srgb,var(--a) 14%,transparent)}
+
+/* --- barre de favoris : style « Étagères », une seule rangée de 30 px --- */
+#fav{height:30px;flex:none;display:flex;align-items:center;gap:1px;padding:0 6px;overflow:hidden;background:color-mix(in srgb,var(--a) 7%,var(--bg3));border-bottom:1px solid var(--bg)}
+.it{display:flex;align-items:center;gap:7px;height:24px;padding:0 8px;border-radius:6px;white-space:nowrap;flex:none;max-width:200px;color:var(--tx);transition:background .12s}
+.it span{overflow:hidden;text-overflow:ellipsis}
+.it:hover{background:color-mix(in srgb,var(--tx) 9%,transparent)}
+.it.dir{color:var(--tx)}
+.it .dt{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
+.it small{font-size:11px;color:var(--mu);font-variant-numeric:tabular-nums}
+.fsep{width:1px;height:16px;background:var(--mu);opacity:.35;margin:0 6px;flex:none}
+.more{height:24px;padding:0 9px;border-radius:12px;flex:none;color:var(--tx);font-weight:500;font-variant-numeric:tabular-nums;background:color-mix(in srgb,var(--tx) 9%,transparent)}
+
+/* --- zone sous les barres : [rail] [panneau] [page web] --- */
+.body{flex:1;min-height:0;display:flex}
+.side{width:0;flex:none;overflow:hidden;background:var(--bg);transition:width .18s cubic-bezier(.2,.7,.2,1)}
+.win.open .side{width:var(--pw);border-right:1px solid var(--bg3)}
+.side .in{width:var(--pw);height:100%;display:flex;flex-direction:column;transition:visibility 0s .18s}
+.win.open .side .in{transition:none}
+.win:not(.open) .side .in{visibility:hidden}
+.web{flex:1;min-width:0;position:relative;overflow:hidden;background:var(--bg2)}
+
+/* rail permanent (design 2) */
+.rail{width:44px;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;background:var(--bg3);border-right:1px solid var(--bg)}
+.rb{position:relative;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--mu);transition:background .15s,color .15s}
+.rb:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 6%,transparent)}
+.rb.on{color:var(--a);background:color-mix(in srgb,var(--a) 14%,transparent)}
+.rb.on::before{content:"";position:absolute;left:-5px;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--a)}
+.rb .pip{position:absolute;right:5px;bottom:5px;width:7px;height:7px;border-radius:50%;background:var(--a);box-shadow:0 0 0 2px var(--bg3)}
+
+/* --- fausse page web --- */
+.wtag{position:absolute;top:10px;right:12px;z-index:2;height:22px;padding:0 9px;border-radius:11px;display:flex;align-items:center;gap:6px;font:12px Consolas,monospace;color:var(--tx);background:color-mix(in srgb,var(--bg) 80%,transparent)}
+.wtag svg{width:12px;height:12px;color:var(--a)}
+.fk{padding:0 40px}
+.fk .hd{height:52px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--bg3);margin:0 -40px 22px;padding:0 40px}
+.fk .hd i{display:block;height:10px;border-radius:5px;background:var(--bg3)}
+.fk .hd .lg{width:96px;height:22px;border-radius:6px;background:color-mix(in srgb,var(--tx) 14%,var(--bg3))}
+.fk .hero{display:block;height:200px;border-radius:12px;margin-bottom:22px;background:linear-gradient(120deg,var(--bg3),color-mix(in srgb,var(--a) 10%,var(--bg3)))}
+.fk .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.fk .card{height:150px;border-radius:10px;background:var(--bg3);padding:96px 12px 0}
+.fk .card i{display:block;height:9px;border-radius:5px;background:color-mix(in srgb,var(--tx) 10%,transparent);margin-bottom:8px}
+.cover{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:6px;background:var(--bg);color:var(--mu);text-align:center;padding:0 40px}
+.cover b{color:var(--tx);font-size:16px;font-weight:600}
+
+/* --- panneau : éléments communs --- */
+.ph{height:48px;flex:none;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px}
+.ph h2{font-size:14px;font-weight:600;flex:1}
+.seg{flex:1;display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--bg2)}
+.seg button{flex:1;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--mu);transition:background .15s,color .15s}
+.seg button:hover{color:var(--tx)}
+.seg button.on{background:var(--bg3);color:var(--tx);font-weight:500}
+.seg button svg{width:15px;height:15px}
+.seg .on svg{color:var(--a)}
+.seg .pip{width:6px;height:6px;border-radius:50%;background:var(--a)}
+.srch{flex:none;position:relative;margin:0 12px 6px}
+.srch svg{position:absolute;left:10px;top:9px;width:14px;height:14px;color:var(--mu)}
+.srch input{width:100%;height:32px;padding:0 10px 0 32px;border-radius:8px;border:1px solid var(--bg3);background:var(--bg2);outline:0;transition:border-color .15s}
+.srch input:focus{border-color:var(--a)}
+.srch input::placeholder{color:var(--mu)}
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--bg3) transparent;padding-bottom:8px}
+.hday{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;padding:10px 14px 5px 20px;background:var(--bg);font-size:12px;font-weight:600;color:var(--mu)}
+.hday small{font-weight:400;font-variant-numeric:tabular-nums}
+.he{display:flex;align-items:center;gap:10px;height:44px;padding:0 6px 0 14px;margin:0 6px;border-radius:8px;cursor:pointer;transition:background .12s}
+.he:hover{background:var(--bg2)}
+.he:active{background:var(--bg3)}
+.he .t{flex:1;min-width:0;line-height:17px}
+.he .t b{display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.he .t small{display:block;font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.he time{width:36px;text-align:right;font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums;flex:none}
+.he .x{display:none}
+.he:hover time{display:none}
+.he:hover .x,.he:focus-within .x{display:grid}
+.he.cur .t b{color:var(--a)}
+/* variante compacte une ligne (design 2) */
+.he.c{height:30px;gap:9px;padding-left:10px}
+.he.c time{order:-1;width:34px;text-align:left}
+.he.c .t{display:flex;gap:7px;align-items:baseline}
+.he.c .t b{flex:1;min-width:0}
+.he.c .t small{flex:none;max-width:96px}
+.he.c:hover time{display:block;visibility:hidden}
+.empty{padding:28px 20px;color:var(--mu);line-height:1.5;text-align:center}
+.empty b{display:block;color:var(--tx);font-weight:500;margin-bottom:2px}
+.pf{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:6px 8px 6px 12px;border-top:1px solid var(--bg3)}
+.lnk{height:30px;padding:0 8px;border-radius:7px;display:flex;align-items:center;gap:6px;color:var(--mu);transition:background .15s,color .15s}
+.lnk:hover{color:var(--tx);background:var(--bg2)}
+.lnk svg{width:14px;height:14px}
+.cf{flex:none;padding:12px;border-top:1px solid var(--bg3);background:var(--bg2)}
+.cf p{line-height:1.45;margin-bottom:10px}
+.cf p small{display:block;color:var(--mu)}
+.cf .bs{display:flex;justify-content:flex-end;gap:6px}
+.btn{height:32px;padding:0 14px;border-radius:8px;background:var(--a);color:#fff;font-weight:600;transition:filter .15s}
+.btn:hover{filter:brightness(1.15)}
+.btn:active{transform:translateY(1px)}
+.btn.g{background:var(--bg3);color:var(--tx);font-weight:500}
+.btn.w{width:100%}
+
+/* cookies */
+.ck{padding:4px 12px 12px}
+.ck h3{font-size:12px;font-weight:600;color:var(--mu);margin:14px 2px 6px;display:flex;justify-content:space-between}
+.ck h3:first-child{margin-top:4px}
+.ck h3 small{font-weight:400;font-size:12px;font-variant-numeric:tabular-nums}
+.box{background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:6px}
+.site{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.site .ico{width:28px;height:28px;border-radius:7px;background:var(--bg3)}
+.site .ico img{width:20px;height:20px}
+.site b{display:block;font-weight:500}
+.site small{color:var(--mu);font-variant-numeric:tabular-nums}
+.hint{display:block;color:var(--mu);font-size:12px;line-height:1.4;margin-top:6px}
+.sr{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.sr>div{min-width:0}
+.sr b{font-weight:500;display:block}
+.sr small{display:block;color:var(--mu);font-size:12px;line-height:1.4;margin-top:2px}
+.sr.dis{opacity:.45}
+.sr+.sr,.choice+.sr{margin-top:12px;padding-top:12px;border-top:1px solid var(--bg3)}
+.sw{appearance:none;width:40px;height:22px;border-radius:11px;background:var(--bg3);position:relative;cursor:pointer;transition:background .2s;flex:none;margin:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--mu);transition:left .2s,background .2s}
+.sw:checked{background:var(--a)}
+.sw:checked::after{left:21px;background:#fff}
+.sw:disabled{cursor:default}
+.box .sw{background:var(--bg)}
+.box .sw:checked{background:var(--a)}
+.choice{margin-top:12px}
+.rad{display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--bg)}
+.rad button{flex:1;height:30px;border-radius:7px;color:var(--mu);transition:background .15s,color .15s}
+.rad button:hover{color:var(--tx)}
+.rad button.on{background:color-mix(in srgb,var(--a) 22%,var(--bg3));color:var(--tx);font-weight:600;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 55%,transparent)}
+.rad button small{font-weight:400;color:var(--mu);margin-left:4px}
+.cnt{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:12px;margin-top:10px;font-variant-numeric:tabular-nums}
+.cnt svg{width:13px;height:13px;color:var(--a)}
+.done{color:var(--mu);font-size:12px;margin-top:8px;display:flex;gap:6px;align-items:center}
+.done svg{width:13px;height:13px;color:var(--a)}
+
+/* carte repliable (design 3) */
+.card3{flex:none;margin:0 12px 10px;border-radius:var(--r);background:var(--bg2);overflow:hidden}
+.card3>button{width:100%;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;text-align:left;transition:background .15s}
+.card3>button:hover{background:color-mix(in srgb,var(--tx) 4%,var(--bg2))}
+.card3 .ci{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--a) 16%,var(--bg3));color:var(--a);flex:none}
+.card3 .ci.off{background:var(--bg3);color:var(--mu)}
+.card3 .sm{flex:1;min-width:0;line-height:17px}
+.card3 .sm b{display:block;font-weight:500}
+.card3 .sm small{display:block;color:var(--mu);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.card3 .chev{color:var(--mu);transition:transform .18s}
+.card3.op .chev{transform:rotate(180deg)}
+.card3 .ck{padding:0 10px 10px;border-top:1px solid var(--bg3)}
+.card3 .box{background:var(--bg);margin-bottom:6px}
+.card3 .box .sw{background:var(--bg3)}
+.card3 .box .sw:checked{background:var(--a)}
+.card3 .rad{background:var(--bg2)}
+/* design 3 : une seule colonne qui défile ; la recherche reste collée en haut une fois la carte passée */
+.d3 .srch{position:sticky;top:0;z-index:2;margin:0;padding:0 12px 6px;background:var(--bg)}
+.d3 .srch svg{left:22px}
+.d3 .hday{top:38px}
+
+.ico{width:16px;height:16px;display:grid;place-items:center;font-size:10px;line-height:1;flex:none}
+.ico img{width:16px;height:16px;border-radius:3px;display:block}
+.ico.l{border-radius:4px;background:color-mix(in srgb,var(--tx) 16%,transparent);color:var(--tx);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<header class="sel">
+  <div class="top"><h1>Panneau Historique et cookies</h1>
+    <button class="dz" data-act="d1"><b>1</b>Tiroir à deux onglets</button>
+    <button class="dz" data-act="d2"><b>2</b>Rail d'icônes</button>
+    <button class="dz" data-act="d3"><b>3</b>Colonne unique</button>
+    <div class="st"><button data-act="s-hist">Historique</button><button data-act="s-ck">Cookies</button><button data-act="s-off">Panneau fermé</button></div>
+  </div>
+  <p id="pp"></p><p class="gp" id="gp"></p>
+</header>
+<div class="win" id="win"></div>
+<script>
+// ---------- icônes de sites : pastilles SVG inline aux couleurs des marques (reprises de designs/favoris/data.js) ----------
+const P=(bg,inner,r=4)=>"data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="${r}" fill="${bg}"/>${inner}</svg>`);
+const T=(c,t,s=10,w=700,f="Segoe UI")=>`<text x="8" y="8" dy=".36em" text-anchor="middle" font-family="${f}" font-size="${s}" font-weight="${w}" fill="${c}">${t}</text>`;
+const ICONS={
+  "YouTube":P("#ff0033",'<path d="M6.2 4.8v6.4L11.6 8z" fill="#fff"/>'),
+  "Twitch":P("#9146ff",'<path d="M4 3.5h8.5v5.8L10 11.8H8l-1.8 1.8v-1.8H4z" fill="#fff"/><path d="M7.4 5.8v2.4M10 5.8v2.4" stroke="#9146ff" stroke-width="1.3"/>'),
+  "GitHub":P("#24292f",'<circle cx="8" cy="9" r="4" fill="#fff"/><path d="M4.4 7 4.6 3.6 7.2 5.4M11.6 7l-.2-3.4-2.6 1.8" fill="#fff"/>',8),
+  "Reddit":P("#ff4500",'<ellipse cx="8" cy="9.6" rx="4.6" ry="3.1" fill="#fff"/><circle cx="11.4" cy="4" r="1.2" fill="#fff"/><circle cx="6.3" cy="9.3" r=".9" fill="#ff4500"/><circle cx="9.7" cy="9.3" r=".9" fill="#ff4500"/>',8),
+  "Steam":P("#1b2838",'<circle cx="10.3" cy="6" r="2.3" fill="none" stroke="#fff" stroke-width="1.3"/><circle cx="5.6" cy="10.6" r="1.7" fill="#fff"/><path d="m5.6 10.6 4.7-4.6" stroke="#fff" stroke-width="1.3"/>',8),
+  "Wikipédia":P("#f4f4f4",T("#111","W",10,400,"Georgia"),8),
+  "Le Monde":P("#111",T("#fff","M",11,700,"Georgia"),3),
+  "Amazon":P("#232f3e",T("#fff","a",11,700)+'<path d="M4.2 12q3.8 2 7.6 0" stroke="#ff9900" stroke-width="1.3" fill="none"/>'),
+  "Stack Overflow":P("#f2f2f2",'<path d="M3.6 9.5v3.7h8.8V9.5" stroke="#bcbbbb" stroke-width="1.3" fill="none"/><path d="M5.5 11.4h4.9M5.7 9.4l4.8.9M6.3 7.3l4.4 2M7.4 5.3l3.8 3" stroke="#f48024" stroke-width="1.2"/>'),
+  "Discord":P("#5865f2",'<path d="M4 5.5q4-2 8 0l1 5.2q-1.4 1.3-3 1.6l-.6-1q-1.4.4-2.8 0l-.6 1q-1.6-.3-3-1.6z" fill="#fff"/><circle cx="6.4" cy="8.5" r=".9" fill="#5865f2"/><circle cx="9.6" cy="8.5" r=".9" fill="#5865f2"/>'),
+  "Netflix":P("#000",T("#e50914","N",12,800),3),
+  "Gmail":P("#fff",'<path d="M3 4.5v7.2h2.2V7.4L8 9.6l2.8-2.2v4.3H13V4.5L8 8.3z" fill="#ea4335"/>',3),
+  "Crates.io":P("#1f3b2c",'<path d="M8 3.2 12.4 5.6v4.8L8 12.8 3.6 10.4V5.6zM3.6 5.6 8 8l4.4-2.4M8 8v4.8" fill="none" stroke="#ffc832" stroke-width="1.1" stroke-linejoin="round"/>'),
+  "Epic Games":P("#2a2a2a",T("#fff","E",10,800)),
+  "GOG":P("#86328a",T("#fff","gog",6.5,800),8),
+  "itch.io":P("#fa5c5c",T("#fff","i",11,800)),
+  "Humble Bundle":P("#cc2929",T("#fff","h",11,800)),
+  "Nexus Mods":P("#da8e35",'<circle cx="8" cy="8" r="4" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="8" r="1.4" fill="#fff"/>',8),
+  "Speedrun.com":P("#ffb800",'<path d="M9 2.8 4.6 9h3l-.8 4.2L11.4 7h-3z" fill="#1a1a1a"/>'),
+  "HLTV":P("#2b6ea4",T("#fff","H",10,800)),
+  "Jeuxvideo.com":P("#ff6a00",T("#fff","jv",8,800)),
+  "Battle.net":P("#148eff",'<circle cx="8" cy="8" r="4.2" fill="none" stroke="#fff" stroke-width="1.4"/><circle cx="8" cy="8" r="1.5" fill="#fff"/>'),
+  "Riot Games":P("#d13639",'<path d="M3.5 4.5 11 3l1.5 7.5-1.8.5-1-3.6-.9 4L6.6 11 5.2 6.7l-.9 4.2-1.2-.3z" fill="#fff"/>'),
+  "Lichess":P("#f4f4f4",T("#111","♞",12,400),8),
+  "Game Pass":P("#107c10",'<circle cx="8" cy="8" r="4.6" fill="none" stroke="#fff" stroke-width="1.3"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.3"/>',8),
+  "Spotify":P("#1ed760",'<path d="M4.5 6.5q4-1.3 7.2.5M5 8.6q3.3-.9 6 .5M5.5 10.6q2.6-.6 4.6.4" stroke="#000" stroke-width="1.2" fill="none" stroke-linecap="round"/>',8),
+  "Deezer":P("#a238ff",T("#fff","d",11,800)),
+  "Prime Video":P("#00a8e1",T("#fff","p",11,800)),
+  "Leboncoin":P("#ec5a13",T("#fff","lbc",6,800)),
+  "DeepL":P("#0f2b46",T("#fff","D",10,800)),
+  "Bluesky":P("#1185fe",'<path d="M8 8.2Q5.2 3.6 3.6 4.4 3 6.8 5 8.6 3.6 9.6 5.4 11.6 7 12.6 8 9.6 9 12.6 10.6 11.6 12.4 9.6 11 8.6 13 6.8 12.4 4.4 10.8 3.6 8 8.2z" fill="#fff"/>'),
+  "Duolingo":P("#58cc02",T("#fff","D",10,800),8),
+  "ProtonDB":P("#2a0a0a",T("#ff2e4c","P",10,800))
+};
+const ico=s=>ICONS[s]?`<span class="ico"><img src="${ICONS[s]}" alt=""></span>`:`<span class="ico l">${s[0]}</span>`;
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>String(n).replace(/\B(?=(\d{3})+$)/g," ");
+const short=d=>d.split(".").slice(-2).join(".");
+const norm=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+
+// ---------- historique de démonstration : 41 pages sur 3 jours (on est le dimanche 22 novembre) ----------
+const DAYS=["Aujourd'hui","Hier","Vendredi 20 novembre"];
+const H=`0|21:47|Steam|Steam : Magasin|store.steampowered.com
+0|21:40|YouTube|Hollow Knight: Silksong – tous les boss sans dégâts|youtube.com
+0|21:12|Reddit|r/pcgaming – Les pilotes 581 corrigent enfin les saccades ?|reddit.com
+0|20:58|ProtonDB|Elden Ring Nightreign – ProtonDB|protondb.com
+0|20:31|Twitch|Gotaga – Live Warzone|twitch.tv
+0|19:05|Jeuxvideo.com|Test de Metroid Prime 4 : notre avis|jeuxvideo.com
+0|18:44|Discord|#général – Les Copains du Jeudi|discord.com
+0|17:20|Leboncoin|RTX 4070 Super – Leboncoin|leboncoin.fr
+0|17:02|Amazon|Logitech G Pro X Superlight 2 : Amazon.fr|amazon.fr
+0|16:15|Wikipédia|Hollow Knight — Wikipédia|fr.wikipedia.org
+0|15:48|Gmail|Boîte de réception (3) – Gmail|mail.google.com
+0|14:26|Le Monde|Le Monde.fr – Actualités et infos en France et dans le monde|lemonde.fr
+0|13:10|Spotify|Lo-fi pour coder – Spotify|open.spotify.com
+0|11:52|GitHub|volt/src/main.rs at main|github.com
+0|11:30|Stack Overflow|How to resize a WebView2 controller from Rust|stackoverflow.com
+0|10:04|Speedrun.com|Celeste – Any% – Classement|speedrun.com
+1|23:18|Netflix|Arcane – Saison 2 | Netflix|netflix.com
+1|22:40|HLTV|Vitality vs FaZe – Match|hltv.org
+1|21:55|Twitch|ZeratoR – Live|twitch.tv
+1|20:12|Riot Games|Notes de patch 25.23 – League of Legends|leagueoflegends.com
+1|19:37|Nexus Mods|Skyrim Special Edition – Mods les plus téléchargés|nexusmods.com
+1|18:03|GOG|The Witcher 3 – Édition jeu de l'année sur GOG.com|gog.com
+1|16:49|Humble Bundle|Humble Choice – Novembre|humblebundle.com
+1|15:22|YouTube|Comment réduire l'input lag sur Windows 11|youtube.com
+1|14:58|DeepL|DeepL Traduction|deepl.com
+1|13:31|Crates.io|webview2-com – crates.io|crates.io
+1|12:07|Reddit|r/jeuxvideo – Vos jeux de l'année 2026|reddit.com
+1|11:40|Bluesky|Accueil – Bluesky|bsky.app
+1|10:15|Duolingo|Duolingo – Leçon de japonais|duolingo.com
+1|09:48|Le Monde|Les prix de l'électricité baissent en février|lemonde.fr
+2|23:02|Epic Games|Jeu gratuit de la semaine – Epic Games Store|store.epicgames.com
+2|22:15|Battle.net|Diablo IV – Saison 10|battle.net
+2|21:30|Steam|Soldes d'automne Steam|store.steampowered.com
+2|20:44|itch.io|Jeux indés du moment – itch.io|itch.io
+2|19:10|Lichess|Partie rapide 10+0 • lichess.org|lichess.org
+2|18:25|Prime Video|The Boys – Prime Video|primevideo.com
+2|17:52|Game Pass|Nouveautés Game Pass de novembre|xbox.com
+2|14:06|GitHub|Pull request #48 · volt|github.com
+2|12:38|Stack Overflow|Rust: iterate over HashMap sorted by value|stackoverflow.com
+2|10:21|Deezer|Flow – Deezer|deezer.com
+2|09:05|Wikipédia|Segoe UI — Wikipédia|fr.wikipedia.org`.split("\n").map((l,id)=>{const [d,t,s,...r]=l.split("|");const dom=r.pop();return{id,day:+d,t,s,title:r.join("|"),dom}});
+console.assert(H.length===41,"41 entrées attendues");
+
+// ---------- état (figeable par l'URL) ----------
+// ?d=1|2|3 &vue=hist|cookies &ouvert=0 &auto=1 &mode=accepter &exception=1 &q=texte &confirm=hist|cookies &vide=1
+const Q=new URLSearchParams(location.search);
+const S={d:[1,2,3].includes(+Q.get("d"))?+Q.get("d"):1,vue:Q.get("vue")==="cookies"?"cookies":"hist",open:Q.get("ouvert")!=="0",
+  auto:Q.get("auto")==="1",mode:Q.get("mode")==="accepter"?"acc":"ref",exc:Q.get("exception")==="1",q:Q.get("q")||"",confirm:Q.get("confirm")||"",
+  site:23,all:1284,sites:212,full:false,cur:{s:"Steam",title:"Steam : Magasin",dom:"store.steampowered.com"}};
+if(Q.get("vide")==="1")H.forEach(e=>e.gone=1);
+function sync(){const p=new URLSearchParams({d:S.d,vue:S.vue});if(!S.open)p.set("ouvert","0");if(S.auto)p.set("auto","1");if(S.mode==="acc")p.set("mode","accepter");
+  if(S.exc)p.set("exception","1");if(S.q)p.set("q",S.q);if(S.confirm)p.set("confirm",S.confirm);try{history.replaceState(null,"","?"+p)}catch(e){}}
+
+const DES={
+ 1:{pw:340,pp:"Un tiroir, deux onglets. L'icône Historique est à gauche de Précédent ; le panneau de 340 px s'ouvre sur Historique ou sur Cookies.",
+    gp:"<em>On gagne</em> : aucune largeur perdue quand il est fermé, une seule icône à apprendre. <em>On perd</em> : les cookies sont un clic plus loin, et rien ne dit que la réponse auto tourne quand le panneau est fermé."},
+ 2:{pw:320,pp:"Un rail d'icônes toujours visible au bord gauche (44 px), une icône par fonction, chacune ouvre son propre tiroir de 320 px.",
+    gp:"<em>On gagne</em> : historique et cookies à un clic chacun, la réponse auto se lit sur le rail (point violet), de la place pour d'autres outils. <em>On perd</em> : 44 px de page en permanence, même fermé."},
+ 3:{pw:360,pp:"Une seule colonne de 360 px : les cookies en carte repliable en haut, l'historique dessous. L'icône est dans la bande d'onglets, juste après le logo.",
+    gp:"<em>On gagne</em> : tout se voit sans changer de vue, l'état des cookies tient en une ligne. <em>On perd</em> : la colonne la plus large, et carte dépliée il faut défiler pour retrouver l'historique."}
+};
+
+// ---------- pictogrammes ----------
+const I={
+ hist:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+ ck:'<svg viewBox="0 0 24 24"><path d="M21 12.5A9 9 0 1 1 11.5 3a3 3 0 0 0 3.5 3.5 3 3 0 0 0 3.5 3.5 3 3 0 0 0 2.5 2.5z"/><path d="M8.5 9h.01M15.5 15h.01M9.5 15.5h.01M12.5 12h.01"/></svg>',
+ x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+ find:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+ ext:'<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+ trash:'<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+ chev:'<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
+ ok:'<svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>',
+ bolt:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+ panel:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>'
+};
+
+// ---------- fenêtre ----------
+function chrome(d){
+  const tabs=[[S.cur.title,1],["Liste des favoris importés",0],["YouTube",0]];
+  const histBtn=c=>`<button class="${c}" id="hbtn" data-act="toggle" title="Historique et cookies (Ctrl+H)">${I.hist}</button>`;
+  return `<div id="tabs"><div id="logo">${I.bolt}</div>${d===3?histBtn("tb-h"):""}<div id="list">${tabs.map(([t,on])=>`<div class="tab${on?" on":""}"><i class="dot"></i><span>${esc(t)}</span><button class="x">${I.x}</button></div>`).join("")}</div>
+<button id="add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><div class="wc"><button><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button><button>${I.x}</button></div></div>
+<div id="bar">${d===1?histBtn("ib")+'<span class="vsep"></span>':""}<button class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3z"/></svg></button>
+<input id="url" spellcheck="false" value="https://${S.cur.dom}/"><button class="ib"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg></button><button class="ib"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></button></div>
+<div id="fav"></div>`;
+}
+const FAVDIRS=[["Jeux","#e5484d",16],["Dev","#3e9bff",22],["Vidéos","#ff6b9a",9],["Achats","#f5a524",14]];
+const FAVS=["YouTube","Twitch","GitHub","Reddit","Steam","Wikipédia","Le Monde","Amazon","Stack Overflow","Discord","Netflix","Gmail","Crates.io"];
+function fillFav(){
+  const f=document.getElementById("fav");
+  f.innerHTML=FAVDIRS.map(([n,c,k])=>`<button class="it dir" style="--c:${c}"><i class="dt"></i><span>${n}</span><small>${k}</small></button>`).join("")+'<span class="fsep"></span>'+FAVS.map(n=>`<button class="it">${ico(n)}<span>${n}</span></button>`).join("");
+  // ce qui tient, puis « +N » (comme la rangée basse des Étagères)
+  const els=[...f.querySelectorAll(".it:not(.dir)")],lim=f.clientWidth-6;
+  if(els.at(-1).offsetLeft+els.at(-1).offsetWidth<=lim)return;
+  const more=document.createElement("button");more.className="more";more.textContent="+"+els.length;f.append(more);
+  const room=lim-more.offsetWidth-6;let cut=0;while(cut<els.length&&els[cut].offsetLeft+els[cut].offsetWidth<=room)cut++;
+  els.slice(cut).forEach(e=>e.remove());more.textContent="+"+(els.length-cut);
+}
+function page(){
+  if(S.full)return `<div class="cover"><b>Écran Historique complet</b><span>L'écran existant des réglages (volt://reglages, section Historique), avec sa recherche sur tout l'historique.</span></div>`;
+  return `<div class="fk"><div class="hd"><i class="lg"></i><i style="width:60px"></i><i style="width:74px"></i><i style="width:52px"></i><i style="width:66px;margin-left:auto"></i></div>
+<i class="hero"></i><div class="grid">${Array.from({length:10},(_,i)=>`<div class="card"><i style="width:${70-i%3*12}%"></i><i style="width:${40+i%4*9}%"></i></div>`).join("")}</div></div>`;
+}
+function build(){
+  const d=S.d,w=document.getElementById("win");
+  w.className="win"+(S.open?" open":"");w.style.setProperty("--pw",DES[d].pw+"px");
+  w.innerHTML=chrome(d)+`<div class="body">${d===2?`<nav class="rail"><button class="rb" data-act="r-hist" title="Historique">${I.hist}</button><button class="rb" data-act="r-ck" title="Cookies">${I.ck}<i class="pip" hidden></i></button></nav>`:""}<aside class="side" aria-label="Historique et cookies"><div class="in" id="pin"></div></aside><div class="web" id="web"><span class="wtag">${I.panel}<span id="wv"></span></span><div id="pg">${page()}</div></div></div>`;
+  fillFav();fillPanel();
+  new ResizeObserver(()=>{const web=document.getElementById("web");document.getElementById("wv").textContent="Page web : "+Math.round(web.getBoundingClientRect().width)+" px de large"}).observe(document.getElementById("web"));
+  document.querySelectorAll(".dz").forEach(b=>b.classList.toggle("on",b.dataset.act==="d"+d));
+  document.getElementById("pp").innerHTML="<i>Parti pris</i>"+DES[d].pp;
+  document.getElementById("gp").innerHTML="<i>Bilan</i>"+DES[d].gp;
+}
+function marks(){
+  const w=document.getElementById("win");w.classList.toggle("open",S.open);
+  const hb=document.getElementById("hbtn");if(hb)hb.classList.toggle("on",S.open);
+  document.querySelectorAll(".rb").forEach(b=>b.classList.toggle("on",S.open&&(b.dataset.act==="r-hist")===(S.vue==="hist")));
+  const pip=document.querySelector(".rb .pip");if(pip)pip.hidden=!S.auto;
+  document.querySelectorAll(".st button").forEach(b=>b.classList.toggle("on",b.dataset.act==="s-off"?!S.open:S.open&&(b.dataset.act==="s-ck")===(S.vue==="cookies")));
+  sync();
+}
+
+// ---------- contenu du panneau ----------
+const left=()=>H.filter(e=>!e.gone).length;
+function histRows(compact){
+  const q=norm(S.q.trim());
+  const gs=DAYS.map((label,i)=>({label,it:H.filter(e=>e.day===i&&!e.gone&&(!q||norm(e.title+" "+e.dom).includes(q)))})).filter(g=>g.it.length);
+  if(!left())return `<div class="empty"><b>Historique vide</b>Les pages que vous ouvrez s'afficheront ici.</div>`;
+  if(!gs.length)return `<div class="empty"><b>Aucune page trouvée</b>Rien ne correspond à « ${esc(S.q)} » dans les 3 derniers jours.</div>`;
+  return gs.map(g=>`<div class="hday">${g.label}<small>${g.it.length} page${g.it.length>1?"s":""}</small></div>`+g.it.map(e=>
+    `<div class="he${compact?" c":""}${e.id===0?" cur":""}" data-id="${e.id}" title="${esc(e.title)}\n${e.dom}">${ico(e.s)}<span class="t"><b>${esc(e.title)}</b><small>${compact?short(e.dom):e.dom}</small></span><time>${e.t}</time><button class="x" data-act="rm" title="Retirer de l'historique" aria-label="Retirer de l'historique">${I.x}</button></div>`).join("")).join("");
+}
+const search=()=>`<div class="srch">${I.find}<input id="hq" type="search" placeholder="Filtrer l'historique" value="${esc(S.q)}" aria-label="Filtrer l'historique"></div>`;
+function histFoot(){
+  if(S.confirm==="hist")return `<div class="cf"><p>Effacer les ${left()} pages de l'historique ?<small>On ne peut pas revenir en arrière. Les cookies et les favoris ne sont pas touchés.</small></p><div class="bs"><button class="btn g" data-act="cancel">Annuler</button><button class="btn" data-act="hclear-ok">Effacer</button></div></div>`;
+  return `<div class="pf"><button class="lnk" data-act="full">${I.ext}Tout l'historique</button>${left()?`<button class="lnk" data-act="hclear">${I.trash}Effacer l'historique</button>`:""}</div>`;
+}
+function autoBlock(){
+  return `<div class="box"><div class="sr"><div><b>Répondre automatiquement</b><small>Volt répond aux bandeaux de cookies à votre place.</small></div><input type="checkbox" class="sw" data-act="auto" ${S.auto?"checked":""} aria-label="Répondre automatiquement aux bandeaux de cookies"></div>
+${S.auto?`<div class="choice"><div class="rad" role="radiogroup" aria-label="Réponse"><button role="radio" aria-checked="${S.mode==="ref"}" class="${S.mode==="ref"?"on":""}" data-act="ref">Tout refuser</button><button role="radio" aria-checked="${S.mode==="acc"}" class="${S.mode==="acc"?"on":""}" data-act="acc">Tout accepter</button></div>
+<small class="hint">${S.mode==="ref"?"Volt clique sur « Refuser » à chaque bandeau.":"Volt clique sur « Accepter » à chaque bandeau."} Marche sur la plupart des sites, pas sur tous.</small></div>`:`<small class="hint">Désactivé : chaque site vous demande votre choix.</small>`}
+<div class="sr${S.auto?"":" dis"}"><div><b>Pas sur ce site</b><small>Ne pas répondre automatiquement sur ${S.cur.dom}</small></div><input type="checkbox" class="sw" data-act="exc" ${S.exc?"checked":""} ${S.auto?"":"disabled"} aria-label="Ne pas répondre automatiquement sur ce site"></div>
+${S.auto?`<div class="cnt">${I.ok}37 bandeaux traités cette semaine</div>`:""}</div>`;
+}
+function siteBlock(){
+  return `<div class="box"><div class="site">${ico(S.cur.s)}<div><b>${S.cur.dom}</b><small>${S.site?S.site+" cookies":"Aucun cookie"}</small></div></div>
+${S.site?`<button class="btn g w" data-act="site-del">Supprimer les cookies de ce site</button><small class="hint">Vous serez déconnecté de ce site.</small>`:`<div class="done">${I.ok}Cookies de ce site supprimés.</div>`}</div>`;
+}
+function allBlock(){
+  if(S.confirm==="cookies")return `<div class="box"><p style="line-height:1.45">Supprimer les ${fmt(S.all)} cookies ?<small class="hint" style="margin-top:2px">Vous serez déconnecté de tous les sites. L'historique n'est pas touché.</small></p><div class="cf bs" style="padding:0;border:0;background:none;margin-top:10px;display:flex;justify-content:flex-end;gap:6px"><button class="btn g" data-act="cancel">Annuler</button><button class="btn" data-act="all-ok">Tout supprimer</button></div></div>`;
+  return `<div class="box"><div class="site" style="margin-bottom:${S.all?10:0}px"><div><b>${S.all?fmt(S.all)+" cookies":"Aucun cookie"}</b><small>${S.all?"sur "+S.sites+" sites":"Tous les cookies ont été supprimés."}</small></div></div>${S.all?`<button class="btn g w" data-act="all-del">Supprimer tous les cookies</button><small class="hint">Vous serez déconnecté de tous les sites.</small>`:""}</div>`;
+}
+const cookies=()=>`<div class="ck"><h3>Bandeaux de cookies</h3>${autoBlock()}<h3>Ce site</h3>${siteBlock()}<h3>Tous les sites</h3>${allBlock()}</div>`;
+const closeBtn=`<button class="x" data-act="close" title="Fermer (Échap)" aria-label="Fermer">${I.x}</button>`;
+
+function fillPanel(){
+  const p=document.getElementById("pin"),d=S.d,c=S.vue==="cookies";
+  if(d===1)p.innerHTML=`<div class="ph" style="padding-left:12px"><div class="seg" role="tablist"><button role="tab" class="${c?"":"on"}" data-act="v-hist">${I.hist}Historique</button><button role="tab" class="${c?"on":""}" data-act="v-ck">${I.ck}Cookies${S.auto?'<i class="pip" title="Réponse automatique active"></i>':""}</button></div>${closeBtn}</div>`+
+    (c?`<div class="scroll">${cookies()}</div>`:`${search()}<div class="scroll" id="hl">${histRows(false)}</div>${histFoot()}`);
+  if(d===2)p.innerHTML=`<div class="ph"><h2>${c?"Cookies":"Historique"}</h2>${c?"":`<small style="color:var(--mu);font-variant-numeric:tabular-nums">${left()} pages</small>`}${closeBtn}</div>`+
+    (c?`<div class="scroll">${cookies()}</div>`:`${search()}<div class="scroll" id="hl">${histRows(true)}</div>${histFoot()}`);
+  if(d===3){
+    const sum=S.auto?(S.exc?"Pas de réponse auto sur ce site":`Bandeaux ${S.mode==="ref"?"refusés":"acceptés"} automatiquement`):"Bandeaux : réponse auto désactivée";
+    p.innerHTML=`<div class="ph"><h2>Historique et cookies</h2>${closeBtn}</div>
+<div class="scroll d3"><section class="card3${c?" op":""}"><button data-act="card" aria-expanded="${c}"><span class="ci${S.auto?"":" off"}">${I.ck}</span><span class="sm"><b>${sum}</b>${S.auto?"<small>37 bandeaux traités cette semaine</small>":""}<small>Ce site : ${S.site?S.site+" cookies":"aucun cookie"}</small></span><span class="chev">${I.chev}</span></button>${c?cookies():""}</section>
+${search()}<div id="hl">${histRows(false)}</div></div>${histFoot()}`;
+  }
+  marks();
+}
+
+// ---------- interactions ----------
+function go(e){S.cur={s:e.s,title:e.title,dom:e.dom};S.full=false;const u=document.getElementById("url");u.value="https://"+e.dom+"/";
+  document.querySelector(".tab.on span").textContent=e.title;document.getElementById("pg").innerHTML=page();S.site=7+e.id*3%31;fillPanel();}
+const ACT={
+  d1:()=>{S.d=1;build()},d2:()=>{S.d=2;build()},d3:()=>{S.d=3;build()},
+  "s-hist":()=>{S.open=true;S.vue="hist";fillPanel()},"s-ck":()=>{S.open=true;S.vue="cookies";fillPanel()},"s-off":()=>{S.open=false;marks()},
+  toggle:()=>{S.open=!S.open;marks()},close:()=>{S.open=false;marks()},
+  "r-hist":()=>{if(S.open&&S.vue==="hist")S.open=false;else{S.open=true;S.vue="hist"}fillPanel()},
+  "r-ck":()=>{if(S.open&&S.vue==="cookies")S.open=false;else{S.open=true;S.vue="cookies"}fillPanel()},
+  "v-hist":()=>{S.vue="hist";fillPanel()},"v-ck":()=>{S.vue="cookies";fillPanel()},
+  card:()=>{S.vue=S.vue==="cookies"?"hist":"cookies";fillPanel()},
+  auto:t=>{S.auto=t.checked;fillPanel()},exc:t=>{S.exc=t.checked;fillPanel()},
+  ref:()=>{S.mode="ref";fillPanel()},acc:()=>{S.mode="acc";fillPanel()},
+  "site-del":()=>{S.site=0;fillPanel()},"all-del":()=>{S.confirm="cookies";fillPanel()},"all-ok":()=>{S.all=0;S.site=0;S.confirm="";fillPanel()},
+  hclear:()=>{S.confirm="hist";fillPanel()},"hclear-ok":()=>{H.forEach(e=>e.gone=1);S.confirm="";S.q="";fillPanel()},cancel:()=>{S.confirm="";fillPanel()},
+  full:()=>{S.full=true;document.getElementById("pg").innerHTML=page();document.getElementById("url").value="volt://reglages/historique"},
+  rm:t=>{H[+t.closest(".he").dataset.id].gone=1;fillPanel()}
+};
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-act]");
+  if(a&&a.type!=="checkbox"){ACT[a.dataset.act](a);return}
+  const r=e.target.closest(".he");if(r)go(H[+r.dataset.id]);
+});
+document.addEventListener("change",e=>{const a=e.target.closest("input[data-act]");if(a)ACT[a.dataset.act](a)});
+document.addEventListener("input",e=>{if(e.target.id!=="hq")return;S.q=e.target.value;document.getElementById("hl").innerHTML=histRows(S.d===2);sync()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&S.open){S.open=false;marks()}
+  if(e.ctrlKey&&e.key.toLowerCase()==="h"){e.preventDefault();S.open=!S.open;marks()}});
+build();
+</script></body></html>

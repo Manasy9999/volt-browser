@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Favoris 2 : Icônes</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.fv{height:30px;display:flex;align-items:center;gap:6px;padding:0 4px 0 6px;background:var(--bg3);border-bottom:1px solid #000;container-type:inline-size}
+.area{flex:1;min-width:0;height:100%;display:flex;align-items:center;gap:2px;overflow:hidden}
+.ic{width:28px;height:24px;border-radius:6px;display:grid;place-items:center;flex:none;position:relative;transition:background .12s}
+.ic:hover,.ic.hov{background:color-mix(in srgb,var(--tx) 11%,transparent)}
+.ic:active{transform:translateY(1px)}
+/* dossier : trait de sa couleur sous l'icône, le distingue d'un site */
+.ic.dir::after{content:"";position:absolute;left:9px;right:9px;bottom:1px;height:2px;border-radius:1px;background:var(--c)}
+.ic.dir.on{background:color-mix(in srgb,var(--c) 26%,transparent)}
+.ic.dir.on::after{left:4px;right:4px}
+/* contenu déplié en ligne, juste après son dossier */
+.grp{display:flex;gap:2px;height:24px;border-radius:6px;background:color-mix(in srgb,var(--c) 16%,transparent);flex:none}
+.sp{width:28px;height:24px;flex:none;display:grid;place-items:center}
+.sp::before{content:"";width:1px;height:14px;background:var(--mu);opacity:.35}
+/* étiquette : le nom de ce qu'on survole, dans la bande elle-même */
+.lab{width:300px;flex:none;display:flex;align-items:baseline;gap:8px;overflow:hidden;white-space:nowrap;padding-left:10px;border-left:1px solid color-mix(in srgb,var(--mu) 30%,transparent)}
+.lab b{font-weight:500;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+.lab span{color:var(--mu);overflow:hidden;text-overflow:ellipsis;flex:1 1 0;min-width:40px}
+.lab.idle b{font-weight:400;color:var(--mu)}
+@container (max-width:1000px){.lab{width:190px}}
+.pg{display:flex;align-items:center;flex:none;color:var(--mu);font-variant-numeric:tabular-nums}
+.pg[hidden]{display:none}
+.pg em{font-style:normal;min-width:30px;text-align:center;font-size:12px}
+.bt{height:24px;min-width:24px;border-radius:6px;display:grid;place-items:center;color:var(--mu);transition:background .12s,color .12s}
+.bt:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 9%,transparent)}
+.bt:disabled{opacity:.3;pointer-events:none}
+.bt svg{width:14px;height:14px}
+.all{display:flex;gap:6px;padding:0 8px}
+.all b{font-weight:500;font-variant-numeric:tabular-nums}
+</style></head><body>
+<script src="data.js"></script>
+<script>
+const CHEV=d=>`<svg viewBox="0 0 24 24"><path d="${d?"m9 18 6-6-6-6":"m15 18-6-6 6-6"}"/></svg>`;
+function mount(root,st){
+  root.innerHTML="";
+  const fv=h("div","fv"),area=h("div","area"),lab=h("div","lab"),pg=h("div","pg"),all=h("button","bt all");
+  const prev=h("button","bt"),next=h("button","bt"),num=h("em");
+  prev.innerHTML=CHEV(0);next.innerHTML=CHEV(1);prev.title="Page précédente";next.title="Page suivante";pg.append(prev,num,next);
+  all.innerHTML='<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg><b>'+TOTAL+'</b>';
+  all.title="Tous les favoris (page de favoris)";all.onclick=()=>showFavPage(true);
+  fv.append(area,lab,pg,all);root.append(fv);
+
+  const open=FOLDERS.find(d=>d.id===st.open);
+  const idle=()=>open?[open.name,open.items.length+" favoris dépliés · Échap pour replier"]:[FOLDERS.length+" dossiers · "+ROOT.length+" favoris",""];
+  const say=(a,b,isIdle)=>{lab.className="lab"+(isIdle?" idle":"");lab.replaceChildren(h("b",null,a),h("span",null,b))};
+  // liste à plat : dossiers (avec contenu déplié), séparateur, favoris
+  const flat=[];
+  FOLDERS.forEach(d=>{flat.push({d});if(open===d)d.items.forEach(n=>flat.push({n,g:d}))});
+  flat.push({sep:1});ROOT.forEach(n=>flat.push({n}));
+  // icônes de largeur fixe (28 + 2) : la capacité d'une page est un simple calcul
+  const per=Math.max(1,Math.floor((area.clientWidth+2)/30)),pages=Math.ceil(flat.length/per);
+  let p=Math.min(st.page||0,pages-1);
+  if(open&&st.page==null)p=Math.floor(flat.findIndex(e=>e.d===open)/per);
+  const draw=()=>{
+    area.replaceChildren();let grp=null;
+    flat.slice(p*per,(p+1)*per).forEach(e=>{
+      let b;
+      if(e.sep)b=h("i","sp");
+      else if(e.d){b=h("button","ic dir"+(e.d===open?" on":""));b.style.setProperty("--c",e.d.color);b.append(dirIco(e.d));
+        b.onmouseenter=()=>say(e.d.name,e.d.items.length+" favoris · "+(e.d===open?"clic pour replier":"clic pour déplier"));
+        b.onclick=()=>mount(root,{open:e.d===open?null:e.d.id})}
+      else{b=h("button","ic");b.append(favIco(e.n));b.setAttribute("aria-label",e.n);
+        b.onmouseenter=()=>say(e.n,host(e.n));b.onclick=()=>go(e.n);
+        if(st.hover===e.n){b.classList.add("hov");say(e.n,host(e.n))}}
+      b.onmouseleave=()=>say(...idle(),1);
+      if(e.g){if(!grp){grp=h("span","grp");grp.style.setProperty("--c",e.g.color);area.append(grp)}grp.append(b)}
+      else{grp=null;area.append(b)}
+    });
+    pg.hidden=pages<2;num.textContent=(p+1)+"/"+pages;prev.disabled=p===0;next.disabled=p===pages-1;
+  };
+  prev.onclick=()=>{p--;draw()};next.onclick=()=>{p++;draw()};
+  fv.onwheel=e=>{const q=p+Math.sign(e.deltaY||e.deltaX);if(q>=0&&q<pages){p=q;draw()}e.preventDefault()};
+  if(root.id==="live")document.onkeydown=e=>{if(e.key==="Escape"&&open)mount(root,{})};
+  if(!st.hover)say(...idle(),1);
+  draw();
+}
+scaffold(mount,"<b>Essayer :</b> survoler une icône (le nom s'affiche à droite dans la bande), cliquer un dossier pour le déplier sur place, molette ou flèches pour changer de page, « 138 » pour la page de favoris. État figé du haut : survol de Speedrun.com.");
+// état figé « Jeux ouvert » : on y montre aussi le survol
+mount($("#f1"),{open:"jeux",hover:"Speedrun.com"});
+</script></body></html>

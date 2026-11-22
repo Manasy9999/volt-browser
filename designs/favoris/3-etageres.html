@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Favoris 3 : Étagères</title>
+<link rel="stylesheet" href="base.css">
+<style>
+/* deux rangées (26 + 30 px) : les dossiers en onglets, leur contenu dessous */
+.fv{background:var(--bg3);border-bottom:1px solid #000;container-type:inline-size}
+.shelf{height:26px;display:flex;align-items:flex-end;gap:2px;padding:0 4px 0 6px}
+.tabsrow{flex:1;min-width:0;height:100%;display:flex;align-items:flex-end;gap:2px;overflow-x:auto;scrollbar-width:none}
+.sh{position:relative;height:24px;display:flex;align-items:center;gap:6px;padding:0 9px;border-radius:6px 6px 0 0;color:var(--mu);white-space:nowrap;flex:none;transition:color .12s,background .12s}
+.sh:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 6%,transparent)}
+.sh.on{color:var(--tx);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.sh.on::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:2px;border-radius:1px;background:var(--c)}
+.sh small{font-size:11px;opacity:.75;font-variant-numeric:tabular-nums}
+.sh .dt{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
+.sh .fd{width:14px;font-size:12px}
+.sh svg.st{width:13px;height:13px;color:var(--a)}
+@container (max-width:1000px){.sh small{display:none}.sh{padding:0 7px}}
+.bt{height:22px;margin-bottom:2px;border-radius:6px;display:flex;align-items:center;gap:6px;padding:0 8px;color:var(--mu);flex:none;transition:background .12s,color .12s}
+.bt:hover{color:var(--tx);background:color-mix(in srgb,var(--tx) 9%,transparent)}
+.bt svg{width:14px;height:14px}
+.bt b{font-weight:500;font-variant-numeric:tabular-nums}
+.row{position:relative;height:30px;display:flex;align-items:center;gap:1px;padding:0 6px;overflow:hidden;
+  background:color-mix(in srgb,var(--c) 7%,var(--bg3))}
+.it{display:flex;align-items:center;gap:7px;height:24px;padding:0 8px;border-radius:6px;white-space:nowrap;flex:none;max-width:200px;color:var(--tx);transition:background .12s}
+.it span{overflow:hidden;text-overflow:ellipsis}
+.it:hover{background:color-mix(in srgb,var(--tx) 9%,transparent)}
+.it:active{background:color-mix(in srgb,var(--tx) 14%,transparent)}
+.more{height:24px;padding:0 9px;border-radius:12px;flex:none;color:var(--tx);font-weight:500;font-variant-numeric:tabular-nums;
+  background:color-mix(in srgb,var(--tx) 9%,transparent);transition:background .12s}
+.more:hover{background:color-mix(in srgb,var(--tx) 16%,transparent)}
+.more.b{padding:0 7px;display:grid;place-items:center;color:var(--mu)}
+.more svg{width:14px;height:14px}
+</style></head><body>
+<script src="data.js"></script>
+<script>
+const LOOSE={id:null,name:"Favoris",color:"var(--a)",items:ROOT};
+function mount(root,st){
+  root.innerHTML="";
+  const cur=FOLDERS.find(d=>d.id===st.open)||LOOSE;
+  const fv=h("div","fv"),shelf=h("div","shelf"),tabs=h("div","tabsrow"),all=h("button","bt"),row=h("div","row");
+  all.innerHTML='<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg><span>Tout voir</span><b>'+TOTAL+'</b>';
+  all.title="Page de favoris";all.onclick=()=>showFavPage(true);
+  shelf.append(tabs,all);fv.append(shelf,row);root.append(fv);
+  fv.style.setProperty("--c",cur.color);
+  [LOOSE,...FOLDERS].forEach(d=>{
+    const b=h("button","sh"+(d===cur?" on":""));b.style.setProperty("--c",d.color);
+    if(d===LOOSE)b.insertAdjacentHTML("beforeend",'<svg class="st" viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>');
+    else b.append(d.icon?dirIco(d):h("i","dt"));
+    b.append(h("span",null,d.name),h("small",null,d.items.length));
+    b.onclick=()=>mount(root,{open:d.id});tabs.append(b);
+  });
+  tabs.onwheel=e=>{tabs.scrollLeft+=e.deltaY;e.preventDefault()};
+  // rangée du bas : ce qui tient, puis « +N » qui affiche la suite à la place
+  const starts=[0];
+  const fill=()=>{
+    const s=starts[starts.length-1],list=cur.items.slice(s);
+    row.replaceChildren();
+    if(s>0){const bk=h("button","more b");bk.innerHTML='<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>';bk.title="Revenir au début";bk.onclick=()=>{starts.pop();fill()};row.append(bk)}
+    const els=list.map(n=>{const b=h("button","it");b.append(favIco(n),h("span",null,n));b.title=n+"\n"+host(n);b.onclick=()=>go(n);return b});
+    row.append(...els);
+    const lim=row.clientWidth-6,fits=i=>els[i].offsetLeft+els[i].offsetWidth<=lim;
+    if(!els.length||fits(els.length-1))return;
+    const more=h("button","more","+"+els.length);row.append(more);
+    const room=lim-more.offsetWidth-6;let cut=0;
+    while(cut<els.length&&els[cut].offsetLeft+els[cut].offsetWidth<=room)cut++;
+    els.slice(cut).forEach(e=>e.remove());
+    more.textContent="+"+(els.length-cut);more.title="Afficher les "+(els.length-cut)+" suivants";
+    more.onclick=()=>{starts.push(s+cut);fill()};
+  };
+  row.onwheel=e=>{const m=row.querySelector(".more:not(.b)"),b=row.querySelector(".more.b");
+    if(e.deltaY>0&&m)m.click();else if(e.deltaY<0&&b)b.click();e.preventDefault()};
+  fill();
+}
+scaffold(mount,"<b>Essayer :</b> cliquer un onglet de dossier (la rangée du bas change, aucun bouton Retour), « +N » ou la molette sur la rangée du bas pour voir la suite, « Tout voir » pour la page de favoris. La barre passe de 30 à 56 px.");
+</script></body></html>

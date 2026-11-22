@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Favoris : dossiers à gauche</title>
+<link rel="stylesheet" href="base.css">
+<style>
+nav{padding:16px 10px 14px;gap:1px}
+nav .it{display:flex;align-items:center;gap:10px;padding:7px 10px;min-height:36px}
+nav .it span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav .it .n{color:var(--mu);font-size:12px}
+nav .it.on{box-shadow:inset 3px 0 0 var(--c,var(--a))}
+nav .it .ai{width:22px;height:22px;display:grid;place-items:center;color:var(--mu);flex:none}
+nav h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);opacity:.7;padding:14px 10px 6px}
+.foot{margin-top:auto;padding:12px 4px 0;border-top:1px solid var(--bg3);display:flex;flex-direction:column;gap:8px}
+.foot .def{display:flex;flex-direction:column;gap:6px}
+.foot .def .btn{height:auto;min-height:34px;padding:7px 12px;white-space:normal;text-align:left;line-height:1.3}
+.foot .def small{font-size:12px;line-height:1.35}
+.foot .lnk{align-self:flex-start;margin-left:-8px}
+main{padding:22px 32px 32px}
+.top{display:flex;gap:12px;align-items:center;margin-bottom:22px}
+.top .srch{flex:1}
+.head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.head h2{margin:0;font-size:20px}
+.head .n{color:var(--mu)}
+.head .flt{margin-left:auto;position:relative}
+.head .flt svg{position:absolute;left:10px;top:9px;color:var(--mu)}
+.head .flt input{width:260px;padding-left:34px;padding-right:36px}
+.head .flt kbd{position:absolute;right:8px;top:7px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:8px}
+.fv{display:flex;align-items:center;gap:10px;padding:9px 12px;min-width:0;text-align:left;border-radius:var(--r);background:var(--bg2);border:1px solid transparent;transition:background .15s,border-color .15s}
+.fv:hover{background:var(--bg3)}
+.fv.k{border-color:color-mix(in srgb,var(--a) 60%,transparent)}
+.fv span:last-child{min-width:0}
+.fv b,.fv small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv b{font-weight:500}
+.fv small{color:var(--mu);font-size:12px}
+.gh{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
+.gh:first-child{margin-top:0}
+.gh b{font-weight:600}
+.gh .n{color:var(--mu)}
+.gh .lnk{margin-left:auto;font-size:12px}
+.gh .lnk svg{width:14px;height:14px}
+.none{padding:40px;text-align:center;color:var(--mu);background:var(--bg2);border-radius:var(--r)}
+/* état vide */
+.empty{max-width:560px;margin:24px auto 0;text-align:center}
+.empty .volty{width:104px;height:104px;margin:0 auto 18px}
+.empty h2{margin-bottom:8px}
+.empty p{color:var(--mu);margin-bottom:22px;line-height:1.5;text-wrap:balance}
+.empty .row{text-align:left;justify-content:flex-start}
+.empty .hint{margin-top:14px;font-size:12px;color:var(--mu)}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<div id="panel"><nav id="nav"></nav><main id="main"></main></div>
+<script>
+let empty=P.get("etat")==="vide",cur="tous",q="",kSel=0;
+const tile=(f,showDir)=>`<button class="fv" data-u="${f.u}" title="${esc(f.u)}">${fav(f,"m")}<span><b>${hl(f.n,q)}</b><small>${showDir&&dirOf(f)?esc(dirOf(f).name)+" · ":""}${esc(f.u)}</small></span></button>`;
+function drawNav(){
+  const it=(id,label,n,icon,c)=>`<button class="it ${cur===id&&!q?"on":""}" data-d="${id}" ${c?`style="--c:${c}"`:""}>${icon}<span>${label}</span><span class="n">${n}</span></button>`;
+  const total=empty?0:FAVS.length;
+  $("#nav").innerHTML=it("tous","Tous les favoris",total,`<span class="ai">${ic("star")}</span>`)
+    +(empty?"":it("hors","Sans dossier",LOOSE_FAVS.length,`<span class="ai">${ic("globe")}</span>`)
+    +`<h3>Dossiers</h3>`+FOLDERS.map(d=>it(d.id,esc(d.name),d.items.length,dico(d),d.c)).join(""))
+    +`<div class="foot">${defBlock()}<button class="lnk" id="manage">${ic("gear")}Gérer les favoris</button></div>`;
+  $$("#nav .it").forEach(b=>b.onclick=()=>{cur=b.dataset.d;q="";drawMain()});
+  $("#manage").onclick=()=>toast("Ouvre Réglages › Favoris");
+  wireDefault($("#nav"),drawNav);
+}
+function drawMain(){
+  drawNav();
+  const top=`<div class="top"><div class="srch">${ic("search")}<input type="search" id="web" placeholder="Rechercher sur Google ou saisir une adresse" aria-label="Rechercher sur le web"></div></div>`;
+  if(empty){
+    $("#main").innerHTML=top+`<div class="empty in"><div class="volty">${voltySvg("",false)}</div><h2>Aucun favori pour l'instant</h2>
+      <p>Récupérez ceux de votre ancien navigateur en un clic. Ensuite, l'étoile de la barre d'adresse ajoute la page ouverte (Ctrl+D).</p>
+      ${BROWSERS.map(importRow).join("")}<div class="hint">Volt a cherché les navigateurs installés sur ce PC.</div></div>`;
+    wireImport($("#main"),k=>{if(k>1)setTimeout(()=>{empty=false;drawMain();toast(`${k} favoris importés`)},500)});
+    wireWeb();return;
+  }
+  let body,title,count;
+  if(q){
+    const r=FAVS.filter(f=>match(f,q));kSel=Math.min(kSel,Math.max(r.length-1,0));
+    title=`Résultats pour « ${esc(q)} »`;count=r.length;
+    body=r.length?`<div class="grid">${r.map(f=>tile(f,true)).join("")}</div>`
+      :`<div class="none">Aucun favori ne correspond. <kbd>Entrée</kbd> cherche « ${esc(q)} » sur Google.</div>`;
+  }else if(cur==="tous"){
+    title="Tous les favoris";count=FAVS.length;
+    const grp=(d,list)=>`<div class="gh">${d?dico(d):`<span class="ai">${ic("globe")}</span>`}<b>${d?esc(d.name):"Sans dossier"}</b><span class="n">${list.length}</span>${d?`<button class="lnk" data-d="${d.id}">Ouvrir seul${ic("chev")}</button>`:""}</div><div class="grid">${list.map(f=>tile(f)).join("")}</div>`;
+    body=grp(null,LOOSE_FAVS)+FOLDERS.map(d=>grp(d,d.items)).join("");
+  }else{
+    const d=FOLDERS.find(x=>x.id===cur),list=d?d.items:LOOSE_FAVS;
+    title=d?esc(d.name):"Sans dossier";count=list.length;
+    body=`<div class="grid">${list.map(f=>tile(f)).join("")}</div>`;
+  }
+  $("#main").innerHTML=top+`<div class="head"><h2>${title}</h2><span class="n">${count}</span><div class="flt">${ic("search")}<input type="search" id="flt" placeholder="Filtrer les favoris" aria-label="Filtrer les favoris" value="${esc(q)}"><kbd>/</kbd></div></div><div id="body" class="in">${body}</div>`;
+  $$("#main .fv").forEach((b,i)=>{b.classList.toggle("k",!!q&&i===kSel);b.onclick=()=>open(FAVS.find(f=>f.u===b.dataset.u))});
+  $$("#main .gh .lnk").forEach(b=>b.onclick=()=>{cur=b.dataset.d;drawMain()});
+  const fl=$("#flt");fl.oninput=()=>{q=fl.value.trim();kSel=0;drawMain();const n=$("#flt");n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+  fl.onkeydown=e=>{const r=FAVS.filter(f=>match(f,q));
+    if(e.key==="Enter"){r.length?open(r[kSel]):toast(`Recherche Google : ${q}`)}
+    if(e.key==="Escape"){q="";drawMain()}
+    if(/^Arrow(Right|Down)$/.test(e.key)&&q){kSel=Math.min(kSel+1,r.length-1);e.preventDefault();$$("#main .fv").forEach((b,i)=>b.classList.toggle("k",i===kSel))}
+    if(/^Arrow(Left|Up)$/.test(e.key)&&q){kSel=Math.max(kSel-1,0);e.preventDefault();$$("#main .fv").forEach((b,i)=>b.classList.toggle("k",i===kSel))}};
+  wireWeb();
+}
+function wireWeb(){const w=$("#web");w.onkeydown=e=>{if(e.key==="Enter"&&w.value.trim())toast(/\.\w{2,}/.test(w.value)?`Ouverture de ${w.value}`:`Recherche Google : ${w.value}`)}}
+// « / » ou une lettre tapée hors champ : va dans le filtre
+addEventListener("keydown",e=>{const a=document.activeElement;if(a&&a.tagName==="INPUT"||empty)return;
+  if(e.key==="/"||(e.key.length===1&&/\w/.test(e.key)&&!e.ctrlKey)){e.preventDefault();const f=$("#flt");f.focus();if(e.key!=="/"){f.value=e.key;f.oninput()}}});
+if(P.get("q")){q=P.get("q")}
+drawMain();
+</script>
+</body></html>

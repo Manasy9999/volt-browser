@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Réglages : barre latérale et aperçu</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.lay{height:calc(100% - 76px);display:grid;grid-template-columns:250px 1fr 300px}
+aside.nav{border-right:1px solid var(--line);padding:16px 10px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.nav .search{position:relative;margin:0 4px 12px}
+.nav .search svg{position:absolute;left:10px;top:8px;color:var(--mu)}
+.nav input{width:100%;padding-left:34px}
+.nav button{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--mu);text-align:left}
+.nav button:hover{background:var(--s1);color:var(--tx)}
+.nav button.on{background:var(--s2);color:var(--tx)}
+.nav button.on svg{color:var(--a)}
+.nav button span{flex:1}
+.nav .n{font-size:11px;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--a) 22%,transparent);color:var(--tx)}
+.nav .sep{height:1px;background:var(--line);margin:12px 6px}
+.nav .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:4px 10px;opacity:.8}
+.mid{overflow:auto;padding:28px 32px}
+.mid h1{font-size:22px;font-weight:600}
+.mid p.d{color:var(--mu);margin:2px 0 18px}
+.mid h3{font-size:12px;color:var(--mu);font-weight:600;margin:16px 0 6px}
+#restart{margin-bottom:14px}
+aside.pv{border-left:1px solid var(--line);padding:20px 18px;overflow:auto;display:flex;flex-direction:column;gap:18px}
+.pv h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);font-weight:600}
+.mini{border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
+.mini .t{display:flex;align-items:flex-end;gap:6px;height:30px;padding:0 8px}
+.mini .t i{width:18px;height:18px;margin-bottom:5px}
+.mini .t u{height:22px;width:80px;border-radius:6px 6px 0 0;background:var(--s2);position:relative}
+.mini .t u::before{content:"";position:absolute;left:8px;right:8px;top:0;height:2px;background:var(--a);border-radius:2px}
+.mini .b{height:26px;background:var(--s2);display:flex;align-items:center;padding:0 8px}
+.mini .b s{flex:1;height:14px;border-radius:7px;background:var(--bg)}
+.mini .f{height:20px;background:var(--s2);border-top:1px solid var(--line);display:flex;gap:6px;align-items:center;padding:0 8px}
+.mini .f s{width:36px;height:8px;border-radius:4px;background:var(--s3)}
+.mini .p{height:90px;display:grid;place-items:center;color:var(--mu);font-size:12px}
+.mini.night .p{background:#0d0d0f}
+.chg{display:flex;flex-direction:column;gap:6px}
+.chg div{display:flex;align-items:center;gap:8px;font-size:13px}
+.chg div span{flex:1}
+.chg button{color:var(--a);font-size:12px}
+.chg .none{color:var(--mu)}
+</style></head><body>
+<script src="data.js"></script>
+<script>document.write(chrome())</script>
+<div class="lay">
+  <aside class="nav" id="nav"></aside>
+  <section class="mid" id="mid"></section>
+  <aside class="pv" id="pv"></aside>
+</div>
+<script>
+let cur="jeu",q="";
+const nav=document.getElementById("nav"),mid=document.getElementById("mid"),pv=document.getElementById("pv");
+function drawNav(){
+  const hits=q.trim()?find(q):null;
+  nav.innerHTML=`<div class="search">${ico("search")}<input type="search" id="q" placeholder="Rechercher" value="${esc(q)}" aria-label="Rechercher un réglage"></div>`
+   +SECTIONS.map(s=>{const n=hits?hits.filter(h=>h.sec===s).length:0;
+     return`<button data-s="${s.id}" class="${!hits&&s.id===cur?"on":""}" ${hits&&!n?'style="opacity:.35"':""}>${ico(s.id)}<span>${s.name}</span>${n?`<i class="n">${n}</i>`:""}</button>`}).join("")
+   +`<div class="sep"></div><div class="lbl">Pages</div><button>${ico("star")}<span>Favoris</span></button><button>${ico("hist")}<span>Historique</span></button>`;
+  const inp=document.getElementById("q");inp.oninput=()=>{q=inp.value;drawNav();drawMid();const i=document.getElementById("q");i.focus();i.setSelectionRange(q.length,q.length)};
+  nav.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{cur=b.dataset.s;q="";drawNav();drawMid()});
+}
+function drawMid(){
+  if(q.trim()){
+    const r=find(q);
+    mid.innerHTML=`<h1>Résultats</h1><p class="d">${r.length} réglage${r.length>1?"s":""} pour « ${esc(q)} »</p>`+restartBar();
+    SECTIONS.forEach(s=>{const its=r.filter(x=>x.sec===s);if(!its.length)return;
+      mid.insertAdjacentHTML("beforeend",`<h3>${s.name}</h3>`);const c=document.createElement("div");c.className="card";c.append(...its.map(x=>row(x.it,q)));mid.append(c)});
+  }else{
+    const s=SECTIONS.find(x=>x.id===cur);
+    mid.innerHTML=`<h1>${s.name}</h1><p class="d">${s.desc}</p>`+restartBar();
+    const c=document.createElement("div");c.className="card";c.append(...s.items.map(it=>row(it)));mid.append(c);
+  }
+  document.getElementById("restart").classList.toggle("on",needRestart);
+}
+function drawPv(){
+  const ch=Object.keys(DEF).filter(changed);
+  pv.innerHTML=`<h4>Aperçu</h4><div class="mini ${STATE.night?"night":""}"><div class="t"><i>${VOLTY}</i><u></u></div><div class="b"><s></s></div>${STATE.favbar?'<div class="f"><s></s><s></s><s></s></div>':""}<div class="p">Thème ${STATE.theme}${STATE.game_mode?" · Mode Jeu":""}</div></div>
+  <h4>Modifications</h4><div class="chg">${ch.length?ch.map(k=>{const it=ALL.find(x=>x.it.k===k).it;return`<div><span>${it.label}</span><button data-k="${k}">Annuler</button></div>`}).join(""):'<span class="none">Aucune, tout est par défaut.</span>'}</div>`;
+  pv.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{set(b.dataset.k,DEF[b.dataset.k]);drawMid()});
+}
+addEventListener("volt-change",()=>{drawPv();if(!q)drawMid()});
+drawNav();drawMid();drawPv();
+</script>
+</body></html>
