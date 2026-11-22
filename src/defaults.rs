@@ -15,8 +15,8 @@ use windows::{
             Registry::{HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegGetValueW, RegSetKeyValueW},
         },
         UI::{
-            Shell::{SHCNE_ASSOCCHANGED, SHCNF_IDLIST, SHChangeNotify},
-            WindowsAndMessaging::{ASFW_ANY, AllowSetForegroundWindow},
+            Shell::{SHCNE_ASSOCCHANGED, SHCNF_IDLIST, SHChangeNotify, ShellExecuteW},
+            WindowsAndMessaging::{ASFW_ANY, AllowSetForegroundWindow, SW_SHOWNORMAL},
         },
     },
     core::HSTRING,
@@ -89,8 +89,9 @@ pub fn register(exe: &str, app: &str) -> Result<(), String> {
 pub fn ask() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     register(&exe.to_string_lossy(), APP)?;
-    std::process::Command::new("explorer").arg(format!("ms-settings:defaultapps?registeredAppUser={APP}")).spawn().map_err(|e| e.to_string())?;
-    Ok(())
+    // ShellExecute et non `explorer <adresse>` : l'Explorateur ouvrait un dossier au lieu de la page des Paramètres
+    let r = unsafe { ShellExecuteW(None, &HSTRING::from("open"), &HSTRING::from(format!("ms-settings:defaultapps?registeredAppUser={APP}")), None, None, SW_SHOWNORMAL) };
+    if r.0 as usize > 32 { Ok(()) } else { Err("impossible d'ouvrir les Paramètres de Windows".into()) }
 }
 
 pub fn is_default() -> bool {

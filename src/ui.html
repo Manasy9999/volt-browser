@@ -1116,7 +1116,9 @@ function fico(f){
   try{i.src=new URL(f.url).origin+"/favicon.ico"}catch{return l}
   l.append(i);return l;
 }
-function dirIco(d){if(d.icon)return ico(d.icon,d.name);const s=h("span","ico fd");s.style.setProperty("--c",d.color);s.innerHTML=FOLDER_SVG;return s}
+// couleur d'un dossier : la sienne, ou la couleur d'accent s'il n'en a pas choisi (vide, ou l'ancien violet par défaut)
+const dcol=d=>!d.color||/^#9b5cff$/i.test(d.color)?"var(--a)":d.color;
+function dirIco(d){if(d.icon)return ico(d.icon,d.name);const s=h("span","ico fd");s.style.setProperty("--c",dcol(d));s.innerHTML=FOLDER_SVG;return s}
 function fbIt(f){const b=h("button","it");b.append(fico(f),h("span",null,f.title||f.url));b.title=(f.title?f.title+"\n":"")+f.url;b.onclick=()=>send({cmd:"go",url:f.url});return b}
 // accès à tous les favoris : la page de favoris
 function fbAll(cls,txt){const b=h("button",cls);b.innerHTML=GRID+(txt?`<span>${txt}</span>`:"")+`<b>${S.favs.length}</b>`;b.title="Tous les favoris";b.onclick=()=>openSection("board");return b}
@@ -1178,13 +1180,13 @@ function etageres(fb){
   fill(area,[...S.folders,0,...fbLoose()],x=>{
     if(!x)return h("i","sep");
     if(x.url)return fbIt(x);
-    const b=h("button","sh"+(x.id===openDir?" on":""));b.dataset.id=x.id;b.style.setProperty("--c",x.color);
+    const b=h("button","sh"+(x.id===openDir?" on":""));b.dataset.id=x.id;b.style.setProperty("--c",dcol(x));
     b.append(x.icon?dirIco(x):h("i","dt"),h("span",null,x.name),h("small",null,fbIn(x).length));b.onclick=()=>favDir(x.id);return b;
   });
   const d=S.folders.find(d=>d.id===openDir);if(d)etRow(fb,d);
 }
 function etRow(fb,d,old){
-  const r=h("div","fr2"),a=h("div","fill"),list=fbIn(d);r.style.setProperty("--c",d.color);r.append(a);
+  const r=h("div","fr2"),a=h("div","fill"),list=fbIn(d);r.style.setProperty("--c",dcol(d));r.append(a);
   old?old.replaceWith(r):fb.append(r);
   if(list.length)fill(a,list,fbIt);else a.append(h("span","nil","Dossier vide"));
   return r;
@@ -1206,7 +1208,7 @@ function ruban(fb,anim){
   fb.replaceChildren(left,rail,right,fbAll("all"));
   const d=S.folders.find(d=>d.id===openDir);
   if(d){
-    fb.classList.add("open");fb.style.setProperty("--c",d.color);
+    fb.classList.add("open");fb.style.setProperty("--c",dcol(d));
     const hd=h("button","head");hd.title="Revenir à la barre (Échap)";hd.innerHTML=CHEV(0).replace("<svg",'<svg class="b"');
     hd.append(dirIco(d),h("span",null,d.name),h("small",null,fbIn(d).length));hd.onclick=()=>favDir(d.id);
     rail.append(hd,h("i","sep"),...fbIn(d).map(fbIt));
@@ -1235,12 +1237,12 @@ function icones(fb,anim){
     flat.slice(p*per,(p+1)*per).forEach(e=>{
       let b;
       if(e.sep)b=h("i","sp");
-      else if(e.d){b=h("button","ic dir"+(e.d===open?" on":""));b.style.setProperty("--c",e.d.color);b.append(dirIco(e.d));
+      else if(e.d){b=h("button","ic dir"+(e.d===open?" on":""));b.style.setProperty("--c",dcol(e.d));b.append(dirIco(e.d));
         b.onmouseenter=()=>say(e.d.name,fbIn(e.d).length+" favoris · "+(e.d===open?"clic pour replier":"clic pour déplier"));b.onclick=()=>favDir(e.d.id)}
       else{b=h("button","ic");b.append(fico(e.f));b.setAttribute("aria-label",e.f.title||e.f.url);
         b.onmouseenter=()=>say(e.f.title||e.f.url,e.f.url.replace(/^https?:\/\/(www\.)?/,""));b.onclick=()=>send({cmd:"go",url:e.f.url})}
       b.onmouseleave=()=>say(...idle(),1);
-      if(e.g){if(!grp){grp=h("span","grp"+(anim?" in":""));grp.style.setProperty("--c",e.g.color);area.append(grp)}grp.append(b)}
+      if(e.g){if(!grp){grp=h("span","grp"+(anim?" in":""));grp.style.setProperty("--c",dcol(e.g));area.append(grp)}grp.append(b)}
       else{grp=null;area.append(b)}
     });
     anim=0;pg.hidden=pages<2;num.textContent=(p+1)+"/"+pages;prev.disabled=p===0;next.disabled=p===pages-1;
@@ -1322,7 +1324,7 @@ function renderFavManager(){
   const saveDirs=()=>save({folders:S.folders}), saveFavs=()=>save({favs:S.favs});
   $("#dirlist").replaceChildren(...S.folders.map(d=>{
     const r=document.createElement("div");r.className="row fm";
-    const col=document.createElement("input");col.type="color";col.value=d.color;col.title="Couleur";col.onchange=()=>{d.color=col.value;saveDirs()};
+    const col=document.createElement("input");col.type="color";col.value=d.color||S.accent;col.title="Couleur";col.onchange=()=>{d.color=col.value;saveDirs()};
     r.append(ico(d.icon,d.name),field("em",(d.icon||"").startsWith("data:")?"":d.icon,"😀",v=>{d.icon=v;saveDirs()}),picBtn(u=>{d.icon=u;saveDirs()}),
       field("nm",d.name,"Nom du dossier",v=>{d.name=v||"Dossier";saveDirs()}),col,
       delBtn(()=>{S.favs.forEach(f=>{if(f.folder===d.id)f.folder=""});S.folders=S.folders.filter(x=>x!==d);save({folders:S.folders,favs:S.favs})}));
@@ -1497,7 +1499,7 @@ function tile(f,q,dir){
 }
 function tiles(list,q,dir){const g=h("div","tiles");g.append(...list.map(f=>tile(f,q,dir)));return g}
 function drawer(d){
-  const r=h("div","drawer"),hd=h("div","hd"),x=h("button","x");r.style.setProperty("--c",d.color);
+  const r=h("div","drawer"),hd=h("div","hd"),x=h("button","x");r.style.setProperty("--c",dcol(d));
   x.title="Fermer le dossier";x.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';x.onclick=()=>boardDir(d.id);
   hd.append(dirIco(d),h("b",null,d.name),h("span","n",fbIn(d).length),x);r.append(hd,tiles(fbIn(d)));return r;
 }
@@ -1526,7 +1528,7 @@ function boardBody(){
     if(S.folders.length){
       const g=h("div","dirs");
       g.append(...S.folders.map(d=>{
-        const b=h("button","dir"+(d.id===bOpen?" on":"")),box=h("span","box");b.dataset.id=d.id;b.style.setProperty("--c",d.color);
+        const b=h("button","dir"+(d.id===bOpen?" on":"")),box=h("span","box");b.dataset.id=d.id;b.style.setProperty("--c",dcol(d));
         box.append(...fbIn(d).slice(0,4).map(fico));if(d.icon&&!d.icon.startsWith("data:"))box.append(h("span","em",d.icon));
         b.append(box,h("b",null,d.name),h("small",null,fbIn(d).length+" sites"));b.onclick=()=>boardDir(d.id);return b;
       }));
@@ -1548,7 +1550,7 @@ function renderSort(list){
   const byUrl=new Map(S.favs.map(f=>[f.url,f])),sok=$("#sok");
   const cards=list.map(p=>{
     const d=p.new?null:S.folders.find(x=>x.name===p.folder),c=h("div","card"),hd=h("div","hd"),all=h("input"),n=h("span","n");
-    c.style.setProperty("--c",d?d.color:p.color);all.type="checkbox";all.checked=true;all.title="Tout cocher ou décocher";
+    c.style.setProperty("--c",d?dcol(d):p.color);all.type="checkbox";all.checked=true;all.title="Tout cocher ou décocher";
     const name=p.new?Object.assign(h("input"),{type:"text",value:p.folder,title:"Nom du nouveau dossier"}):h("b",null,p.folder);
     hd.append(all,d?dirIco(d):ico(p.icon),name);if(p.new)hd.append(h("span","tag","nouveau"));hd.append(n);c.append(hd);
     p.urls.forEach(u=>{const f=byUrl.get(u)||{url:u,title:u},l=h("label"),x=h("input");x.type="checkbox";x.checked=true;x.value=u;
@@ -1668,7 +1670,7 @@ $("#star").onclick=()=>window.ipc.postMessage("cd");
 $("#favtoggle").onclick=()=>save({favbar:!S.favbar});
 $("#favbar").oncontextmenu=e=>{e.preventDefault();openSection("favs")};
 addEventListener("resize",()=>{if(S.favs)renderFavbar()}); // largeur changée : « +N » et pages à recalculer
-$("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:"Dossier",color:"#9b5cff",icon:"📁"});save({folders:S.folders})};
+$("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:"Dossier",color:"",icon:"📁"});save({folders:S.folders})};
 $("#hq").oninput=()=>histFull();
 $("#hclear").onclick=()=>send({cmd:"hist_clear"});
 $("#game").onclick=()=>{save({game_mode:!S.game_mode});toast(S.game_mode?"Mode Jeu activé : RAM limitée en arrière-plan":"Mode Jeu désactivé")};

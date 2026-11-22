@@ -104,7 +104,7 @@ pub fn merge(bm: &Value, favs: &mut Vec<Page>, folders: &mut Vec<Folder>, stamp:
                         None => {
                             let id = (0..).map(|i| format!("{stamp}{i}")).find(|id| !folders.iter().any(|d| &d.id == id)).unwrap();
                             // mêmes couleur et icône qu'un dossier créé dans l'interface (newdir)
-                            folders.push(Folder { id: id.clone(), name: name.into(), color: "#9b5cff".into(), icon: "📁".into() });
+                            folders.push(Folder { id: id.clone(), name: name.into(), color: String::new(), icon: "📁".into() });
                             id
                         }
                     },
