@@ -727,6 +727,31 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 .rec .ico{color:var(--a)}
 .rec .ico img{width:24px;height:24px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* Gestionnaire de mots de passe */
+#pwico{color:var(--a)}
+.pwtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.pwtools input[type=text]{flex:1;min-width:160px}
+.qm{width:24px;height:24px;border-radius:50%;background:var(--bg3);color:var(--mu);font-weight:700;flex:none;margin-left:-4px}
+.qm:hover{color:var(--tx)}
+#pwhelp{background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7}
+#pwhelp .lk{display:flex;align-items:center;gap:8px;margin:5px 0}
+#pwhelp code{background:var(--bg);padding:2px 7px;border-radius:6px;font-size:12px;user-select:text}
+#pwhelp .cp{height:24px;padding:0 10px;border-radius:6px;background:var(--bg3);color:var(--tx);font-size:12px;flex:none}
+#pwhelp .cp:hover{color:var(--a)}
+#pwform{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:12px}
+#pwform input{min-width:0;flex:1}
+.pw-e{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-radius:var(--r);margin-bottom:6px}
+.pw-e .site{flex:1;min-width:0;overflow:hidden}
+.pw-e .site b{font-weight:500;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pw-e .site small{color:var(--mu)}
+.pw-e .pw{font-family:ui-monospace,monospace;color:var(--mu);min-width:90px;text-align:right;user-select:text}
+.pw-e .ib{width:30px;height:30px;flex:none}
+.pwempty{color:var(--mu);padding:18px 4px}
+#pwbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--a);box-shadow:0 8px 30px #0008;z-index:30}
+#pwbar b{font-weight:500}
+#pwpick{position:fixed;background:var(--bg3);border:1px solid var(--bg2);border-radius:var(--r);box-shadow:0 8px 30px #0008;padding:6px;z-index:30;min-width:160px}
+#pwpick button{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:6px;color:var(--tx)}
+#pwpick button:hover{background:var(--bg2);color:var(--a)}
 </style>
 </head>
 <body class="nofav">
@@ -751,6 +776,7 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
   <input id="url" spellcheck="false" placeholder="Rechercher ou saisir une adresse">
   <button id="rsico" hidden><span class="rck"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></button>
   <button id="trico" hidden><svg viewBox="0 0 24 24"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg></button>
+  <button class="ib" id="pwico" hidden title="Remplir l'identifiant enregistré"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg></button>
   <button id="storebtn" hidden></button>
   <div id="exts"><div class="in"></div></div>
   <button class="ib" id="extbtn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -871,9 +897,24 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
     <section id="s-priv" data-cat>
       <h2>Confidentialité</h2>
       <div class="row"><div><b>Bloqueur de pubs et traqueurs</b><small>uBlock Origin Lite : pages plus légères et plus rapides</small></div><input type="checkbox" class="sw" data-k="adblock"></div>
-      <div class="row"><div><b>Proposer d'enregistrer les mots de passe</b><small>Volt propose d'enregistrer vos identifiants quand vous vous connectez ; rien n'est enregistré sans votre accord. Désactivé, Volt ne propose plus d'en enregistrer, mais ceux déjà enregistrés restent remplis tant que vous ne les avez pas supprimés. L'import depuis un autre navigateur n'est pas possible.</small></div><input type="checkbox" class="sw" data-k="save_passwords"></div>
-      <div class="row" id="pwrow"><div><b>Supprimer les mots de passe enregistrés</b><small>Volt ne les remplira plus. Les cookies, l'historique et les autres données ne sont pas touchés.</small></div><button class="btn g" id="pwclear">Supprimer</button></div>
+      <div class="row"><div><b>Proposer d'enregistrer les mots de passe</b><small>Volt propose d'enregistrer vos identifiants quand vous vous connectez ; rien n'est enregistré sans votre accord. Désactivé, Volt ne propose plus d'en enregistrer, mais ceux déjà enregistrés restent remplis tant que vous ne les avez pas supprimés.</small></div><input type="checkbox" class="sw" data-k="save_passwords"></div>
+      <div class="row"><div><b>Gérer les mots de passe</b><small>Voir, modifier, importer ou exporter vos identifiants enregistrés dans Volt</small></div><button class="btn" data-go="pass">Ouvrir</button></div>
+      <div class="row" id="pwrow"><div><b>Supprimer les mots de passe enregistrés</b><small>Vide le coffre de Volt. Les cookies, l'historique et les autres données ne sont pas touchés.</small></div><button class="btn g" id="pwclear">Supprimer</button></div>
       <div class="row"><div><b>Effacer les données de navigation</b><small>Historique, cookies, cache et données des sites</small></div><button class="btn g" id="clear">Effacer</button></div>
+    </section>
+    <section id="s-pass" data-cat>
+      <h2>Mots de passe</h2>
+      <div class="row"><div><b>Enregistrés dans Volt</b><small>Chiffrés sur votre PC. Voir en clair, modifier, supprimer ou exporter demande Windows Hello (code PIN ou empreinte).</small></div></div>
+      <div class="pwtools">
+        <input type="text" id="pwq" placeholder="Filtrer par site ou identifiant">
+        <button class="btn" id="pwaddbtn">Ajouter</button>
+        <button class="btn g" id="pwimport">Importer (.csv)</button><button class="qm" id="qmimp" title="Aide">?</button>
+        <button class="btn g" id="pwexport">Exporter (.csv)</button><button class="qm" id="qmexp" title="Aide">?</button>
+      </div>
+      <div id="pwhelp" hidden></div>
+      <div id="pwform" hidden></div>
+      <div id="pwlist"></div>
+      <div id="pwempty" class="pwempty" hidden>Aucun mot de passe enregistré. Connectez-vous à un site, ou importez un fichier CSV.</div>
     </section>
     <section id="s-exts" data-cat>
       <h2>Extensions</h2>
@@ -892,6 +933,8 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
   </main>
 </div>
 <div id="toast"></div>
+<div id="pwbar" hidden></div>
+<div id="pwpick" hidden></div>
 
 <script>
 const $=q=>document.querySelector(q), $$=q=>[...document.querySelectorAll(q)];
@@ -1016,7 +1059,7 @@ function render(st){
   const a=st.tabs.find(t=>t.id===act);
   if(a&&!panel&&document.activeElement!==$("#url")) $("#url").value=a.url.startsWith("data:")?"":a.url;
   if(a)drawCur(a.url);
-  storeBtn(a?a.url:"");extBar();trIcon(a);renderNt();
+  storeBtn(a?a.url:"");extBar();trIcon(a);pwIcon(a);renderNt();
   if(dOpen&&dView==="ck")drawCmp();
   $("#star").classList.toggle("on",!!a&&S.favs.some(f=>f.url===a.url));
   renderFavbar();
@@ -1683,7 +1726,7 @@ function renderBrowsers(list){
 // réponse de Volt à un import : nombre ajouté, null en cas d'échec (le bouton revient)
 function imported(id,n){if(n!=null){IMP[id]=n;$("#hvolty").classList.add("wink")}renderBrowsers(BR)}
 // volt://… affiché dans la barre quand le panneau est ouvert
-const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",keys:"settings/keys"};
+const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",pass:"settings/passwords",keys:"settings/keys"};
 // tableau de bord : [section, nom, description, icône]
 const CATS=[["gamer","Jeu et performances","Laisser la RAM et le processeur à vos jeux",'<rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/>'],
   ["start","Général","Démarrage, recherche, traduction, mises à jour",'<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>'],
@@ -1731,6 +1774,7 @@ function openSection(id){
   if(!panel)setPanel(true);
   $("#url").value="volt://"+VOLT[id];
   if(id==="hist")send({cmd:"hist"});
+  if(id==="pass"){pwHelp("");pwForm();send({cmd:"pw_list"})}
   if(id==="board"){boardSort(false);drawBoard();if(!S.favs.length)send({cmd:"browsers"})}
   if(id==="hello")send({cmd:"browsers"});
 }
@@ -1781,6 +1825,87 @@ function pwAsk(on){
     n.onclick=()=>pwAsk(0);y.onclick=()=>{pwAsk(0);send({cmd:"pw_clear"})};d.append(n,y);r.append(d);y.focus()}
 }
 $("#pwclear").onclick=()=>pwAsk(1);
+// ===== Gestionnaire de mots de passe (Rust : vault.rs). L'interface ne reçoit jamais de mot de passe sauf la révélation d'une entrée, derrière Windows Hello. =====
+let PW=[],pwbarT; // liste du coffre (sans mots de passe), filtrée à l'affichage
+const EYE='<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const PENCIL='<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const TRASH='<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+const iconBtn=(svg,title)=>{const b=h("button","ib");b.innerHTML=svg;b.title=title;return b};
+$("#pwico").onclick=()=>send({cmd:"pw_fill"});
+function pwIcon(a){$("#pwico").hidden=panel||!(a&&a.pwfill)}
+$("#pwq").oninput=()=>pwDraw();
+function pwManager(list){PW=list;if(cur==="pass")pwDraw()}
+function pwDraw(){
+  const q=$("#pwq").value.trim().toLowerCase();
+  const rows=PW.filter(e=>!q||(e.host+" "+e.user).toLowerCase().includes(q));
+  $("#pwempty").hidden=PW.length>0;
+  $("#pwlist").replaceChildren(...rows.map(e=>{
+    const d=h("div","pw-e"),s=h("div","site");
+    s.innerHTML="<b></b><small></small>";s.querySelector("b").textContent=e.host;s.querySelector("small").textContent=e.user||"(sans identifiant)";
+    const pw=h("span","pw","••••••••");pw.dataset.i=e.i;
+    const eye=iconBtn(EYE,"Afficher (Windows Hello)");eye.onclick=()=>{if(pw.dataset.shown){pw.textContent="••••••••";delete pw.dataset.shown}else send({cmd:"pw_reveal",i:e.i})};
+    const ed=iconBtn(PENCIL,"Modifier (Windows Hello)");ed.onclick=()=>pwForm(e);
+    const rm=iconBtn(TRASH,"Supprimer (Windows Hello)");rm.onclick=()=>send({cmd:"pw_del",i:e.i});
+    d.append(s,pw,eye,ed,rm);return d;
+  }));
+}
+// révélation reçue après Windows Hello : affichée sur la seule ligne concernée
+function pwShow(i,pass){const pw=$(`#pwlist .pw[data-i="${i}"]`);if(pw){pw.textContent=pass;pw.dataset.shown=1}}
+// formulaire d'ajout (e absent) ou de modification ; en modif, mot de passe vide = inchangé
+function pwForm(e){
+  const f=$("#pwform");if(e===undefined){f.hidden=true;f.replaceChildren();return}
+  f.hidden=false;
+  const mk=(ph,val)=>{const i=h("input");i.type="text";i.placeholder=ph;i.value=val||"";return i};
+  const o=mk("https://site.fr",e&&e.origin),u=mk("Identifiant",e&&e.user),p=mk(e?"Nouveau mot de passe (vide = inchangé)":"Mot de passe"),n=mk("Note (optionnel)",e&&e.note);
+  const ok=h("button","btn",e?"Enregistrer":"Ajouter"),no=h("button","btn g","Annuler");
+  no.onclick=()=>pwForm();
+  ok.onclick=()=>{
+    if(!o.value.trim())return toast("Entrez l'adresse du site (exemple : https://site.fr)");
+    send(e?{cmd:"pw_edit",i:e.i,origin:o.value,user:u.value,pass:p.value,note:n.value}:{cmd:"pw_add",origin:o.value,user:u.value,pass:p.value,note:n.value});
+    pwForm();
+  };
+  f.replaceChildren(o,u,p,n,ok,no);o.focus();
+}
+$("#pwaddbtn").onclick=()=>pwForm(null);
+$("#pwimport").onclick=()=>send({cmd:"pw_import"});
+$("#pwexport").onclick=()=>send({cmd:"pw_export"});
+$("#qmimp").onclick=()=>pwHelp("imp");
+$("#qmexp").onclick=()=>pwHelp("exp");
+function copyText(t){try{const a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.append(a);a.select();document.execCommand("copy");a.remove();toast("Lien copié")}catch(e){toast("Copie impossible")}}
+function pwHelp(which){
+  const e=$("#pwhelp");if(!which||e.dataset.w===which){e.hidden=true;e.dataset.w="";e.replaceChildren();return}
+  e.dataset.w=which;e.hidden=false;e.replaceChildren();
+  if(which==="exp"){e.append(h("p",null,"Crée un fichier CSV avec vos identifiants enregistrés dans Volt, pour les emporter ailleurs ou en sauvegarde. Ce fichier n'est pas chiffré : rangez-le en lieu sûr et supprimez-le après usage."));return}
+  e.append(h("p",null,"Exportez d'abord le fichier depuis votre ancien navigateur, puis choisissez-le ici. Collez ce lien dans la barre d'adresse de l'autre navigateur, puis « Exporter » :"));
+  [["Chrome","chrome://password-manager/passwords"," → Paramètres → Exporter les mots de passe"],
+   ["Edge","edge://wallet/passwords"," → ⋯ → Exporter les mots de passe"],
+   ["Opera / Opera GX","opera://settings/passwords"," → ⋮ → Exporter"],
+   ["Brave","brave://settings/passwords"," → ⋮ → Exporter"],
+   ["Firefox","about:logins"," → ⋯ → Exporter les identifiants"]].forEach(([nav,link,steps])=>{
+    const r=h("div","lk"),sp=h("span");
+    sp.append("• ");const b=h("b",null,nav+" : ");const c=h("code",null,link);sp.append(b,c,steps);
+    const cp=h("button","cp","copier");cp.onclick=()=>copyText(link);
+    r.append(sp,cp);e.append(r);
+  });
+  e.append(h("p",null,"Le fichier contient vos mots de passe en clair : supprimez-le après l'import."));
+}
+// proposition d'enregistrer, après l'envoi d'un formulaire (Rust : PwSave). Rien n'est enregistré sans le clic.
+function pwOffer(user){
+  const b=$("#pwbar");b.hidden=false;b.replaceChildren();
+  const t=h("b",null,user?`Enregistrer le mot de passe pour « ${user} » ?`:"Enregistrer ce mot de passe ?");
+  const y=h("button","btn","Enregistrer"),n=h("button","btn g","Pas maintenant");
+  y.onclick=()=>{send({cmd:"pw_save"});b.hidden=true;clearTimeout(pwbarT)};
+  n.onclick=()=>{send({cmd:"pw_dismiss"});b.hidden=true;clearTimeout(pwbarT)};
+  b.append(t,y,n);
+  clearTimeout(pwbarT);pwbarT=setTimeout(()=>{if(!b.hidden){send({cmd:"pw_dismiss"});b.hidden=true}},20000);
+}
+// plusieurs comptes pour l'origine : menu de choix sous l'icône
+function pwPick(users){
+  const m=$("#pwpick");m.hidden=false;
+  m.replaceChildren(...users.map(u=>{const b=h("button",null,u||"(sans identifiant)");b.onclick=()=>{send({cmd:"pw_fill",user:u});m.hidden=true};return b}));
+  const r=$("#pwico").getBoundingClientRect();m.style.left=Math.max(8,r.right-170)+"px";m.style.top=(r.bottom+6)+"px";
+}
+document.addEventListener("click",e=>{const m=$("#pwpick");if(!m.hidden&&!m.contains(e.target)&&e.target!==$("#pwico"))m.hidden=true},true);
 // page de favoris et bienvenue
 $("#logo").onclick=()=>panel&&cur==="board"?setPanel(false):openSection("board");
 $("#bweb").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim()){send({cmd:"nav",url:e.target.value});e.target.value="";setPanel(false)}};

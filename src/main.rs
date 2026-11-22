@@ -11,8 +11,10 @@ mod sort;
 mod tabmenu;
 mod translate;
 mod update;
+mod vault;
 
 use std::{
+    collections::HashSet,
     fs,
     path::PathBuf,
     time::{Duration, Instant},
@@ -69,6 +71,16 @@ const KEYS: [&str; 8] = ["ct", "cw", "cl", "ctab", "cstab", "cd", "ch", "cst"];
 const KEY_JS: &str = r#"addEventListener('keydown',e=>{const k=(e.ctrlKey?'c':'')+(e.shiftKey?'s':'')+e.key.toLowerCase();if(['ct','cw','cl','ctab','cstab','cd','ch','cst'].includes(k)){e.preventDefault();window.ipc.postMessage(k)}},true)"#;
 // Mémorise les champs où l'utilisateur a tapé (jamais leur contenu) ; composedPath : champs dans un shadow DOM.
 const TYPED_JS: &str = r#"addEventListener('input',e=>{const t=e.composedPath()[0];if(t.tagName=='TEXTAREA'||t.isContentEditable||(t.tagName=='INPUT'&&/^(text|search|email|url|tel|number|password)$/.test(t.type)))(window.__voltTyped||=new Set).add(t)},true)"#;
+// Gestionnaire de mots de passe : repère un formulaire de connexion (champ `password` + identifiant associé) et le signale
+// (`pw:form`, sans donnée) ; à l'envoi, transmet identifiant+mot de passe au Rust seul (`pw:save:`, jamais journalisé) ;
+// `__voltFill` remplit sur demande de Volt (valeurs insérées en JSON par le Rust). shortcut: détection au chargement et au
+// focus seulement (un formulaire d'appli monopage apparu plus tard n'est vu qu'au premier focus) ; à revoir si des sites manquent.
+const PW_JS: &str = r#"(()=>{const isPw=e=>e.tagName==='INPUT'&&e.type==='password';
+const userIn=root=>{const ins=[...root.querySelectorAll('input')];const pi=ins.findIndex(isPw);for(let i=pi-1;i>=0;i--){const t=ins[i];if(/^(text|email|tel)$/.test(t.type)||/user|email|login|mail/i.test((t.autocomplete||'')+' '+(t.name||'')+' '+(t.id||'')))return t}return ins.find(t=>/^(text|email|tel)$/.test(t.type))};
+let sent=false;const scan=()=>{if(sent)return;if([...document.querySelectorAll('input')].some(isPw)){sent=true;window.ipc.postMessage('pw:form')}};
+addEventListener('DOMContentLoaded',scan,true);addEventListener('load',scan,true);addEventListener('focusin',scan,true);
+addEventListener('submit',e=>{const f=e.target;if(!f.querySelector)return;const pw=f.querySelector('input[type=password]');if(!pw||!pw.value)return;const u=userIn(f);window.ipc.postMessage('pw:save:'+JSON.stringify({u:u?u.value:'',p:pw.value}))},true);
+window.__voltFill=(user,pass)=>{const pw=document.querySelector('input[type=password]');if(!pw)return;const u=userIn(pw.form||document);if(u&&user){u.focus();u.value=user;u.dispatchEvent(new Event('input',{bubbles:true}));u.dispatchEvent(new Event('change',{bubbles:true}))}pw.focus();pw.value=pass;pw.dispatchEvent(new Event('input',{bubbles:true}));pw.dispatchEvent(new Event('change',{bubbles:true}))}})()"#;
 // État de l'onglet quitté : [défilement, temps de la plus grande vidéo, texte non envoyé]. Un seul champ
 // input rempli = barre de recherche, ignorée ; seul le booléen sort de la page.
 const STATE_JS: &str = r#"(()=>{const v=[...document.querySelectorAll('video')].sort((a,b)=>b.offsetWidth*b.offsetHeight-a.offsetWidth*a.offsetHeight)[0];let n=0,d=false;for(const e of window.__voltTyped||[]){if(!e.isConnected)continue;if(e.tagName=='INPUT'){if(e.value)n++}else if(e.tagName=='TEXTAREA'?e.value:e.textContent.trim())d=true}return [scrollY,v?v.currentTime:0,d||n>=2]})()"#;
@@ -201,6 +213,9 @@ enum Ev {
     Cookies(Value),
     Lang(u32, String, String), // onglet, adresse, réponse de LANG_JS
     Update(Value), // état de la mise à jour pour l'interface (`upd`)
+    PwForm(u32), // un formulaire de connexion a été repéré sur l'onglet (signal, sans donnée)
+    PwSave(u32, String), // formulaire envoyé : {u,p} en JSON ; le mot de passe ne va qu'ici, jamais journalisé
+    Hello(Value, bool), // Windows Hello terminé pour l'action `cmd` : vrai = validé
 }
 
 struct Tab {
@@ -419,6 +434,29 @@ fn save(s: &Settings, cfg: &std::path::Path) {
     let _ = fs::write(cfg, serde_json::to_vec_pretty(s).unwrap());
 }
 
+/// Liste du gestionnaire pour l'interface : origine, hôte, identifiant, note — JAMAIS le mot de passe (révélé à part, derrière Hello).
+fn pw_manager_js(vault: &[vault::Entry]) -> String {
+    let list: Vec<Value> = vault
+        .iter()
+        .enumerate()
+        .map(|(i, e)| json!({"i": i, "host": e.origin.split_once("://").map_or(e.origin.as_str(), |x| x.1), "origin": e.origin, "user": e.username, "note": e.note}))
+        .collect();
+    format!("pwManager({})", json!(list))
+}
+
+/// Demande Windows Hello hors du fil de l'interface, puis renvoie le résultat par `Ev::Hello` pour exécuter `cmd`.
+/// Hello indisponible (pas de PIN) : action bloquée, l'interface le dit. Toute erreur bloque (fail-closed).
+fn ask_hello(proxy: EventLoopProxy<Ev>, message: &'static str, cmd: Value) {
+    std::thread::spawn(move || {
+        if !vault::hello_available() {
+            let _ = proxy.send_event(Ev::Toast("Configurez un code PIN Windows (Windows Hello) pour protéger vos mots de passe".into()));
+            return;
+        }
+        let ok = vault::hello_verify(message);
+        let _ = proxy.send_event(Ev::Hello(cmd, ok));
+    });
+}
+
 /// Ancien `restore` (booléen) : faux devient « neuf » ; vrai ou absent, le défaut « proposer ».
 fn migrate(s: &mut Settings) {
     if s.restore.take() == Some(false) {
@@ -524,10 +562,14 @@ fn toggle_mute(t: &mut Tab) {
     }
 }
 
-/// Le moteur propose d'enregistrer les identifiants à la connexion ; rien n'est enregistré sans le clic de l'utilisateur.
-fn set_password_save(wv: &WebView, on: bool) {
+/// Volt tient son propre coffre (vault.rs) : on coupe l'enregistrement et le remplissage du moteur pour ne pas avoir
+/// deux systèmes concurrents. Le remplissage et la proposition d'enregistrer sont faits par Volt (PW_JS + le coffre).
+fn lock_engine_pw(wv: &WebView) {
     if let Ok(st) = unsafe { wv.webview().Settings() }.and_then(|s| s.cast::<ICoreWebView2Settings4>()) {
-        let _ = unsafe { st.SetIsPasswordAutosaveEnabled(on) };
+        unsafe {
+            let _ = st.SetIsPasswordAutosaveEnabled(false);
+            let _ = st.SetIsGeneralAutofillEnabled(false);
+        }
     }
 }
 
@@ -572,7 +614,7 @@ fn unload_over_budget(tabs: &mut [Tab], active: u32, keep: u32) -> bool {
 
 /// `html` : page d'aperçu ou d'attente à afficher d'abord (elle part elle-même vers `url`) et fond du moteur derrière ;
 /// `cmp` : script des bandeaux de cookies ("" = aucun). Renvoie le webview et l'identifiant de ce script.
-fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: u32, url: &str, html: Option<(String, (u8, u8, u8, u8))>, dark: bool, pw: bool, args: &str, cmp: &str) -> (WebView, String) {
+fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: u32, url: &str, html: Option<(String, (u8, u8, u8, u8))>, dark: bool, args: &str, cmp: &str) -> (WebView, String) {
     let (p1, p2, p3, p4, p5) = (proxy.clone(), proxy.clone(), proxy.clone(), proxy.clone(), proxy.clone());
     // retour avec aperçu : fond du moteur à la couleur de la page, le passage de l'aperçu à la page ne montre plus de gris
     let bg = html.as_ref().map_or(LOADING_BG, |h| h.1);
@@ -586,6 +628,7 @@ fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: 
         .with_theme(if dark { Theme::Dark } else { Theme::Auto })
         .with_initialization_script(KEY_JS)
         .with_initialization_script(TYPED_JS)
+        .with_initialization_script(PW_JS)
         .with_document_title_changed_handler(move |t| {
             let _ = p1.send_event(Ev::Title(id, t));
         })
@@ -597,13 +640,18 @@ fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: 
             NewWindowResponse::Deny
         })
         .with_ipc_handler(move |r| {
-            if KEYS.contains(&r.body().as_str()) {
-                let _ = p4.send_event(Ev::Key(r.body().clone()));
+            let b = r.body();
+            if KEYS.contains(&b.as_str()) {
+                let _ = p4.send_event(Ev::Key(b.clone()));
+            } else if b == "pw:form" {
+                let _ = p4.send_event(Ev::PwForm(id));
+            } else if let Some(j) = b.strip_prefix("pw:save:") {
+                let _ = p4.send_event(Ev::PwSave(id, j.to_string()));
             }
         })
         .build_as_child(win)
         .expect("création de l'onglet");
-    set_password_save(&wv, pw);
+    lock_engine_pw(&wv);
     audio::watch(&wv, move |on| {
         let _ = p5.send_event(Ev::Audio(id, on));
     });
@@ -638,6 +686,9 @@ fn main() {
     FAVH.store(if s.favbar { FAVBAR_H } else { 0 }, std::sync::atomic::Ordering::Relaxed);
     let hist_path = dir.join("history.json");
     let mut hist: Vec<Visit> = load(&hist_path);
+    // Coffre de mots de passe : chiffré par DPAPI sur le disque, déchiffré ici en mémoire seulement.
+    let vault_path = dir.join("passwords.dat");
+    let mut vault = vault::load(&vault_path);
     let _ = fs::remove_dir_all(previews()); // restes d'un arrêt brutal
 
     let ev_loop = EventLoopBuilder::<Ev>::with_user_event().build();
@@ -722,14 +773,14 @@ fn main() {
         // VOLT_EAGER : charge d'un coup les `keep_loaded` premiers (tests de charge ; tout charger a fait planter la machine).
         let eager = std::env::var_os("VOLT_EAGER").is_some() && (s.keep_loaded == 0 || next_id <= s.keep_loaded);
         // URL reçue en argument : c'est elle qu'on affiche, inutile de charger le 1er onglet restauré
-        let (wv, cmp) = ((next_id == 1 && url_arg.is_none()) || eager).then(|| make_tab(&win, &mut ctx, &proxy, next_id, u, None, s.dark_web, s.save_passwords, &args, &cmp_js(&s))).unzip();
+        let (wv, cmp) = ((next_id == 1 && url_arg.is_none()) || eager).then(|| make_tab(&win, &mut ctx, &proxy, next_id, u, None, s.dark_web, &args, &cmp_js(&s))).unzip();
         let title = hist.iter().find(|h| &h.url == u).map_or(u.clone(), |h| h.title.clone());
         tabs.push(Tab { id: next_id, wv, title, url: u.clone(), loading: next_id == 1 && url_arg.is_none(), audio: false, muted: false, seen: Instant::now(), frozen: false, typed: false, saved: None, pinned: restored && next_id <= s.pinned, cmp: cmp.unwrap_or_default(), foreign: false });
     }
     let mut active = tabs[0].id;
     if let Some(u) = &url_arg {
         next_id += 1;
-        let (wv, cmp) = make_tab(&win, &mut ctx, &proxy, next_id, u, None, s.dark_web, s.save_passwords, &args, &cmp_js(&s));
+        let (wv, cmp) = make_tab(&win, &mut ctx, &proxy, next_id, u, None, s.dark_web, &args, &cmp_js(&s));
         tabs.push(Tab { id: next_id, wv: Some(wv), title: u.clone(), url: u.clone(), loading: true, audio: false, muted: false, seen: Instant::now(), frozen: false, typed: false, saved: None, pinned: false, cmp, foreign: false });
         active = next_id;
     }
@@ -740,6 +791,8 @@ fn main() {
     let mut cursor = (0.0, 0.0);
     let mut closed: Vec<(usize, String)> = vec![]; // (position, adresse) des onglets fermés, pour « Rouvrir »
     let mut ext_at: Option<Instant> = None; // dernière installation d'extension (page d'accueil en arrière-plan)
+    let mut pw_forms: HashSet<u32> = HashSet::new(); // onglets où un formulaire de connexion est repéré
+    let mut pending_save: Option<vault::Entry> = None; // identifiant envoyé, en attente du clic « Enregistrer » (jamais sur le disque)
 
     ev_loop.run(move |event, _, flow| {
         *flow = ControlFlow::WaitUntil(next_tick);
@@ -762,8 +815,10 @@ fn main() {
 
             }
         };
-        let sync = |tabs: &Vec<Tab>, active: u32, s: &Settings, offer: usize| {
-            let list: Vec<Value> = tabs.iter().map(|t| json!({"id": t.id, "title": t.title, "url": t.url, "loading": t.loading, "audio": t.audio, "muted": t.muted, "asleep": t.wv.is_none(), "pinned": t.pinned, "foreign": t.foreign, "tr": translate::can_relay(&t.url)})).collect();
+        let sync = |tabs: &Vec<Tab>, active: u32, s: &Settings, offer: usize, vault: &[vault::Entry], pw_forms: &HashSet<u32>| {
+            // pwfill : un formulaire de connexion est repéré ET le coffre a une entrée pour l'origine EXACTE de l'onglet
+            let has_fill = |t: &Tab| pw_forms.contains(&t.id) && vault::origin_of(&t.url).is_some_and(|o| !vault::for_origin(vault, &o).is_empty());
+            let list: Vec<Value> = tabs.iter().map(|t| json!({"id": t.id, "title": t.title, "url": t.url, "loading": t.loading, "audio": t.audio, "muted": t.muted, "asleep": t.wv.is_none(), "pinned": t.pinned, "foreign": t.foreign, "tr": translate::can_relay(&t.url), "pwfill": has_fill(t)})).collect();
             let _ = ui.evaluate_script(&format!("render({})", json!({"tabs": list, "active": active, "s": s, "max": win.is_maximized(), "first": first, "fresh": fresh, "def": defaults::is_default(), "offer": offer, "ver": update::CURRENT})));
         };
         // Place interface et page ; la page (au-dessus de l'interface) d'abord quand elle gagne de la place,
@@ -796,7 +851,7 @@ fn main() {
 
         let mut open = |url: &str, tabs: &mut Vec<Tab>, active: &mut u32| {
             next_id += 1;
-            let (wv, cmp) = make_tab(&win, &mut ctx, &proxy, next_id, url, None, s.dark_web, s.save_passwords, &args, &cmp_js(&s));
+            let (wv, cmp) = make_tab(&win, &mut ctx, &proxy, next_id, url, None, s.dark_web, &args, &cmp_js(&s));
             tabs.push(Tab { id: next_id, wv: Some(wv), title: "Nouvel onglet".into(), url: url.into(), loading: true, audio: false, muted: false, seen: Instant::now(), frozen: false, typed: false, saved: None, pinned: false, cmp, foreign: false });
             *active = next_id;
         };
@@ -888,6 +943,9 @@ fn main() {
                         }
                     }
                     Ev::Load(id, url, l) => {
+                        if l {
+                            pw_forms.remove(&id); // nouvelle page : le repère du formulaire est remis par PW_JS si besoin
+                        }
                         if let Some(tab) = tabs.iter_mut().find(|x| x.id == id) {
                             if !l && url.starts_with("http") {
                                 add_visit(&mut hist, &url, &tab.title);
@@ -1063,6 +1121,76 @@ fn main() {
                         let _ = ui.evaluate_script(&format!("volty({c})"));
                         return;
                     }
+                    // formulaire de connexion repéré : propose le remplissage si le coffre a l'origine exacte (fait dans sync)
+                    Ev::PwForm(id) => {
+                        pw_forms.insert(id);
+                        dirty = true;
+                        return;
+                    }
+                    // formulaire envoyé : propose d'enregistrer si (origine, identifiant) est nouveau. Le mot de passe ne va qu'ici.
+                    Ev::PwSave(id, j) => {
+                        if !s.save_passwords {
+                            return;
+                        }
+                        let (Some(url), Ok(cred)) = (tabs.iter().find(|t| t.id == id).map(|t| t.url.clone()), serde_json::from_str::<Value>(&j)) else { return };
+                        let (Some(origin), p) = (vault::origin_of(&url), cred["p"].as_str().unwrap_or_default().to_string()) else { return };
+                        let u = cred["u"].as_str().unwrap_or_default().to_string();
+                        if p.is_empty() || vault.iter().any(|e| e.origin == origin && e.username == u) {
+                            return; // vide, ou couple déjà enregistré
+                        }
+                        let _ = ui.evaluate_script(&format!("pwOffer({})", json!(u)));
+                        pending_save = Some(vault::Entry { origin, username: u, password: p, note: String::new() });
+                        return;
+                    }
+                    // Windows Hello terminé : exécute l'action protégée seulement si validé
+                    Ev::Hello(cmd, ok) => {
+                        if !ok {
+                            toast("Déverrouillage annulé");
+                            return;
+                        }
+                        let i = cmd["i"].as_u64().map(|i| i as usize);
+                        match cmd["do"].as_str().unwrap_or_default() {
+                            "reveal" => {
+                                if let Some(e) = i.and_then(|i| vault.get(i)) {
+                                    let _ = ui.evaluate_script(&format!("pwShow({},{})", i.unwrap(), json!(e.password)));
+                                }
+                            }
+                            "edit" => {
+                                let origin = vault::origin_of(cmd["origin"].as_str().unwrap_or_default());
+                                match (i.filter(|&i| i < vault.len()), origin) {
+                                    (Some(i), Some(origin)) => {
+                                        let pass = cmd["pass"].as_str().unwrap_or_default();
+                                        // mot de passe laissé vide : on garde l'ancien (pas d'effacement accidentel)
+                                        let password = if pass.is_empty() { vault[i].password.clone() } else { pass.into() };
+                                        vault[i] = vault::Entry { origin, username: cmd["user"].as_str().unwrap_or_default().into(), password, note: cmd["note"].as_str().unwrap_or_default().into() };
+                                        vault::save(&vault_path, &vault);
+                                        let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                    }
+                                    _ => toast("Adresse invalide (exemple : https://site.fr)"),
+                                }
+                            }
+                            "del" => {
+                                if let Some(i) = i.filter(|&i| i < vault.len()) {
+                                    vault.remove(i);
+                                    vault::save(&vault_path, &vault);
+                                    let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                    toast("Mot de passe supprimé");
+                                }
+                            }
+                            "export" => match vault::pick_save(win.hwnd()) {
+                                Some(path) => {
+                                    if fs::write(&path, vault::to_csv(&vault)).is_ok() {
+                                        toast(&format!("{} identifiants exportés", vault.len()));
+                                    } else {
+                                        toast("Écriture du fichier impossible");
+                                    }
+                                }
+                                None => {}
+                            },
+                            _ => {}
+                        }
+                        return;
+                    }
                     Ev::Ui(body) => {
                         let Ok(v) = serde_json::from_str::<Value>(&body) else { return };
                         let str_of = |k: &str| v[k].as_str().unwrap_or_default().to_string();
@@ -1187,7 +1315,6 @@ fn main() {
                                     save(&s, &cfg_path);
                                     for w in tabs.iter().filter_map(|t| t.wv.as_ref()) {
                                         let _ = w.set_theme(if s.dark_web { Theme::Dark } else { Theme::Auto });
-                                        set_password_save(w, s.save_passwords);
                                     }
                                 }
                             }
@@ -1280,14 +1407,87 @@ fn main() {
                                 save(&s, &cfg_path);
                                 set_cmp(&mut tabs, &cmp_js(&s));
                             }
+                            // vide le coffre de Volt (plus ClearBrowsingData pour ce qui resterait côté moteur)
                             "pw_clear" => {
+                                vault.clear();
+                                vault::save(&vault_path, &vault);
                                 let p = proxy.clone();
-                                let started = cookies::clear_passwords(&ui, move |ok| {
-                                    let _ = p.send_event(Ev::Toast(if ok { "Mots de passe enregistrés supprimés" } else { "Suppression des mots de passe impossible" }.into()));
+                                cookies::clear_passwords(&ui, move |_| {
+                                    let _ = p.send_event(Ev::Toast("Mots de passe supprimés".into()));
                                 });
-                                if !started {
-                                    toast("Suppression des mots de passe impossible");
+                                let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                toast("Mots de passe supprimés");
+                                return;
+                            }
+                            // gestionnaire : envoie la liste (sans mots de passe)
+                            "pw_list" => {
+                                let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                return;
+                            }
+                            // ajout d'une entrée (sans Hello) ; origine validée
+                            "pw_add" => {
+                                let Some(origin) = vault::origin_of(&str_of("origin")) else {
+                                    toast("Adresse invalide (exemple : https://site.fr)");
+                                    return;
+                                };
+                                vault::merge(&mut vault, vec![vault::Entry { origin, username: str_of("user"), password: str_of("pass"), note: str_of("note") }]);
+                                vault::save(&vault_path, &vault);
+                                let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                return;
+                            }
+                            // révéler / modifier / supprimer / exporter : derrière Windows Hello (fait dans Ev::Hello)
+                            c @ ("pw_reveal" | "pw_edit" | "pw_del" | "pw_export") => {
+                                let msg = if c == "pw_export" { "Déverrouillez pour exporter vos mots de passe" } else { "Déverrouillez pour voir vos mots de passe" };
+                                let mut cmd = v.clone();
+                                cmd["do"] = json!(c.trim_start_matches("pw_"));
+                                ask_hello(proxy.clone(), msg, cmd);
+                                return;
+                            }
+                            // import CSV (sans Hello) : l'utilisateur choisit le fichier
+                            "pw_import" => {
+                                let Some(path) = vault::pick_open(win.hwnd()) else { return };
+                                let Ok(text) = fs::read_to_string(&path) else {
+                                    toast("Lecture du fichier impossible");
+                                    return;
+                                };
+                                let (entries, skipped) = vault::parse_csv(&text);
+                                let added = vault::merge(&mut vault, entries);
+                                vault::save(&vault_path, &vault);
+                                let _ = ui.evaluate_script(&pw_manager_js(&vault));
+                                toast(&format!("{added} importés, {skipped} ignorés"));
+                                return;
+                            }
+                            // remplissage sur action de l'utilisateur : clic sur l'icône (ou choix d'un compte)
+                            "pw_fill" => {
+                                let Some((Some(origin), Some(w))) = tabs.iter().find(|t| t.id == active).map(|t| (vault::origin_of(&t.url), t.wv.as_ref())) else { return };
+                                let accounts = vault::for_origin(&vault, &origin);
+                                let chosen = match v["user"].as_str() {
+                                    Some(u) => accounts.into_iter().find(|e| e.username == u),
+                                    None if accounts.len() == 1 => Some(accounts[0]),
+                                    None => {
+                                        // plusieurs comptes : laisser choisir l'identifiant
+                                        let users: Vec<&str> = accounts.iter().map(|e| e.username.as_str()).collect();
+                                        let _ = ui.evaluate_script(&format!("pwPick({})", json!(users)));
+                                        return;
+                                    }
+                                };
+                                if let Some(e) = chosen {
+                                    // valeurs insérées en JSON (jamais par collage de chaîne), `<` échappé comme ailleurs
+                                    let esc = |x: &str| serde_json::to_string(x).unwrap_or_default().replace('<', "\\u003c");
+                                    let _ = w.evaluate_script(&format!("window.__voltFill&&__voltFill({},{})", esc(&e.username), esc(&e.password)));
                                 }
+                                return;
+                            }
+                            // bandeau « Enregistrer » : valide le couple en attente (jamais sans ce clic)
+                            "pw_save" => {
+                                if let Some(e) = pending_save.take() {
+                                    vault::merge(&mut vault, vec![e]);
+                                    vault::save(&vault_path, &vault);
+                                }
+                                return;
+                            }
+                            "pw_dismiss" => {
+                                pending_save = None;
                                 return;
                             }
                             "default_browser" => {
@@ -1476,7 +1676,7 @@ fn main() {
                         // Capture de la page laissée, affichée tout de suite pendant le rechargement derrière. Sans capture,
                         // rien : une page d'attente a été mesurée, elle ne s'affichait jamais et coûtait 50 ms.
                         let html = t.url.starts_with("http").then(|| preview::page(&preview_of(t.id), &t.url)).flatten().map(|h| (h, preview::bg(&preview_of(t.id)).unwrap_or(LOADING_BG)));
-                        let (w, c) = make_tab(&win, &mut ctx, &proxy, t.id, &t.url, html, s.dark_web, s.save_passwords, &args, &cmp_js(&s));
+                        let (w, c) = make_tab(&win, &mut ctx, &proxy, t.id, &t.url, html, s.dark_web, &args, &cmp_js(&s));
                         (t.wv, t.cmp) = (Some(w), c);
                         t.loading = true;
                     } else if active != prev {
@@ -1501,7 +1701,7 @@ fn main() {
             Event::MainEventsCleared if dirty => {
                 dirty = false;
                 layout(&tabs, active, panel, s.game_mode, minimized_at.is_some());
-                sync(&tabs, active, &s, offer_n(&offer));
+                sync(&tabs, active, &s, offer_n(&offer), &vault, &pw_forms);
             }
             _ => {}
         }

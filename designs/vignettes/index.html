@@ -53,6 +53,29 @@ small{color:var(--mu)}
 .card .meta b{display:block;font-size:15px;font-weight:600}
 .card .meta span{font-size:11.5px;opacity:.85}
 .card:hover{transform:scale(1.07) translateY(-2px);box-shadow:0 10px 30px #000a,0 0 0 2px var(--a)}
+/* image perso de la carte : remplace le dégradé de marque */
+.card.img::before{background:center/cover no-repeat var(--img);opacity:1}
+.card.img .meta{background:linear-gradient(0deg,#000c,transparent);padding:22px 14px 12px;left:0;right:0;bottom:0}
+/* crayon d'édition, visible au survol */
+.card .pen{position:absolute;top:8px;right:8px;z-index:2;width:28px;height:28px;border-radius:8px;border:0;background:#000a;color:#fff;display:grid;place-items:center;opacity:0;cursor:pointer;transition:opacity .15s}
+.card:hover .pen{opacity:1}
+.card .pen svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.add{display:grid;place-items:center;color:var(--mu);border:2px dashed #ffffff22;background:none;font-size:30px}
+.add:hover{color:var(--tx);border-color:var(--a)}
+/* éditeur de vignette (plein écran dans la page de favoris) */
+#ed{position:fixed;inset:0;z-index:20;background:#000a;display:none;place-items:center}
+#ed.on{display:grid}
+#ed .box{width:420px;max-width:92vw;background:var(--bg2);border:1px solid #fff2;border-radius:16px;padding:22px}
+#ed h3{margin-bottom:16px}
+#ed label{display:block;font-size:12px;color:var(--mu);margin:14px 0 6px}
+#ed input[type=text]{width:100%;height:38px;border-radius:10px;border:1px solid #fff2;background:var(--bg);color:var(--tx);padding:0 12px;font:inherit}
+#ed .prev{height:96px;border-radius:12px;background:center/cover no-repeat var(--bg3);display:grid;place-items:center;color:var(--mu);overflow:hidden;position:relative}
+#ed .prev small{position:absolute}
+#ed .imgbtns{display:flex;gap:8px;margin-top:8px}
+#ed button{font:inherit;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--bg3);color:var(--tx)}
+#ed .row{display:flex;justify-content:space-between;margin-top:22px}
+#ed .ok{background:var(--a);color:#fff;font-weight:600}
+#ed .del{background:none;color:#ff6b6b}
 
 /* carte affiche (style B) : plus haute, icône centrée */
 body.poster .card{width:150px;height:170px}
@@ -101,6 +124,19 @@ body.poster .card .meta{text-align:center;bottom:16px}
   </div>
 </main>
 
+<div id="ed">
+  <div class="box">
+    <h3>Modifier la vignette</h3>
+    <label>Nom</label><input type="text" id="edN" placeholder="YouTube">
+    <label>Lien</label><input type="text" id="edU" placeholder="https://www.youtube.com">
+    <label>Image</label>
+    <div class="prev" id="edImg"><small>aucune image : couleur du site</small></div>
+    <div class="imgbtns"><button id="edPic">Choisir une image…</button><button id="edClr">Retirer l'image</button></div>
+    <div class="row"><button class="del">Supprimer</button><span><button id="edCancel">Annuler</button> <button class="ok" id="edOk">Enregistrer</button></span></div>
+  </div>
+</div>
+<input type="file" id="edFile" accept="image/*" hidden>
+
 <script>
 const dot=(c,l)=>`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='${c}'/><text x='12' y='17' font-size='13' font-family='Segoe UI,sans-serif' font-weight='700' text-anchor='middle' fill='#fff'>${l}</text></svg>`)}`;
 // sites préférés : nom, domaine, couleur de marque, lettre (icône de démo)
@@ -112,18 +148,41 @@ const S=[
  ["Le Monde","lemonde.fr","#222","M"],["Instagram","instagram.com","#e1306c","I"],["Figma","figma.com","#a259ff","F"]];
 // deux rangées : "Préférés" et "Souvent visités"
 const rows=[["Préférés",S.slice(0,10)],["Souvent visités",[...S.slice(5),...S.slice(0,5)]]];
-document.getElementById("rows").innerHTML=rows.map(([t,list],i)=>`
-  <div class="rail">
-    <button class="nav l" data-d="-1" data-i="${i}"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-    <div class="rowhead"><h2>${t}</h2><small>${list.length} sites</small></div>
-    <div class="scroller" id="sc${i}">${list.map(([n,d,c,l])=>`
-      <div class="card" style="--c:${c}" title="${n} · ${d}">
-        <div class="fav"><img src="${dot(c,l)}" alt=""></div>
-        <div class="meta"><b>${n}</b><span>${d}</span></div>
-      </div>`).join("")}</div>
-    <button class="nav r" data-d="1" data-i="${i}"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-  </div>`).join("");
-document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>document.getElementById("sc"+b.dataset.i).scrollBy({left:b.dataset.d*500,behavior:"smooth"}));
+// chaque rangée = une liste de vignettes modifiables {nom, lien, couleur, lettre, image?}
+const V=[rows[0][1].map(([n,d,c,l])=>({n,u:"https://"+d,c,l})),rows[1][1].map(([n,d,c,l])=>({n,u:"https://"+d,c,l}))];
+function host(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(e){return u}}
+function drawRows(){
+  document.getElementById("rows").innerHTML=V.map((list,i)=>`
+    <div class="rail">
+      <button class="nav l" data-d="-1" data-i="${i}"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="rowhead"><h2>${i?"Souvent visités":"Préférés"}</h2><small>${list.length} sites</small></div>
+      <div class="scroller" id="sc${i}">${list.map((v,j)=>`
+        <div class="card${v.img?" img":""}" style="--c:${v.c};--img:url('${v.img||""}')" title="${v.n} · ${host(v.u)}">
+          <button class="pen" data-i="${i}" data-j="${j}"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+          ${v.img?"":`<div class="fav"><img src="${dot(v.c,v.l)}" alt=""></div>`}
+          <div class="meta"><b>${v.n}</b><span>${host(v.u)}</span></div>
+        </div>`).join("")}
+        <button class="card add" data-i="${i}" data-j="-1">+</button></div>
+      <button class="nav r" data-d="1" data-i="${i}"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>`).join("");
+  document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>document.getElementById("sc"+b.dataset.i).scrollBy({left:b.dataset.d*500,behavior:"smooth"}));
+  document.querySelectorAll(".pen,.add").forEach(b=>b.onclick=()=>openEd(+b.dataset.i,+b.dataset.j));
+}
+const $=s=>document.querySelector(s);
+const edN=$("#edN"),edU=$("#edU"),edImg=$("#edImg");
+let cur={i:0,j:-1,img:""};
+function setPrev(img){cur.img=img||"";edImg.style.background=img?`center/cover no-repeat url('${img}')`:"var(--bg3)";edImg.innerHTML=img?"":"<small>aucune image : couleur du site</small>"}
+function openEd(i,j){const v=j<0?{n:"",u:"",img:""}:V[i][j];cur={i,j,img:v.img||""};
+  edN.value=v.n||"";edU.value=v.u||"";setPrev(v.img);$(".del").style.display=j<0?"none":"";$("#ed").classList.add("on")}
+$("#edCancel").onclick=()=>$("#ed").classList.remove("on");
+$("#edOk").onclick=()=>{const n=edN.value.trim()||host(edU.value)||"Site",u=edU.value.trim();
+  const v={n,u,img:cur.img,c:"#555",l:(host(u)[0]||"?").toUpperCase()};
+  if(cur.j<0)V[cur.i].push(v);else V[cur.i][cur.j]=v;$("#ed").classList.remove("on");drawRows()};
+$(".del").onclick=()=>{V[cur.i].splice(cur.j,1);$("#ed").classList.remove("on");drawRows()};
+$("#edClr").onclick=()=>setPrev("");
+$("#edPic").onclick=()=>$("#edFile").click();
+$("#edFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>setPrev(r.result);r.readAsDataURL(f);e.target.value=""};
+drawRows();
 
 const dirs=[["Jeux","🎮","#c084fc",22],["Dev","💻","#34d399",25],["Vidéos","🎬","#f87171",18],["Achats","🛒","#fb923c",18],["Actualités","📰","#818cf8",20]];
 document.getElementById("folders").innerHTML=dirs.map(([n,e,c,k])=>`<div class="folder" style="--c:${c}"><div class="box">${e}</div><b>${n}</b><small>${k} sites</small></div>`).join("");
