@@ -1011,7 +1011,7 @@ function render(st){
 const relayed=u=>/^https:\/\/[^/?#]+\.translate\.goog([/?#:]|$)/i.test(u);
 function trIcon(a){
   const b=$("#trico"),u=a?a.url:"",r=relayed(u);
-  b.hidden=panel||!/^https?:\/\//i.test(u);
+  b.hidden=panel||!(r||(a&&a.tr)); // tr : faux sur les pages que le relais refuse (Google, YouTube)
   b.classList.toggle("on",r||!!(a&&a.foreign));
   const t=r?"Voir l'original (page non traduite)":a&&a.foreign?"Page en langue étrangère : la traduire en français (Google Traduction)":"Traduire la page en français (Google Traduction)";
   if(b.title!==t){b.title=t;b.setAttribute("aria-label",t)}
@@ -1698,7 +1698,7 @@ $$(".defbtn").forEach(b=>b.onclick=()=>send({cmd:"default_browser"}));
 // « navigateur par défaut » est relu (setDef), pas un rendu complet à chaque clic venu de la page
 addEventListener("focus",()=>send({cmd:"def"}));
 $("#hvolty").innerHTML=voltySvg(seasonFor(new Date()),false);
-$("#hgo").onclick=()=>{save({});openSection("board")}; // réglages écrits : plus de bienvenue au prochain lancement
+$("#hgo").onclick=()=>{save({welcomed:true});openSection("board")}; // plus de bienvenue au prochain lancement
 addEventListener("keydown",e=>{
   const k=(e.ctrlKey?"c":"")+(e.shiftKey?"s":"")+e.key.toLowerCase();
   if(["ct","cw","cl","ctab","cstab","cst"].includes(k)){e.preventDefault();k==="cl"?focusUrl():window.ipc.postMessage(k)}

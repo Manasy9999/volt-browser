@@ -11,6 +11,30 @@ pub fn is_relay(url: &str) -> bool {
     cmp::site(url).is_some_and(|h| h.ends_with(".translate.goog"))
 }
 
+/// Pages que le relais ne sait pas servir (mesuré le 22/11/2026) : Google refuse ses propres pages (une recherche
+/// donne une page anti-robot sans issue), YouTube reste vide. L'icône n'y est pas proposée.
+pub fn can_relay(url: &str) -> bool {
+    !is_relay(url) && defaults::web_url(url).is_some() && cmp::site(url).is_some_and(|h| !h.split('.').any(|l| l == "google" || l == "youtube"))
+}
+
+/// Le relais a répondu par la page anti-robot de Google (`/sorry/`), dont la vérification ne marche pas sur ce domaine.
+pub fn is_refused(url: &str) -> bool {
+    is_relay(url) && url.to_ascii_lowercase().split_once(".translate.goog").is_some_and(|(_, t)| t.starts_with("/sorry/"))
+}
+
+/// Adresse d'origine portée par la page de refus (paramètre `continue`) ; None si absente ou pas http(s).
+pub fn refused_origin(url: &str) -> Option<String> {
+    let c = url.split_once('?')?.1.split('&').find_map(|p| p.strip_prefix("continue="))?;
+    let (b, mut out, mut i) = (c.as_bytes(), vec![], 0);
+    while i < b.len() {
+        // %XX -> octet ; tout le reste tel quel
+        let hex = (b[i] == b'%').then(|| c.get(i + 1..i + 3).and_then(|h| u8::from_str_radix(h, 16).ok())).flatten();
+        out.push(hex.unwrap_or(b[i]));
+        i += if hex.is_some() { 3 } else { 1 };
+    }
+    defaults::web_url(&String::from_utf8(out).ok()?)
+}
+
 /// Adresse d'origine d'une page du relais ; None si ce n'en est pas une ou si le résultat n'est pas http(s).
 /// Encodage constaté (novembre 2026) : « - » -> « -- », « . » -> « - » ; hôte trop long : son début passe dans
 /// `_x_tr_hp` ; hôte en « xn-- » : « xn---- » devient « 0- » (`_x_tr_enc=0`) ; `_x_tr_sch=http`, `_x_tr_port`.
@@ -101,5 +125,23 @@ mod tests {
             assert!(original(bad).is_none(), "{bad}");
         }
         assert!(!is_relay("https://lemonde.fr/translate.goog"));
+    }
+
+    #[test]
+    fn pages_the_relay_refuses() {
+        for ok in ["https://en.wikipedia.org/wiki/A", "http://neverssl.com/", "https://google-fan.fr/x", "https://notgoogle.com/"] {
+            assert!(can_relay(ok), "{ok}");
+        }
+        for no in ["https://www.google.com/search?q=a", "https://google.fr/", "https://mail.google.com/x", "https://www.google.co.uk/", "https://www.youtube.com/watch?v=1", "https://m.youtube.com/", "https://en-wikipedia-org.translate.goog/", "javascript:alert(1)", "volt://newtab", ""] {
+            assert!(!can_relay(no), "{no}");
+        }
+        // adresse relevée en traduisant une recherche Google
+        let r = "https://www-google-com.translate.goog/sorry/index?continue=https://www.google.com/search?q%3Dorion%2Bnebula%26udm%3D2&q=EgRC";
+        assert!(is_refused(r) && is_refused("https://WWW-Google-COM.translate.goog/sorry/index"));
+        assert_eq!(refused_origin(r).as_deref(), Some("https://www.google.com/search?q=orion+nebula&udm=2"));
+        assert!(!is_refused("https://en-wikipedia-org.translate.goog/wiki/Sorry") && !is_refused("https://www.google.com/sorry/index"));
+        for bad in ["https://x-com.translate.goog/sorry/index", "https://x-com.translate.goog/sorry/index?continue=javascript%3Aalert(1)", "https://x-com.translate.goog/sorry/index?continue=%ZZ%"] {
+            assert!(refused_origin(bad).is_none(), "{bad}");
+        }
     }
 }

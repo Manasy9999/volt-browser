@@ -139,6 +139,7 @@ struct Settings {
     favbar: bool,
     favbar_style: String, // "etageres" (défaut), "ruban" ou "icones" ; lu par l'interface seulement
     save_passwords: bool, // le moteur propose d'enregistrer les identifiants à la connexion
+    welcomed: bool, // « Commencer » cliqué sur la page de bienvenue : elle ne revient plus
     exts_open: bool, // icônes des extensions dépliées dans la barre d'adresse ; lu par l'interface seulement
     translate_auto: bool, // page détectée en langue étrangère : rechargée traduite par le relais de Google
     no_translate: Vec<String>, // sites jamais traduits automatiquement (« Voir l'original » les ajoute)
@@ -170,6 +171,7 @@ impl Default for Settings {
             favbar: true,
             favbar_style: "etageres".into(),
             save_passwords: true,
+            welcomed: false,
             exts_open: true,
             translate_auto: false,
             no_translate: vec![],
@@ -628,8 +630,9 @@ fn main() {
     let _ = fs::create_dir_all(&ext_dir);
     let url_arg = defaults::arg_url(std::env::args().skip(1));
     let pipe = defaults::pipe_name(&dir);
-    let first = !cfg_path.exists(); // page de bienvenue
     let mut s: Settings = load(&cfg_path);
+    // Bienvenue tant que « Commencer » n'a pas été cliqué : un profil créé avant cette page la voit aussi une fois.
+    let first = !s.welcomed;
     migrate(&mut s);
     let restarting = std::env::args().any(|a| a == "--restart");
     FAVH.store(if s.favbar { FAVBAR_H } else { 0 }, std::sync::atomic::Ordering::Relaxed);
@@ -760,7 +763,7 @@ fn main() {
             }
         };
         let sync = |tabs: &Vec<Tab>, active: u32, s: &Settings, offer: usize| {
-            let list: Vec<Value> = tabs.iter().map(|t| json!({"id": t.id, "title": t.title, "url": t.url, "loading": t.loading, "audio": t.audio, "muted": t.muted, "asleep": t.wv.is_none(), "pinned": t.pinned, "foreign": t.foreign})).collect();
+            let list: Vec<Value> = tabs.iter().map(|t| json!({"id": t.id, "title": t.title, "url": t.url, "loading": t.loading, "audio": t.audio, "muted": t.muted, "asleep": t.wv.is_none(), "pinned": t.pinned, "foreign": t.foreign, "tr": translate::can_relay(&t.url)})).collect();
             let _ = ui.evaluate_script(&format!("render({})", json!({"tabs": list, "active": active, "s": s, "max": win.is_maximized(), "first": first, "fresh": fresh, "def": defaults::is_default(), "offer": offer, "ver": update::CURRENT})));
         };
         // Place interface et page ; la page (au-dessus de l'interface) d'abord quand elle gagne de la place,
@@ -908,6 +911,24 @@ fn main() {
                             // langue relevée à la fin du chargement : icône de traduction, traduction automatique
                             if l {
                                 tab.foreign = false;
+                            } else if translate::is_refused(&url)
+                                && let Some(w) = &tab.wv
+                            {
+                                // Google refuse cette page au relais (page anti-robot sans issue) : retour à l'original, et le
+                                // site n'est plus traduit automatiquement, sinon il y repartirait aussitôt
+                                match translate::refused_origin(&url) {
+                                    Some(o) => {
+                                        let _ = w.load_url(&o);
+                                        if let Some(h) = cmp::site(&o).filter(|h| !s.no_translate.contains(h)) {
+                                            s.no_translate.push(h);
+                                            save(&s, &cfg_path);
+                                        }
+                                    }
+                                    None => {
+                                        let _ = w.evaluate_script("history.back()");
+                                    }
+                                }
+                                toast("Google ne permet pas de traduire cette page");
                             } else if url.starts_with("http")
                                 && !translate::is_relay(&url)
                                 && let Some(w) = &tab.wv
@@ -942,6 +963,7 @@ fn main() {
                         tab.foreign = fr == 0;
                         if tab.foreign
                             && s.translate_auto
+                            && translate::can_relay(&url)
                             && !pw
                             && !cmp::site(&url).is_some_and(|h| cmp::covers(&h, &s.no_translate))
                             && let Some(w) = &tab.wv
@@ -1222,8 +1244,10 @@ fn main() {
                             "translate" => {
                                 let (Some(w), Some(u)) = (wv, tabs.iter().find(|t| t.id == active).map(|t| t.url.clone())) else { return };
                                 if !translate::is_relay(&u) {
-                                    if u.starts_with("http") {
+                                    if translate::can_relay(&u) {
                                         let _ = w.load_url(&translate::relay(&u));
+                                    } else {
+                                        toast("Google ne permet pas de traduire cette page");
                                     }
                                     return;
                                 }
@@ -1533,6 +1557,7 @@ mod tests {
         assert_eq!(s.home, "https://x.fr");
         assert!(!s.game_mode && s.favs.is_empty() && s.search == "google");
         assert!(s.keep_loaded == 7 && !s.volty_anim && s.save_passwords && s.exts_open);
+        assert!(!s.welcomed); // un profil d'avant la page de bienvenue la voit une fois
         // traduction et bandeaux : désactivés par défaut, réponse « refuser », listes vides ; script vide tant que c'est coupé
         assert!(!s.translate_auto && !s.cmp_auto && s.cmp_mode == "refuser" && s.cmp_skip.is_empty() && s.no_translate.is_empty());
         assert!(cmp_js(&s).is_empty());
