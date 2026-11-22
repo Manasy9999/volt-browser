@@ -155,11 +155,28 @@ body.nofav #favtoggle svg{transform:rotate(180deg)}
 .fm .ico{width:28px;height:28px;font-size:20px;border-radius:6px;background:var(--bg3)}
 .fm .ico img{width:28px;height:28px}
 .fm .ico.l{background:var(--a);color:var(--bg);font-size:14px}
+.fm .fd svg{width:18px;height:18px;stroke:none;fill:var(--c)}
 .fm input[type=text],.fm select{min-width:0}
 .fm .em{width:56px;text-align:center}
 .fm .nm{flex:1}
 .fm input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;cursor:pointer}
 .fm .pic{width:34px;height:34px;border-radius:8px;background:var(--bg3);display:grid;place-items:center}
+.fm .edit{width:34px;height:34px;border-radius:8px;color:var(--mu);display:grid;place-items:center}
+.fm .edit:hover{background:var(--bg3);color:var(--tx)}
+.fm .edit.on{color:var(--a);background:var(--bg3)}
+.fm .edit svg{width:17px;height:17px}
+.diritem{margin-bottom:4px}
+.fmed{margin:0 0 10px;padding:12px 14px;border-radius:var(--r);background:var(--bg2);display:flex;flex-direction:column;gap:8px}
+.fmed .edl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}
+.fmed .pal{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fmed .pal .pi,.fmed .pal .pic{width:32px;height:32px;border-radius:8px;background:var(--bg3);display:grid;place-items:center;font-size:18px;border:2px solid transparent}
+.fmed .pal .pi:hover,.fmed .pal .pic:hover{background:var(--bg)}
+.fmed .pal .pi.on{border-color:var(--a)}
+.fmed .pal .pi svg,.fmed .pal .pic svg{width:17px;height:17px}
+.fmed .pal .pi.def svg{fill:var(--mu);stroke:none}
+.fmed .em{width:130px;height:30px;padding:0 10px}
+.fmed .cpal{flex-wrap:wrap;align-items:center}
+.fmed .cpal input[type=color]{width:28px;height:28px;border:0;padding:0;background:none;border-radius:50%;cursor:pointer}
 body.panel #panel{display:flex}
 nav{width:220px;padding:18px 10px;border-right:1px solid var(--bg3);display:flex;flex-direction:column;gap:2px}
 nav button{text-align:left;padding:10px 14px;border-radius:8px;color:var(--mu)}
@@ -538,6 +555,17 @@ html:not([data-theme=angulaire]) body:not(.nofav) #bar{border-bottom-color:trans
 .lnk{color:var(--mu);display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px}
 .lnk:hover{color:var(--tx);background:var(--bg2)}
 #s-board .sort>p{margin:-8px 0 16px;font-size:13px}
+#s-board .smode{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:-4px 0 12px}
+#s-board .smode .seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--bg2)}
+#s-board .smode .seg button{height:30px;padding:0 14px;border-radius:7px;color:var(--mu);transition:background .15s,color .15s}
+#s-board .smode .seg button:hover{color:var(--tx)}
+#s-board .smode .seg button.on{background:var(--bg3);color:var(--tx);font-weight:500}
+#s-board .sall{display:inline-flex;align-items:center;gap:8px;color:var(--mu);cursor:pointer}
+#s-board .sall input{width:15px;height:15px;accent-color:var(--a)}
+#s-board .card label .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#s-board .card label .from{flex:none;color:var(--mu);font-size:11px}
+#s-board .empty{padding:30px;text-align:center;color:var(--mu);background:var(--bg2);border-radius:var(--r)}
+#s-board .empty b{display:block;color:var(--tx);margin-bottom:6px}
 #s-board .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-items:start}
 #s-board .card{padding:12px 14px;border-radius:var(--r);background:var(--bg2);border-top:2px solid var(--c);animation:bin .2s ease-out}
 #s-board .card .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -765,7 +793,15 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
       </div>
       <div id="bsort" class="sort" hidden>
         <h2>Ranger automatiquement</h2>
-        <p class="mu">Décochez ce que vous ne voulez pas ranger. Les favoris que Volt ne reconnaît pas restent sans dossier.</p>
+        <div class="smode">
+          <div class="seg" id="smode" role="radiogroup" aria-label="Mode de rangement">
+            <button data-m="theme" role="radio">Par thème</button>
+            <button data-m="site" role="radio">Par site</button>
+            <button data-m="entity" role="radio">Détaillé</button>
+          </div>
+          <label class="sall"><input type="checkbox" id="sall">Réorganiser aussi mes dossiers actuels</label>
+        </div>
+        <p class="mu" id="sdesc"></p>
         <div class="cards"></div>
         <div class="sbar"><span></span><button class="btn g" id="snok">Annuler</button><button class="btn" id="sok"></button></div>
       </div>
@@ -861,6 +897,9 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 const $=q=>document.querySelector(q), $$=q=>[...document.querySelectorAll(q)];
 const send=o=>window.ipc.postMessage(JSON.stringify(o));
 const COLORS=["#9b5cff","#00e5ff","#2bff88","#ff3b5c","#ff8a00","#ff4fd8"];
+// palette de l'éditeur de dossier : icônes utiles et une douzaine de couleurs lisibles sur fond sombre
+const DIRICONS=["🎮","🎬","🎵","💬","💻","🛒","📰","🧰","🏦","📚","✈️","⚽","⭐","📁","🔧","🎨","📺","🖼️","🐙","🔖"];
+const DIRCOLORS=["#ff3b5c","#ff8a00","#ffcf3b","#2bff88","#00e5ff","#4f9cff","#9b5cff","#c084fc","#ff4fd8","#ff6b9a","#34d399","#d6a77a"];
 // thème -> [nom, accent par défaut, fond, surface]
 const THEMES={volt:["Volt","#9b5cff","#0b0c10","#1b1e28"],classique:["Classique","#8ab4f8","#1b1c1e","#323336"],verre:["Verre","#7aa2ff","#0c0e1b","#2a2f4a"],
   esport:["Esport","#00e5ff","#09090e","#1e1e2a"],pastel:["Pastel","#f4a7c6","#1c1923","#2f2a3a"],angulaire:["Angulaire","#ff4655","#0f1923","#1f2e3c"]};
@@ -1320,15 +1359,33 @@ function pickImage(done){
 function field(cls,val,ph,ch){const i=document.createElement("input");i.type="text";i.className=cls;i.value=val||"";i.placeholder=ph;i.onchange=()=>ch(i.value.trim());return i}
 function delBtn(fn){const b=document.createElement("button");b.className="x";b.title="Supprimer";b.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';b.onclick=fn;return b}
 function picBtn(fn){const b=document.createElement("button");b.className="pic";b.title="Image perso";b.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 7"/></svg>';b.onclick=()=>pickImage(fn);return b}
+let editDir=null; // dossier dont l'éditeur (icône/couleur) est déplié dans « Gérer les favoris »
+// éditeur d'un dossier : palette d'icônes + emoji libre + image + retour au dossier par défaut ; pastilles de couleur + accent + couleur perso
+function dirEditor(d,saveDirs){
+  const ed=h("div","fmed"),pal=h("div","pal"),cp=h("div","cpal sw-c");
+  DIRICONS.forEach(e=>{const b=h("button","pi"+(d.icon===e?" on":""),e);b.title=e;b.onclick=()=>{d.icon=e;saveDirs()};pal.append(b)});
+  const def=h("button","pi def"+(d.icon?"":" on"));def.title="Icône dossier par défaut";def.innerHTML=FOLDER_SVG;def.onclick=()=>{d.icon="";saveDirs()};
+  pal.append(def,picBtn(u=>{d.icon=u;saveDirs()}));
+  ed.append(h("div","edl","Icône"),pal,field("em",(d.icon||"").startsWith("data:")?"":d.icon,"emoji libre",v=>{d.icon=v;saveDirs()}));
+  const acc=h("button");acc.title="Couleur d'accent (par défaut)";acc.style.background="var(--a)";if(!d.color||/^#9b5cff$/i.test(d.color))acc.classList.add("on");
+  acc.onclick=()=>{d.color="";saveDirs()};cp.append(acc);
+  DIRCOLORS.forEach(c=>{const b=h("button");b.style.background=c;b.title=c;if((d.color||"").toLowerCase()===c)b.classList.add("on");b.onclick=()=>{d.color=c;saveDirs()};cp.append(b)});
+  const col=h("input");col.type="color";col.value=d.color||S.accent;col.title="Couleur personnalisée";col.onchange=()=>{d.color=col.value;saveDirs()};
+  cp.append(col);ed.append(h("div","edl","Couleur"),cp);
+  return ed;
+}
 function renderFavManager(){
   const saveDirs=()=>save({folders:S.folders}), saveFavs=()=>save({favs:S.favs});
   $("#dirlist").replaceChildren(...S.folders.map(d=>{
-    const r=document.createElement("div");r.className="row fm";
-    const col=document.createElement("input");col.type="color";col.value=d.color||S.accent;col.title="Couleur";col.onchange=()=>{d.color=col.value;saveDirs()};
-    r.append(ico(d.icon,d.name),field("em",(d.icon||"").startsWith("data:")?"":d.icon,"😀",v=>{d.icon=v;saveDirs()}),picBtn(u=>{d.icon=u;saveDirs()}),
-      field("nm",d.name,"Nom du dossier",v=>{d.name=v||"Dossier";saveDirs()}),col,
-      delBtn(()=>{S.favs.forEach(f=>{if(f.folder===d.id)f.folder=""});S.folders=S.folders.filter(x=>x!==d);save({folders:S.folders,favs:S.favs})}));
-    return r;
+    const wrap=h("div","diritem"),r=h("div","row fm");
+    const edb=h("button","edit"+(d.id===editDir?" on":""));edb.title="Modifier le dossier";
+    edb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m13.5 6.5 3 3"/></svg>';
+    edb.onclick=()=>{editDir=editDir===d.id?null:d.id;renderFavManager()};
+    r.append(dirIco(d),field("nm",d.name,"Nom du dossier",v=>{d.name=v||"Dossier";saveDirs()}),edb,
+      delBtn(()=>{if(editDir===d.id)editDir=null;S.favs.forEach(f=>{if(f.folder===d.id)f.folder=""});S.folders=S.folders.filter(x=>x!==d);save({folders:S.folders,favs:S.favs})}));
+    wrap.append(r);
+    if(d.id===editDir)wrap.append(dirEditor(d,saveDirs));
+    return wrap;
   }));
   $("#favlist").replaceChildren(...S.favs.map(f=>{
     const r=document.createElement("div");r.className="row fm";
@@ -1535,8 +1592,8 @@ function boardBody(){
       out.push(g);const d=S.folders.find(d=>d.id===bOpen);if(d)out.push(drawer(d));
     }
     if(loose.length){
-      const sec=h("div","sec"),bt=h("button","lnk","Ranger automatiquement");bt.title="Volt propose des dossiers pour vos favoris sans dossier";
-      bt.onclick=()=>send({cmd:"sort"});sec.append(h("h3","cap","Sans dossier"),bt);out.push(sec,tiles(loose));
+      const sec=h("div","sec"),bt=h("button","lnk","Ranger automatiquement");bt.title="Volt propose des dossiers pour vos favoris";
+      bt.onclick=()=>{sortMode="theme";sortAll=false;reqSort()};sec.append(h("h3","cap","Sans dossier"),bt);out.push(sec,tiles(loose));
     }
   }
   $("#bbody").replaceChildren(...out);
@@ -1544,17 +1601,36 @@ function boardBody(){
 }
 const openDirGone=()=>bOpen&&!S.folders.some(d=>d.id===bOpen);
 function boardSort(on){$("#bmain").hidden=on;$("#bsort").hidden=!on}
+// mode de rangement et périmètre choisis dans l'écran ; Volt renvoie la proposition par renderSort
+let sortMode="theme",sortAll=false;
+const SDESC={
+  theme:"Volt classe vos favoris par catégorie (Jeux, Vidéos, Dev…). Décochez ce que vous ne voulez pas ranger ; les favoris non reconnus restent sans dossier.",
+  site:"Un dossier par site : tous les favoris d'un même domaine sont regroupés (tous les youtube.com ensemble, etc.).",
+  entity:"Regroupe par chaîne, créateur ou communauté quand l'adresse le porte (chaîne YouTube, chaîne Twitch, subreddit, compte GitHub…) ; sinon par site."};
+function reqSort(){
+  $("#sdesc").textContent=SDESC[sortMode];
+  $$("#smode button").forEach(b=>{const on=b.dataset.m===sortMode;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)});
+  $("#sall").checked=sortAll;
+  send({cmd:"sort",mode:sortMode,all:sortAll});
+}
 // proposition de rangement (Rust : sort::suggest) : une carte par dossier, tout coché
 function renderSort(list){
-  if(!list.length)return toast("Volt ne reconnaît aucun de vos favoris sans dossier : rien à ranger.");
-  const byUrl=new Map(S.favs.map(f=>[f.url,f])),sok=$("#sok");
+  const sok=$("#sok"),snok=$("#snok");snok.textContent="Annuler";snok.onclick=()=>boardSort(false);
+  boardSort(true);$("#panel main").scrollTop=0;
+  if(!list.length){
+    $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:"<b>Rien à ranger dans ce mode</b>Essayez un autre mode, ou cochez « Réorganiser aussi mes dossiers actuels »."}));
+    $("#bsort .sbar span").textContent="";sok.textContent="Ranger";sok.disabled=true;sok.onclick=null;return;
+  }
+  const byUrl=new Map(S.favs.map(f=>[f.url,f]));
   const cards=list.map(p=>{
     const d=p.new?null:S.folders.find(x=>x.name===p.folder),c=h("div","card"),hd=h("div","hd"),all=h("input"),n=h("span","n");
-    c.style.setProperty("--c",d?dcol(d):p.color);all.type="checkbox";all.checked=true;all.title="Tout cocher ou décocher";
+    c.style.setProperty("--c",d?dcol(d):(p.color||"var(--a)"));all.type="checkbox";all.checked=true;all.title="Tout cocher ou décocher";
     const name=p.new?Object.assign(h("input"),{type:"text",value:p.folder,title:"Nom du nouveau dossier"}):h("b",null,p.folder);
-    hd.append(all,d?dirIco(d):ico(p.icon),name);if(p.new)hd.append(h("span","tag","nouveau"));hd.append(n);c.append(hd);
+    hd.append(all,dirIco(d||{icon:p.icon,color:p.color}),name);if(p.new)hd.append(h("span","tag","nouveau"));hd.append(n);c.append(hd); // dossier sans icône : glyphe de dossier coloré, pas d'initiale
     p.urls.forEach(u=>{const f=byUrl.get(u)||{url:u,title:u},l=h("label"),x=h("input");x.type="checkbox";x.checked=true;x.value=u;
-      l.title=u;l.append(x,fico(f),h("span",null,f.title||u));c.append(l)});
+      l.title=u;l.append(x,fico(f),h("span","nm",f.title||u));
+      const cf=f.folder&&S.folders.find(x=>x.id===f.folder);if(cf&&cf.name!==p.folder)l.append(h("small","from","⟵ "+cf.name)); // déplacé d'un autre dossier
+      c.append(l)});
     const upd=()=>{const xs=[...c.querySelectorAll("label input")],k=xs.filter(x=>x.checked).length;all.checked=k===xs.length;all.indeterminate=k>0&&k<xs.length;n.textContent=k+"/"+xs.length};
     c.onchange=e=>{if(e.target===all)c.querySelectorAll("label input").forEach(x=>x.checked=all.checked);upd();total()};
     upd();c.v={p,d,name};return c;
@@ -1563,16 +1639,32 @@ function renderSort(list){
   const total=()=>{const k=cards.reduce((a,c)=>a+checked(c).length,0);$("#bsort .sbar span").textContent=`${list.length} dossier${list.length>1?"s":""} proposé${list.length>1?"s":""}`;
     sok.textContent=`Ranger ${k} favori${k>1?"s":""}`;sok.disabled=!k};
   sok.onclick=()=>{
+    const had=new Set(S.favs.map(f=>f.folder).filter(Boolean)); // dossiers non vides avant le rangement
     const t=Date.now().toString(36);let i=0,n=0;
     cards.forEach(c=>{
       const urls=checked(c),{p,d,name}=c.v;if(!urls.length)return;
       let id=d&&S.folders.some(x=>x.id===d.id)?d.id:"";
-      if(!id){id=t+i++;S.folders.push({id,name:p.new&&name.value.trim()||p.folder,color:p.color,icon:p.icon})} // identifiant comme newdir
-      S.favs.forEach(f=>{if(urls.includes(f.url)&&!S.folders.some(x=>x.id===f.folder&&x.id!==id)){f.folder=id;n++}});
+      if(!id){id=t+i++;S.folders.push({id,name:p.new&&name.value.trim()||p.folder,color:"",icon:p.icon})} // identifiant comme newdir, couleur vide (suit l'accent)
+      S.favs.forEach(f=>{if(urls.includes(f.url)&&f.folder!==id){f.folder=id;n++}});
     });
-    save({folders:S.folders,favs:S.favs});boardSort(false);toast(`${n} favori${n>1?"s":""} rangé${n>1?"s":""}`);
+    // périmètre « tout » : des dossiers ont pu se vider ; on propose de les supprimer, jamais sans validation
+    const empties=sortAll?S.folders.filter(d=>had.has(d.id)&&!S.favs.some(f=>f.folder===d.id)):[];
+    save({folders:S.folders,favs:S.favs});
+    if(empties.length)askEmpty(empties.map(d=>d.id),empties.map(d=>d.name),n);
+    else{boardSort(false);toast(`${n} favori${n>1?"s":""} rangé${n>1?"s":""}`)}
   };
-  $("#bsort .cards").replaceChildren(...cards);total();boardSort(true);$("#panel main").scrollTop=0;
+  $("#bsort .cards").replaceChildren(...cards);total();
+}
+// dossiers vidés par un rangement « tout » : suppression sur validation uniquement (par id : S est reconstruit après save)
+function askEmpty(ids,names,n){
+  const sok=$("#sok"),snok=$("#snok");
+  const finish=()=>{snok.textContent="Annuler";snok.onclick=()=>boardSort(false);boardSort(false);toast(`${n} favori${n>1?"s":""} rangé${n>1?"s":""}`)};
+  $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:`<b>${ids.length} dossier${ids.length>1?"s":""} vidé${ids.length>1?"s":""} par ce rangement</b>${names.join(" · ")}`}));
+  $("#sdesc").textContent="Supprimer les dossiers devenus vides ?";$("#bsort .sbar span").textContent="";
+  sok.disabled=false;sok.textContent=`Supprimer ${ids.length} dossier${ids.length>1?"s":""} vide${ids.length>1?"s":""}`;
+  snok.textContent="Garder";
+  sok.onclick=()=>{S.folders=S.folders.filter(d=>!ids.includes(d.id));save({folders:S.folders});finish()};
+  snok.onclick=finish;
 }
 // ===== import (page de favoris vide, bienvenue) =====
 let BR=[];const IMP={};
@@ -1695,6 +1787,8 @@ $("#bweb").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim()){send({cmd:"n
 $("#bq").oninput=()=>boardBody();
 $("#bq").onkeydown=e=>{const t=$("#s-board .tl.k");if(e.key==="Enter"&&e.target.value.trim()){t?goFav(t.dataset.u,e.ctrlKey):(send({cmd:"nav",url:e.target.value}),setPanel(false))}};
 $("#snok").onclick=()=>boardSort(false);
+$$("#smode button").forEach(b=>b.onclick=()=>{sortMode=b.dataset.m;reqSort()});
+$("#sall").onchange=()=>{sortAll=$("#sall").checked;reqSort()};
 $$(".defbtn").forEach(b=>b.onclick=()=>send({cmd:"default_browser"}));
 // retour depuis la page Windows : le focus revient à l'interface (pas à la fenêtre de Volt) ; seul le bloc
 // « navigateur par défaut » est relu (setDef), pas un rendu complet à chaque clic venu de la page

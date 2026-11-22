@@ -1082,9 +1082,15 @@ fn main() {
                             },
                             "sort" => {
                                 let names: Vec<String> = s.folders.iter().map(|d| d.name.clone()).collect();
-                                // favoris sans dossier ou dans un dossier qui n'existe plus
-                                let loose: Vec<(String, String)> = s.favs.iter().filter(|f| !s.folders.iter().any(|d| d.id == f.folder)).map(|f| (f.url.clone(), f.title.clone())).collect();
-                                let props: Vec<Value> = sort::suggest(&loose, &names).into_iter().map(|p| json!({"folder": p.folder, "new": p.new, "icon": p.icon, "color": p.color, "urls": p.urls})).collect();
+                                // périmètre : tout (« all »), ou seulement les favoris sans dossier (ou dans un dossier disparu)
+                                let all = v["all"].as_bool().unwrap_or(false);
+                                let items: Vec<(String, String)> = s.favs.iter().filter(|f| all || !s.folders.iter().any(|d| d.id == f.folder)).map(|f| (f.url.clone(), f.title.clone())).collect();
+                                let mode = match v["mode"].as_str().unwrap_or("theme") {
+                                    "site" => sort::Mode::Site,
+                                    "entity" => sort::Mode::Entity,
+                                    _ => sort::Mode::Theme,
+                                };
+                                let props: Vec<Value> = sort::suggest(&items, &names, mode).into_iter().map(|p| json!({"folder": p.folder, "new": p.new, "icon": p.icon, "color": p.color, "urls": p.urls})).collect();
                                 let _ = ui.evaluate_script(&format!("renderSort({})", json!(props)));
                                 return;
                             }

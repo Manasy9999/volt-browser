@@ -4,16 +4,24 @@
 //! précise l'emporte), puis à défaut par mots de l'hôte, puis du titre. Dans le doute on ne
 //! classe pas : un favori laissé sans dossier vaut mieux qu'un mauvais rangement.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-/// Un dossier proposé et les favoris sans dossier qu'on y rangerait.
+/// Un dossier proposé et les favoris qu'on y rangerait.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Proposal {
-    pub folder: String,     // nom du dossier : celui de l'utilisateur s'il en existe un équivalent, sinon le nom de la catégorie
+    pub folder: String,     // nom du dossier : celui de l'utilisateur s'il en existe un équivalent, sinon le nom proposé
     pub new: bool,          // true = dossier à créer
-    pub icon: &'static str, // emoji de la catégorie (pour un dossier à créer)
-    pub color: &'static str, // couleur "#rrggbb" de la catégorie (pour un dossier à créer)
+    pub icon: &'static str, // emoji de la catégorie (pour un dossier à créer) ; vide en mode site/détaillé
+    pub color: &'static str, // couleur "#rrggbb" de la catégorie (aperçu) ; vide en mode site/détaillé
     pub urls: Vec<String>,  // favoris proposés, dans l'ordre reçu
+}
+
+/// Façon de regrouper les favoris.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Mode {
+    Theme,  // par catégorie (Jeux, Vidéos, Dev…)
+    Site,   // un dossier par domaine racine
+    Entity, // par chaîne/créateur/communauté quand l'URL le porte, sinon par site
 }
 
 struct Category {
@@ -297,17 +305,27 @@ const CATEGORIES: &[Category] = &[
     },
 ];
 
-/// `loose` : (url, titre) des favoris sans dossier. `folders` : noms des dossiers existants.
-pub fn suggest(loose: &[(String, String)], folders: &[String]) -> Vec<Proposal> {
+/// `items` : (url, titre) des favoris à ranger (sans dossier, ou tous selon le périmètre choisi par l'appelant).
+/// `folders` : noms des dossiers existants (réutilisés quand ils correspondent). `mode` : façon de regrouper.
+pub fn suggest(items: &[(String, String)], folders: &[String], mode: Mode) -> Vec<Proposal> {
+    match mode {
+        Mode::Theme => suggest_theme(items, folders),
+        Mode::Site => group_by(items, folders, site_name),
+        Mode::Entity => group_by(items, folders, entity_name),
+    }
+}
+
+/// Classe par catégorie (domaine connu, puis mots) ; réutilise un dossier équivalent par synonyme.
+fn suggest_theme(items: &[(String, String)], folders: &[String]) -> Vec<Proposal> {
     let mut buckets = vec![Vec::new(); CATEGORIES.len()];
     let mut seen = HashSet::new();
-    for (url, title) in loose {
+    for (url, title) in items {
         let Some(cat) = host_of(url).and_then(|h| classify(&h, title)) else { continue };
         if seen.insert(url.as_str()) {
             buckets[cat].push(url.clone());
         }
     }
-    let mut out: Vec<Proposal> = buckets
+    let out: Vec<Proposal> = buckets
         .into_iter()
         .zip(CATEGORIES)
         .filter_map(|(urls, c)| {
@@ -325,6 +343,40 @@ pub fn suggest(loose: &[(String, String)], folders: &[String]) -> Vec<Proposal> 
             })
         })
         .collect();
+    sorted(out)
+}
+
+/// Regroupe par la clé renvoyée pour chaque URL (nom de dossier) ; réutilise un dossier existant de même nom.
+fn group_by(items: &[(String, String)], folders: &[String], name_of: impl Fn(&str) -> Option<String>) -> Vec<Proposal> {
+    let mut order: Vec<String> = vec![]; // premiers vus d'abord : propositions déterministes
+    let mut map: HashMap<String, Vec<String>> = HashMap::new();
+    let mut seen = HashSet::new();
+    for (url, _) in items {
+        let Some(name) = name_of(url) else { continue };
+        if !seen.insert(url.as_str()) {
+            continue;
+        }
+        if !map.contains_key(&name) {
+            order.push(name.clone());
+        }
+        map.entry(name).or_default().push(url.clone());
+    }
+    let out: Vec<Proposal> = order
+        .into_iter()
+        .filter_map(|name| {
+            let urls = map.remove(&name).unwrap();
+            let existing = folders.iter().find(|f| fold_name(f) == fold_name(&name));
+            if urls.len() < if existing.is_some() { 1 } else { 2 } {
+                return None;
+            }
+            Some(Proposal { folder: existing.cloned().unwrap_or(name), new: existing.is_none(), icon: "", color: "", urls })
+        })
+        .collect();
+    sorted(out)
+}
+
+/// Ordre d'affichage : les plus gros dossiers d'abord, les dossiers existants avant les nouveaux, puis par nom.
+fn sorted(mut out: Vec<Proposal>) -> Vec<Proposal> {
     out.sort_by(|a, b| {
         b.urls.len().cmp(&a.urls.len())
             .then(a.new.cmp(&b.new))
@@ -332,6 +384,86 @@ pub fn suggest(loose: &[(String, String)], folders: &[String]) -> Vec<Proposal> 
             .then_with(|| a.folder.cmp(&b.folder))
     });
     out
+}
+
+fn site_name(url: &str) -> Option<String> {
+    host_of(url).map(|h| root_domain(&h))
+}
+
+fn entity_name(url: &str) -> Option<String> {
+    host_of(url).map(|h| entity(url).unwrap_or_else(|| root_domain(&h)))
+}
+
+// Suffixes publics à deux niveaux les plus courants (eTLD de la forme « xx.yy »).
+// shortcut: liste courte, pas la Public Suffix List complète ; à compléter si un regroupement par site se scinde à tort.
+const COMPOUND: &[&str] = &[
+    "ac.uk", "co.jp", "co.kr", "co.nz", "co.uk", "co.za", "com.au", "com.br", "com.cn", "com.mx",
+    "com.tr", "gouv.fr", "gov.uk", "ne.jp", "net.au", "org.uk",
+];
+
+/// Domaine racine (enregistrable) d'un hôte : les deux derniers labels, ou trois sur un suffixe composé connu.
+fn root_domain(host: &str) -> String {
+    let l: Vec<&str> = host.split('.').collect();
+    if l.len() <= 2 {
+        return host.to_string();
+    }
+    let last2 = format!("{}.{}", l[l.len() - 2], l[l.len() - 1]);
+    if COMPOUND.contains(&last2.as_str()) {
+        format!("{}.{}", l[l.len() - 3], last2)
+    } else {
+        last2
+    }
+}
+
+// Premiers segments de chemin qui ne portent pas d'entité (évite les faux dossiers « settings », « explore »…).
+const GITHUB_RES: &[&str] = &[
+    "about", "apps", "codespaces", "collections", "contact", "dashboard", "events", "explore",
+    "features", "join", "login", "marketplace", "new", "notifications", "orgs", "pricing", "pulls",
+    "search", "security", "settings", "sponsors", "stars", "topics", "trending", "watching",
+];
+const TWITCH_RES: &[&str] = &["directory", "downloads", "friends", "jobs", "p", "prime", "settings", "store", "subscriptions", "turbo", "videos"];
+const X_RES: &[&str] = &[
+    "about", "account", "compose", "explore", "hashtag", "home", "i", "intent", "login", "messages",
+    "notifications", "privacy", "search", "settings", "share", "signup", "tos",
+];
+const IG_RES: &[&str] = &["about", "accounts", "direct", "explore", "p", "reel", "reels", "stories"];
+
+/// Entité réellement portée par l'URL (chaîne, créateur, communauté) pour les sites connus ; `None` sinon.
+/// Prudent : seuls les motifs explicites ci-dessous donnent une entité, jamais une devinette.
+fn entity(url: &str) -> Option<String> {
+    let (host, segs) = parts(url)?;
+    let s0 = segs.first().map(|s| s.to_ascii_lowercase());
+    let s0 = s0.as_deref();
+    let seg = |i: usize| segs.get(i).map(|s| s.to_ascii_lowercase()).filter(|s| !s.is_empty());
+    match root_domain(&host).as_str() {
+        "youtube.com" => match s0 {
+            Some(h) if h.starts_with('@') && h.len() > 1 => Some(format!("YouTube · {h}")),
+            Some("channel" | "c" | "user") => seg(1).map(|n| format!("YouTube · {n}")),
+            _ => None,
+        },
+        "twitch.tv" => s0.filter(|h| !h.is_empty() && !TWITCH_RES.contains(h)).map(|h| format!("Twitch · {h}")),
+        "reddit.com" => match s0 {
+            Some("r") => seg(1).map(|n| format!("r/{n}")),
+            Some("user" | "u") => seg(1).map(|n| format!("u/{n}")),
+            _ => None,
+        },
+        "github.com" => s0.filter(|h| !h.is_empty() && !GITHUB_RES.contains(h)).map(|h| format!("GitHub · {h}")),
+        "steampowered.com" => (s0 == Some("app")).then(|| seg(1)).flatten().filter(|n| n.chars().all(|c| c.is_ascii_digit())).map(|id| format!("Steam · app {id}")),
+        "x.com" | "twitter.com" => s0.filter(|h| !h.is_empty() && !X_RES.contains(h)).map(|h| format!("X · {h}")),
+        "instagram.com" => s0.filter(|h| !h.is_empty() && !IG_RES.contains(h)).map(|h| format!("Instagram · {h}")),
+        "tiktok.com" => s0.filter(|h| h.starts_with('@') && h.len() > 1).map(|h| format!("TikTok · {h}")),
+        _ => None,
+    }
+}
+
+/// Hôte (minuscules) et segments de chemin non vides d'une URL http(s) ; `None` si l'URL n'est pas http(s).
+fn parts(url: &str) -> Option<(String, Vec<String>)> {
+    let host = host_of(url)?;
+    let (_, rest) = url.trim().split_once("://")?;
+    let path = rest.split_once('/').map_or("", |(_, p)| p);
+    let path = path.split(['?', '#']).next().unwrap_or("");
+    let segs = path.split('/').filter(|s| !s.is_empty()).map(str::to_string).collect();
+    Some((host, segs))
 }
 
 /// Hôte en minuscules d'une URL http(s), sans identifiants ni port ; `None` sinon.
@@ -441,6 +573,10 @@ mod tests {
         items.iter().map(|u| (u.to_string(), String::new())).collect()
     }
 
+    fn theme(items: &[(String, String)], folders: &[String]) -> Vec<Proposal> {
+        suggest(items, folders, Mode::Theme)
+    }
+
     #[test]
     fn domaine_exact_et_sous_domaine() {
         assert_eq!(cat("https://lemonde.fr/", ""), Some("Actualités"));
@@ -493,7 +629,7 @@ mod tests {
         for u in ["javascript:alert(1)", "ftp://youtube.com/", "https://", "file:///C:/x.html", "chrome://settings", "youtube.com"] {
             assert_eq!(host_of(u).and_then(|h| classify(&h, "")), None, "{u}");
         }
-        let p = suggest(&loose(&["ftp://youtube.com/a", "https://youtube.com/b", "https://youtu.be/c", "about:blank"]), &[]);
+        let p = theme(&loose(&["ftp://youtube.com/a", "https://youtube.com/b", "https://youtu.be/c", "about:blank"]), &[]);
         assert_eq!(p.len(), 1);
         assert_eq!(p[0].urls, ["https://youtube.com/b", "https://youtu.be/c"]);
     }
@@ -501,7 +637,7 @@ mod tests {
     #[test]
     fn dossier_existant_reutilise_sous_son_nom() {
         let folders = vec!["Perso".to_string(), "🎬 VIDEOS".to_string(), "jéux".to_string()];
-        let p = suggest(&loose(&["https://www.youtube.com/a", "https://www.twitch.tv/b", "https://www.ign.com/"]), &folders);
+        let p = theme(&loose(&["https://www.youtube.com/a", "https://www.twitch.tv/b", "https://www.ign.com/"]), &folders);
         assert_eq!(p.len(), 2);
         assert_eq!((p[0].folder.as_str(), p[0].new, p[0].urls.len()), ("🎬 VIDEOS", false, 2));
         assert_eq!((p[1].folder.as_str(), p[1].new, p[1].urls.len()), ("jéux", false, 1)); // dès 1 favori
@@ -512,8 +648,8 @@ mod tests {
 
     #[test]
     fn seuil_de_deux_pour_un_dossier_a_creer() {
-        assert!(suggest(&loose(&["https://www.ign.com/"]), &[]).is_empty());
-        let p = suggest(&loose(&["https://www.ign.com/", "https://www.roblox.com/"]), &[]);
+        assert!(theme(&loose(&["https://www.ign.com/"]), &[]).is_empty());
+        let p = theme(&loose(&["https://www.ign.com/", "https://www.roblox.com/"]), &[]);
         assert_eq!(p.len(), 1);
         assert_eq!((p[0].folder.as_str(), p[0].new, p[0].icon), ("Jeux", true, "🎮"));
     }
@@ -525,11 +661,11 @@ mod tests {
             "https://youtube.com/2", "https://roblox.com/", "https://spotify.com/", "https://youtube.com/3",
             "https://ebay.fr/", "https://youtube.com/1", // doublon : une seule fois
         ]);
-        let p = suggest(&urls, &["musique".to_string()]);
+        let p = theme(&urls, &["musique".to_string()]);
         let names: Vec<&str> = p.iter().map(|x| x.folder.as_str()).collect();
         assert_eq!(names, ["Vidéos", "musique", "Achats", "Jeux"]);
         assert_eq!(p[0].urls, ["https://youtube.com/1", "https://youtube.com/2", "https://youtube.com/3"]);
-        assert_eq!(suggest(&urls, &["musique".to_string()]), p); // stable
+        assert_eq!(theme(&urls, &["musique".to_string()]), p); // stable
     }
 
     #[test]
@@ -551,5 +687,88 @@ mod tests {
             assert!(colors.insert(c.color) && c.color.len() == 7 && c.color.starts_with('#'));
         }
         assert!(CATEGORIES.len() <= 12);
+    }
+
+    #[test]
+    fn domaine_racine() {
+        assert_eq!(root_domain("www.youtube.com"), "youtube.com");
+        assert_eq!(root_domain("music.youtube.com"), "youtube.com");
+        assert_eq!(root_domain("store.steampowered.com"), "steampowered.com");
+        assert_eq!(root_domain("fr.wikipedia.org"), "wikipedia.org");
+        assert_eq!(root_domain("github.com"), "github.com");
+        assert_eq!(root_domain("www.bbc.co.uk"), "bbc.co.uk"); // suffixe composé
+        assert_eq!(root_domain("a.b.gouv.fr"), "b.gouv.fr");
+        assert_eq!(root_domain("e.leclerc"), "e.leclerc");
+    }
+
+    #[test]
+    fn mode_par_site() {
+        // tous les sous-domaines d'un même site réunis ; nom = le domaine racine
+        let p = suggest(
+            &loose(&["https://www.youtube.com/a", "https://music.youtube.com/b", "https://github.com/x/y", "https://github.com/z"]),
+            &[],
+            Mode::Site,
+        );
+        assert_eq!(p.len(), 2); // à taille égale, ordre alphabétique : github.com avant youtube.com
+        assert_eq!((p[0].folder.as_str(), p[0].new, p[0].icon, p[0].color, p[0].urls.len()), ("github.com", true, "", "", 2));
+        assert_eq!((p[1].folder.as_str(), p[1].urls.len()), ("youtube.com", 2));
+        // seuil de deux : un site seul ne crée pas de dossier
+        assert!(suggest(&loose(&["https://seul.example/a"]), &[], Mode::Site).is_empty());
+        // dossier existant de même nom réutilisé dès un favori
+        let p = suggest(&loose(&["https://x.com/alice"]), &["x.com".to_string()], Mode::Site);
+        assert_eq!((p[0].folder.as_str(), p[0].new), ("x.com", false));
+    }
+
+    #[test]
+    fn extraction_entite() {
+        assert_eq!(entity("https://www.youtube.com/@LeGrandJD/videos"), Some("YouTube · @legrandjd".into()));
+        assert_eq!(entity("https://www.youtube.com/channel/UC123"), Some("YouTube · uc123".into()));
+        assert_eq!(entity("https://www.youtube.com/c/MKBHD"), Some("YouTube · mkbhd".into()));
+        assert_eq!(entity("https://www.youtube.com/watch?v=abc"), None); // pas d'entité dans l'URL
+        assert_eq!(entity("https://www.twitch.tv/zerator"), Some("Twitch · zerator".into()));
+        assert_eq!(entity("https://www.twitch.tv/directory/game/x"), None); // chemin réservé
+        assert_eq!(entity("https://www.reddit.com/r/rust/"), Some("r/rust".into()));
+        assert_eq!(entity("https://www.reddit.com/user/spez"), Some("u/spez".into()));
+        assert_eq!(entity("https://old.reddit.com/"), None);
+        assert_eq!(entity("https://github.com/rust-lang/rust"), Some("GitHub · rust-lang".into()));
+        assert_eq!(entity("https://github.com/settings/profile"), None); // chemin réservé
+        assert_eq!(entity("https://store.steampowered.com/app/570/Dota_2/"), Some("Steam · app 570".into()));
+        assert_eq!(entity("https://store.steampowered.com/"), None);
+        assert_eq!(entity("https://x.com/elonmusk"), Some("X · elonmusk".into()));
+        assert_eq!(entity("https://twitter.com/jack"), Some("X · jack".into()));
+        assert_eq!(entity("https://x.com/home"), None);
+        assert_eq!(entity("https://www.instagram.com/nasa/"), Some("Instagram · nasa".into()));
+        assert_eq!(entity("https://www.instagram.com/reels/"), None);
+        assert_eq!(entity("https://www.tiktok.com/@khaby.lame"), Some("TikTok · @khaby.lame".into()));
+        assert_eq!(entity("https://www.tiktok.com/foryou"), None); // pas de @ : pas d'entité
+        assert_eq!(entity("https://exemple.org/quelquechose"), None); // site inconnu
+    }
+
+    #[test]
+    fn mode_detaille() {
+        // deux vidéos d'une même chaîne → un dossier de la chaîne ; une URL sans entité retombe au site
+        let p = suggest(
+            &loose(&[
+                "https://www.youtube.com/@zbra/videos", "https://www.youtube.com/@zbra/about",
+                "https://www.reddit.com/r/france/top", "https://www.reddit.com/r/france/new",
+                "https://www.youtube.com/watch?v=1", "https://www.youtube.com/watch?v=2",
+            ]),
+            &[],
+            Mode::Entity,
+        );
+        let names: Vec<&str> = p.iter().map(|x| x.folder.as_str()).collect();
+        // la chaîne, le subreddit, et les deux « watch » (sans entité) regroupés sous le site youtube.com
+        assert!(names.contains(&"YouTube · @zbra") && names.contains(&"r/france") && names.contains(&"youtube.com"));
+        let yt = p.iter().find(|x| x.folder == "youtube.com").unwrap();
+        assert_eq!(yt.urls, ["https://www.youtube.com/watch?v=1", "https://www.youtube.com/watch?v=2"]);
+    }
+
+    #[test]
+    fn perimetre_tout_vs_sans_dossier() {
+        // l'appelant choisit le périmètre ; ici on vérifie qu'un lot « tout » est bien regroupé selon le mode
+        let all = loose(&["https://www.youtube.com/a", "https://www.youtube.com/b", "https://github.com/x"]);
+        let p = suggest(&all, &[], Mode::Site);
+        assert_eq!(p.len(), 1); // youtube.com (2) ; github.com (1) sous le seuil
+        assert_eq!(p[0].folder, "youtube.com");
     }
 }
