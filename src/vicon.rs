@@ -147,6 +147,8 @@ fn manifest_icons(origin: &str, murl: &str, body: &[u8]) -> Vec<(String, u32)> {
         .as_array()
         .map(|a| {
             a.iter()
+                // « monochrome » : une silhouette pour les badges du système, pas le logo
+                .filter(|ic| !ic["purpose"].as_str().is_some_and(|p| p.contains("monochrome")))
                 .filter_map(|ic| {
                     let url = abs(origin, murl, ic["src"].as_str()?)?;
                     Some((url, ic["sizes"].as_str().map_or(0, max_dim)))
@@ -197,14 +199,22 @@ fn pick(cands: &[(String, u32)]) -> Option<(String, Option<String>, u32)> {
 /// Résout le meilleur logo (URL, couleur, taille) depuis les icônes déclarées par la page, sinon les chemins usuels.
 fn resolve(origin: &str) -> Option<(String, Option<String>, u32)> {
     let page = format!("{origin}/");
-    let mut cands: Vec<(String, u32)> = vec![];
+    let (mut cands, mut manifest): (Vec<(String, u32)>, _) = (vec![], None);
     if let Some(html) = fetch(&page).map(|b| String::from_utf8_lossy(&b).into_owned()) {
-        let (mut icons, manifest) = page_icons(origin, &page, &html);
-        cands.append(&mut icons);
-        if let Some(murl) = manifest
-            && let Some(body) = fetch(&murl)
-        {
-            cands.append(&mut manifest_icons(origin, &murl, &body));
+        (cands, manifest) = page_icons(origin, &page, &html);
+    }
+    // Manifeste déclaré par la page ; sinon, faute de grande icône, ses adresses usuelles (YouTube sert à un programme une
+    // page de consentement qui ne déclare rien, mais son manifeste est bien là).
+    let murls = match manifest {
+        Some(m) => vec![m],
+        None if cands.iter().all(|c| c.1 < 144) => vec![format!("{origin}/manifest.webmanifest"), format!("{origin}/manifest.json")],
+        None => vec![],
+    };
+    for murl in murls {
+        let mut icons = fetch(&murl).map_or(vec![], |body| manifest_icons(origin, &murl, &body));
+        if !icons.is_empty() {
+            cands.append(&mut icons);
+            break;
         }
     }
     // replis : icônes aux chemins usuels
@@ -262,8 +272,10 @@ mod tests {
         let (icons, man) = page_icons(o, "https://site.fr/", html);
         assert_eq!(man.as_deref(), Some("https://site.fr/m.webmanifest"));
         assert!(icons.contains(&("https://site.fr/at.png".into(), 180)) && icons.contains(&("https://site.fr/f.png".into(), 32)));
-        let mi = manifest_icons(o, "https://site.fr/m.webmanifest", br#"{"icons":[{"src":"/i512.png","sizes":"512x512"}]}"#);
+        // la silhouette « monochrome » n'est pas le logo, même plus grande
+        let mi = manifest_icons(o, "https://site.fr/m.webmanifest", br#"{"icons":[{"src":"/i512.png","sizes":"512x512"},{"src":"/mono.png","sizes":"1024x1024","purpose":"monochrome"}]}"#);
         assert_eq!(mi, vec![("https://site.fr/i512.png".into(), 512)]);
+        assert!(manifest_icons(o, "https://site.fr/manifest.json", b"<html>navigateur non pris en charge</html>").is_empty());
         assert!(is_image(b"\x89PNG\r\n") && is_image(b"\xff\xd8\xff\xe0") && !is_image(b"<html>"));
     }
 }

@@ -1295,6 +1295,13 @@ fn main() {
                                 open(&h, &mut tabs, &mut active)
                             }
                             "select" => active = v["id"].as_u64().unwrap_or(active as u64) as u32,
+                            // onglet glissé à la souris vers une nouvelle place
+                            "tabmove" => {
+                                let id = v["id"].as_u64().unwrap_or(0) as u32;
+                                if let Some(i) = tabs.iter().position(|t| t.id == id) {
+                                    tabmenu::move_to(&mut tabs, i, v["to"].as_u64().unwrap_or(0) as usize);
+                                }
+                            }
                             // menu de l'onglet ; « tabdo » applique une action sans menu (essais pilotés), « mute » et « close » sont les boutons de l'onglet
                             c @ ("tabmenu" | "tabdo" | "mute" | "close") => {
                                 let id = v["id"].as_u64().unwrap_or(0) as u32;

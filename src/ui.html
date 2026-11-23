@@ -26,6 +26,7 @@ svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-l
 .dot{width:8px;height:8px;border-radius:50%;background:var(--mu);flex:none}
 .tab.on .dot{background:var(--a)}
 .tab.ld .dot{animation:p .8s infinite alternate}
+.tab.drag{z-index:2;transition:none;box-shadow:0 6px 18px #0009}
 .tab.zz{opacity:.5}
 .tab.zz .dot{background:none;border:1px solid var(--mu)}
 /* épinglé : compact, sans titre ni croix (titre au survol) ; #list l'emporte sur les thèmes */
@@ -1091,8 +1092,8 @@ function renderPeriods(){
 
 // Bouton gauche enfoncé dans l'interface : les rendus venus du Rust attendent le relâchement (1,5 s au plus, le
 // déplacement de la fenêtre garde la souris), sinon une liste reconstruite entre l'appui et le relâchement perd le clic.
-let held=0;const later=new Map();
-const hold=(f,a)=>held?(later.set(f,a),true):false;
+let held=0,drag=null;const later=new Map(); // drag : onglet en cours de glissement, les rendus attendent aussi
+const hold=(f,a)=>held||drag?.on?(later.set(f,a),true):false;
 function flush(){clearTimeout(held);held=0;const l=[...later];later.clear();l.forEach(([f,a])=>f(a))}
 addEventListener("pointerdown",e=>{if(e.button===0){clearTimeout(held);held=setTimeout(flush,1500)}},true);
 addEventListener("pointerup",()=>held&&setTimeout(flush),true); // après le clic
@@ -1133,6 +1134,40 @@ $("#list").onmousedown=e=>{
 };
 $("#list").onclick=e=>{const b=e.target.closest(".tab"),x=e.target.closest(".x");if(b&&x)send({cmd:x.classList.contains("m")?"mute":"close",id:+b.dataset.id})};
 $("#list").oncontextmenu=e=>{const b=e.target.closest(".tab");if(b){e.preventDefault();send({cmd:"tabmenu",id:+b.dataset.id})}}; // menu natif : un menu HTML serait coupé par la page
+// Glisser un onglet pour le déplacer, comme Chrome : il suit le pointeur, ses voisins du même groupe (épinglés / autres) lui
+// cèdent la place, l'ordre part au Rust au lâcher. C'est le VOISIN qu'on déplace dans la barre : sortir l'onglet glissé du
+// document lui ferait perdre la capture du pointeur.
+// shortcut: la barre ne défile pas toute seule pendant le glissement, à ajouter si on veut déposer hors de la partie visible.
+$("#list").addEventListener("pointerdown",e=>{
+  const b=e.target.closest(".tab");
+  if(b&&e.button===0&&!e.target.closest(".x"))drag={b,x:e.clientX,p:e.pointerId,on:false};
+});
+addEventListener("pointermove",e=>{
+  if(!drag)return;
+  const b=drag.b;let dx=e.clientX-drag.x;
+  if(!drag.on){if(Math.abs(dx)<6)return;drag.on=true;try{b.setPointerCapture(drag.p)}catch{}b.classList.add("drag")}
+  for(let k=0;k<50;k++){ // borné : jamais de boucle sans fin si la mise en page surprend
+    const o=dx<0?b.previousElementSibling:b.nextElementSibling;
+    if(!o||o.classList.contains("pin")!==b.classList.contains("pin")){dx=Math.max(-10,Math.min(10,dx));break} // bout de son groupe
+    // échange après plus d'une demi-place (largeur du voisin + espace) : l'écart restant passe sous la demi-place, donc pas de va-et-vient
+    const slot=dx<0?b.offsetLeft-o.offsetLeft:o.offsetLeft+o.offsetWidth-b.offsetLeft-b.offsetWidth;
+    if(Math.abs(dx)<=slot/2)break;
+    const b0=b.offsetLeft,o0=o.offsetLeft;
+    dx<0?b.after(o):b.before(o);
+    const d=b.offsetLeft-b0;drag.x+=d;dx-=d; // l'onglet glissé reste sous le pointeur
+    o.animate([{transform:`translateX(${o0-o.offsetLeft}px)`},{transform:"none"}],{duration:140,easing:"ease-out"});
+  }
+  b.style.transform=`translateX(${dx}px)`;
+});
+function dropTab(){
+  if(!drag)return;const {b,on}=drag;drag=null;
+  if(!on)return;
+  b.classList.remove("drag");b.style.transform="";
+  const ord=[...$("#list").children].map(x=>+x.dataset.id),st=later.get(render);
+  if(st)st.tabs.sort((x,y)=>ord.indexOf(x.id)-ord.indexOf(y.id)); // le rendu en attente a l'ancien ordre : pas de retour en arrière visible
+  send({cmd:"tabmove",id:+b.dataset.id,to:ord.indexOf(+b.dataset.id)});flush();
+}
+addEventListener("pointerup",dropTab);addEventListener("pointercancel",dropTab);
 function render(st){
   if(hold(render,st))return;
   S=st.s;S.keep_loaded??=7;S.volty_anim??=false;S.favbar_style??="etageres";S.exts_open??=true; // absents tant qu'un ancien exe tourne
@@ -1737,11 +1772,13 @@ function vigCard(v,j){
   if(userImg){
     const bg=h("img","vbg");bg.alt="";bg.decoding="async";bg.src=v.image;bg.classList.add("on");
     const badge=h("span","badge");badge.append(h("span","bli",initial));
-    resolveLogo(logoSources(v.url),src=>badge.replaceChildren(logo(src)),()=>{});
+    resolveLogo(logoSources(v.url),src=>{if(!c.dataset.hd)badge.replaceChildren(logo(src))},()=>{}); // jamais par-dessus le logo HD déjà posé
     c.append(bg,badge);
   }else{
     const clogo=h("span","clogo");c.append(h("span","vli",initial),clogo);
-    resolveLogo(logoSources(v.url),src=>{clogo.replaceChildren(logo(src));c.querySelector(".vli")?.remove()},()=>{}); // repli apple-touch/favicon, upgrade HD + couleur par viconReady
+    // repli apple-touch/favicon, upgrade HD + couleur par viconReady. Cache chaud : le logo HD arrive AVANT la fin de cette
+    // cascade (3 requêtes), le repli ne doit alors plus rien remplacer (data-hd).
+    resolveLogo(logoSources(v.url),src=>{if(c.dataset.hd)return;clogo.replaceChildren(logo(src));c.querySelector(".vli")?.remove()},()=>{});
   }
   c.append(pen,meta);
   return c;
@@ -1753,29 +1790,34 @@ $("#bvigs").addEventListener("click",e=>{
 });
 $("#bvigs").addEventListener("auxclick",e=>{const c=e.target.closest(".vig");if(c&&e.button===1)goFav(c.dataset.u,1)});
 $("#bvigs").addEventListener("mousedown",e=>{if(e.button===1)e.preventDefault()});
+const VIG_W=294; // place d'une carte : largeur 280 + marge 14 (CSS #bvigs .vig)
+// Copies d'une rangée de n cartes : de quoi couvrir la fenêtre, plus une. Avec deux copies seulement, un vide apparaît en bout
+// de boucle dès que la fenêtre est plus large qu'une copie (écran 2560 px, ou peu de cartes).
+const vigCopies=n=>n?Math.min(20,Math.max(2,Math.ceil(innerWidth/(n*VIG_W))+1)):2;
 function vigRow(items,cls){
-  const rail=h("div","rail "+cls),track=h("div","track");
-  // deux copies identiques à la suite : translateX(-50%) = une copie -> boucle sans couture (cartes reconstruites, pas clonées,
+  const rail=h("div","rail "+cls),track=h("div","track"),n=vigCopies(items.length);
+  // copies identiques à la suite, translation d'exactement une copie -> boucle sans couture (cartes reconstruites, pas clonées,
   // pour que chaque copie charge son logo)
-  const fill=hidden=>items.forEach(it=>{const c=vigCard(it.v,it.j);if(hidden)c.setAttribute("aria-hidden","true");track.append(c)});
-  fill(false);fill(true);
-  rail.append(track);return rail;
+  for(let k=0;k<n;k++)items.forEach(it=>{const c=vigCard(it.v,it.j);if(k)c.setAttribute("aria-hidden","true");track.append(c)});
+  track.dataset.n=n;rail.append(track);return rail;
 }
 let vigKey="";
 function drawVigs(){
-  const V=S.vignettes||[],k=JSON.stringify(V);if(k===vigKey)return;vigKey=k;
-  const mid=Math.ceil(V.length/2),top=V.slice(0,mid).map((v,j)=>({v,j})),bot=V.slice(mid).map((v,j)=>({v,j:mid+j}));
+  // la clé compte aussi les copies : une fenêtre élargie reconstruit les rangées
+  const V=S.vignettes||[],mid=Math.ceil(V.length/2),k=JSON.stringify(V)+"|"+vigCopies(mid)+"|"+vigCopies(V.length-mid);if(k===vigKey)return;vigKey=k;
+  const top=V.slice(0,mid).map((v,j)=>({v,j})),bot=V.slice(mid).map((v,j)=>({v,j:mid+j}));
   const head=h("div","vhead"),add=h("button","vadd");add.setAttribute("aria-label","Ajouter une vignette");add.title="Ajouter une vignette";
   add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';head.append(h("h3","cap","Préférés"),add); // « + » dans l'en-tête, hors du ruban
-  $("#bvigs").replaceChildren(head,vigRow(top,"top"),vigRow(bot,"bot"));
+  const head2=h("div","vhead");head2.append(h("h3","cap","Souvent visités")); // titre de la 2e rangée (cartes choisies par l'utilisateur, pas l'historique)
+  $("#bvigs").replaceChildren(head,vigRow(top,"top"),head2,vigRow(bot,"bot"));
   sizeVigs();
   // logo haute résolution (manifeste du site) résolu côté Rust ; l'affichage ne l'attend pas (initiale/apple-touch d'abord)
   V.forEach(v=>{if(!(v.image&&/^data:image\//.test(v.image)))send({cmd:"vicon",url:v.url})});
   updateVigsScroll(); // pose/retire la classe `run` selon la visibilité de la page
 }
 const VIG_SPEED=70; // px/s : même vitesse dans les deux rangées (durée proportionnelle à la largeur)
-// largeur d'UNE copie = scrollWidth/2 ; on translate d'exactement --w, durée --d = largeur/vitesse (boucle sans saut, même allure)
-function sizeVigs(){$$("#bvigs .track").forEach(t=>{const w=t.scrollWidth/2;if(w>4){t.style.setProperty("--w",w+"px");t.style.setProperty("--d",(w/VIG_SPEED)+"s")}})}
+// largeur d'UNE copie = scrollWidth / nombre de copies ; on translate d'exactement --w, durée --d = largeur/vitesse (boucle sans saut, même allure)
+function sizeVigs(){$$("#bvigs .track").forEach(t=>{const w=t.scrollWidth/(+t.dataset.n||2);if(w>4){t.style.setProperty("--w",w+"px");t.style.setProperty("--d",(w/VIG_SPEED)+"s")}})}
 // logo (icône déclarée par la page, souvent 512px) + couleur dominante renvoyés par Rust : met à jour les deux copies de la carte
 function viconReady(url,icon,color){
   $$("#bvigs .vig").forEach(c=>{
@@ -1784,7 +1826,7 @@ function viconReady(url,icon,color){
     if(!icon)return;
     const probe=new Image();
     probe.onload=()=>{if(probe.naturalWidth<=1)return;const i=new Image();i.alt="";i.decoding="async";i.src=icon;
-      const slot=c.querySelector(c.classList.contains("img")?".badge":".clogo");if(slot){slot.replaceChildren(i);c.querySelector(".vli")?.remove()}};
+      const slot=c.querySelector(c.classList.contains("img")?".badge":".clogo");if(slot){c.dataset.hd="1";slot.replaceChildren(i);c.querySelector(".vli")?.remove()}};
     probe.src=icon;
   });
 }
@@ -2024,7 +2066,7 @@ $$("section:not(#s-home,#s-board,#s-hello)").forEach(sec=>{const b=document.crea
 $("#star").onclick=()=>window.ipc.postMessage("cd");
 $("#favtoggle").onclick=()=>save({favbar:!S.favbar});
 $("#favbar").oncontextmenu=e=>{e.preventDefault();openSection("favs")};
-addEventListener("resize",()=>{if(S.favs)renderFavbar();if(panel&&cur==="board")sizeVigs()}); // largeur changée : « +N », pages, et durée/longueur du défilement
+addEventListener("resize",()=>{if(S.favs)renderFavbar();if(panel&&cur==="board"){drawVigs();sizeVigs()}}); // largeur changée : « +N », pages, et durée/longueur du défilement
 $("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:"Dossier",color:"",icon:"📁"});save({folders:S.folders})};
 $("#hq").oninput=()=>histFull();
 $("#hclear").onclick=()=>send({cmd:"hist_clear"});

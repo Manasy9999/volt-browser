@@ -114,6 +114,14 @@ pub fn move_last(tabs: &mut Vec<Tab>, at: usize) {
     }
 }
 
+/// Glisser-déposer : l'onglet n° `i` va en position `to`, sans sortir de son groupe (épinglés en tête, autres après).
+pub fn move_to(tabs: &mut Vec<Tab>, i: usize, to: usize) {
+    let p = pinned(tabs);
+    let (lo, hi) = if tabs[i].pinned { (0, p - 1) } else { (p, tabs.len() - 1) };
+    let t = tabs.remove(i);
+    tabs.insert(to.clamp(lo, hi), t);
+}
+
 /// Mémorise un onglet fermé (position, adresse) pour « Rouvrir » ; pages web seulement.
 pub fn remember(closed: &mut Vec<(usize, String)>, i: usize, url: &str) {
     if url.starts_with("http://") || url.starts_with("https://") {
@@ -156,6 +164,19 @@ mod tests {
         assert!(grayed(&m, "close_others") && grayed(&m, "close_right") && !grayed(&m, "reopen"));
         assert!(m.iter().flatten().any(|i| i.1 == "Réactiver le son de l'onglet") && m.iter().flatten().any(|i| i.1 == "Retirer des favoris"));
         assert!(items(&t2, 1, false, false).iter().flatten().any(|i| i.1 == "Retirer l'épingle"));
+    }
+
+    #[test]
+    fn drag_stays_in_its_group() {
+        let mut t = vec![tab(1, true), tab(2, true), tab(3, false), tab(4, false), tab(5, false)];
+        move_to(&mut t, 4, 2); // dernier -> premier des non épinglés
+        assert_eq!(ids(&t), [1, 2, 5, 3, 4]);
+        move_to(&mut t, 2, 99); // au-delà de la fin -> dernier
+        assert_eq!(ids(&t), [1, 2, 3, 4, 5]);
+        move_to(&mut t, 3, 0); // un non épinglé ne passe pas devant les épinglés
+        assert_eq!(ids(&t), [1, 2, 4, 3, 5]);
+        move_to(&mut t, 0, 4); // un épinglé ne sort pas des épinglés
+        assert_eq!(ids(&t), [2, 1, 4, 3, 5]);
     }
 
     #[test]
