@@ -2368,7 +2368,8 @@ fn main() {
                                 // rectangle (région de fenêtre), la page reste visible autour au lieu d'une bande opaque
                                 unsafe {
                                     use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, RGN_OR, SetWindowRgn};
-                                    let rgn = match v["r"].as_array().filter(|r| h > 0 && r.len() == 4) {
+                                    // pas quand l'interface dessine elle-même la page (nouvel onglet, réglages, tiroir) : la découpe l'effacerait
+                                    let rgn = match v["r"].as_array().filter(|r| h > 0 && r.len() == 4 && !panel && drawer_w() == 0.0) {
                                         Some(r) => {
                                             let k = win.scale_factor();
                                             let f = |i: usize| (r[i].as_f64().unwrap_or(0.0) * k).round() as i32;
