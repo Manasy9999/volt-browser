@@ -34,7 +34,6 @@ use webview2_com::{
     SourceChangedEventHandler, take_pwstr,
 };
 use windows::Win32::Foundation::POINT;
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL};
 use windows::Win32::UI::WindowsAndMessaging::{IDCANCEL, IDYES, MB_ICONINFORMATION, MB_ICONQUESTION, MB_OK, MB_YESNOCANCEL, MessageBoxW};
 use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor, GetCursorPos, HWND_BOTTOM, HWND_TOP, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SetWindowPos, WindowFromPoint};
 use windows::core::{BOOL, Interface, PWSTR};
@@ -380,6 +379,9 @@ impl Ev {
         }
     }
 }
+
+/// fenêtre (hwnd) qui montre en ce moment un onglet glissé depuis une autre, 0 : aucune
+static GHOST: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 
 struct Tab {
     id: u32,
@@ -1191,6 +1193,7 @@ fn main() {
         audio::set_download_dir(&ui, &s.download_dir);
     }
     dl::ASK.store(s.download_ask, std::sync::atomic::Ordering::Relaxed);
+    dl::load_history(dir.join("downloads.json")); // téléchargements terminés des lancements précédents
     if s.auto_update {
         auto_update(proxy.clone());
     }
@@ -2150,7 +2153,36 @@ fn main() {
                             }
                             // onglet lâché hors de la barre d'onglets : dans la fenêtre de Volt qui est sous la souris s'il y
                             // en a une autre (même mode, normal ou privé), sinon dans une nouvelle fenêtre à cet endroit
+                            // onglet tiré hors de la barre : montré dans la fenêtre Volt sous la souris, avant le lâcher ; id 0 : plus rien
+                            "tabhover" => {
+                                let id = v["id"].as_u64().unwrap_or(0) as u32;
+                                let mut p = POINT::default();
+                                let root = unsafe {
+                                    let _ = GetCursorPos(&mut p);
+                                    if let (Some(x), Some(y)) = (v["x"].as_i64(), v["y"].as_i64()) {
+                                        p = POINT { x: x as i32, y: y as i32 }; // essais pilotés, comme « tabout »
+                                    }
+                                    GetAncestor(WindowFromPoint(p), GA_ROOT)
+                                }
+                                .0 as isize;
+                                let t = tabs.iter().find(|t| t.id == id);
+                                let to = t.and_then(|_| parked.iter().find(|x| x.win.hwnd() == root && x.private == private)).map_or(0, |x| x.win.hwnd());
+                                let was = GHOST.swap(to, std::sync::atomic::Ordering::Relaxed);
+                                if was != to {
+                                    if let Some(x) = parked.iter().find(|x| x.win.hwnd() == was) {
+                                        let _ = x.ui.evaluate_script("ghost(null)");
+                                    }
+                                    if let (Some(x), Some(t)) = (parked.iter().find(|x| x.win.hwnd() == to), t) {
+                                        let _ = x.ui.evaluate_script(&format!("ghost({})", serde_json::json!({"title": t.title, "url": t.url, "icon": t.icon})));
+                                    }
+                                }
+                            }
                             "tabout" => {
+                                // le fantôme laisse la place au vrai onglet
+                                let was = GHOST.swap(0, std::sync::atomic::Ordering::Relaxed);
+                                if let Some(x) = parked.iter().find(|x| x.win.hwnd() == was) {
+                                    let _ = x.ui.evaluate_script("ghost(null)");
+                                }
                                 let id = v["id"].as_u64().unwrap_or(0) as u32;
                                 let mut p = POINT::default();
                                 let root = unsafe {
@@ -2329,9 +2361,27 @@ fn main() {
                             }
                             // liste de suggestions affichée (h > 0) ou refermée : l'interface s'étend par-dessus la page
                             "over" => {
-                                let h = v["h"].as_f64().unwrap_or(0.0).clamp(0.0, 480.0) as u32;
+                                let h = v["h"].as_f64().unwrap_or(0.0).clamp(0.0, win.inner_size().to_logical::<f64>(win.scale_factor()).height) as u32; // jusqu'au bas de la fenêtre
                                 OVER.store(h, std::sync::atomic::Ordering::Relaxed);
                                 let _ = ui.set_bounds(ui_rect(&win, panel));
+                                // petit panneau ou menu (r = [x, y, l, h] en px CSS) : l'interface n'occupe que la barre et ce
+                                // rectangle (région de fenêtre), la page reste visible autour au lieu d'une bande opaque
+                                unsafe {
+                                    use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, RGN_OR, SetWindowRgn};
+                                    let rgn = match v["r"].as_array().filter(|r| h > 0 && r.len() == 4) {
+                                        Some(r) => {
+                                            let k = win.scale_factor();
+                                            let f = |i: usize| (r[i].as_f64().unwrap_or(0.0) * k).round() as i32;
+                                            let strip = CreateRectRgn(0, 0, 100_000, (top() * k).ceil() as i32);
+                                            let pop = CreateRectRgn(f(0) - 2, f(1) - 2, f(0) + f(2) + 2, f(1) + f(3) + 2);
+                                            let _ = CombineRgn(Some(strip), Some(strip), Some(pop), RGN_OR);
+                                            let _ = DeleteObject(pop.into());
+                                            Some(strip)
+                                        }
+                                        None => None,
+                                    };
+                                    let _ = SetWindowRgn(ui.hwnd(), rgn, true);
+                                }
                                 let _ = unsafe { SetWindowPos(ui.hwnd(), Some(if h > 0 { HWND_TOP } else { HWND_BOTTOM }), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) };
                                 return;
                             }
@@ -2387,22 +2437,6 @@ fn main() {
                             }
                             // dossier de favoris ouvert « en menu » : liste native de ses favoris sous le dossier (un menu
                             // de l'interface serait coupé par la page)
-                            "favmenu" => {
-                                let id = str_of("id");
-                                let list: Vec<&Page> = s.favs.iter().filter(|f| f.folder == id).collect();
-                                let rows: Vec<_> = if list.is_empty() { vec![Some((lang::t("(vide)"), true))] } else { list.iter().map(|f| Some((tabmenu::label(&f.title, &f.url), false))).collect() };
-                                // coin bas gauche du dossier, donné par l'interface en points de sa vue
-                                let (k, o) = (win.scale_factor(), win.inner_position().map_or((0, 0), |p| (p.x, p.y)));
-                                let at = (o.0 + ((border(&win) + v["x"].as_f64().unwrap_or(0.0)) * k) as i32, o.1 + (v["y"].as_f64().unwrap_or(0.0) * k) as i32);
-                                let Some(u) = tabmenu::popup(win.hwnd(), &rows, Some(at)).and_then(|i| list.get(i)).map(|f| f.url.clone()) else { return };
-                                // Ctrl tenu au moment du choix : nouvel onglet, comme un Ctrl+clic sur un favori
-                                if unsafe { GetKeyState(VK_CONTROL.0 as i32) } < 0 {
-                                    open(&u, &mut tabs, &mut active)
-                                } else if let Some(w) = wv {
-                                    let _ = w.load_url(&u);
-                                    let _ = w.focus();
-                                }
-                            }
                             "go" => {
                                 panel = false;
                                 if let Some(w) = wv {

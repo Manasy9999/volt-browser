@@ -1,7 +1,8 @@
 // Téléchargements lancés par les pages, pour la page « Téléchargements » de Volt : le panneau du moteur s'ouvre mais
 // ne liste rien dans une vue intégrée (mesuré), on tient donc la liste nous-mêmes. Tout vit sur le fil de l'interface.
-// shortcut: liste de la session seulement, perdue à la fermeture ; à écrire sur le disque si on veut un historique.
+// Les téléchargements terminés sont gardés d'un lancement à l'autre (fichier downloads.json du profil, 50 au plus).
 use std::cell::{Cell, RefCell};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::{Value, json};
@@ -22,6 +23,57 @@ thread_local! {
     static NEXT: Cell<u32> = const { Cell::new(1) };
     // téléchargements retenus par le moteur le temps de demander où les enregistrer (voir `ask_waiting`)
     static WAITING: RefCell<Vec<Waiting>> = const { RefCell::new(vec![]) };
+    // téléchargements terminés des lancements précédents (et de celui-ci), le plus récent en tête, et leur fichier
+    static PAST: RefCell<Vec<Past>> = const { RefCell::new(vec![]) };
+    static PAST_FILE: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct Past {
+    #[serde(skip)]
+    id: u32,
+    name: String,
+    path: String,
+    site: String,
+    size: i64,
+}
+const PAST_MAX: usize = 50;
+
+fn save_past() {
+    PAST_FILE.with_borrow(|f| {
+        if let Some(f) = f {
+            let _ = PAST.with_borrow(|l| std::fs::write(f, serde_json::to_vec(l).unwrap_or_default()));
+        }
+    });
+}
+
+/// Au démarrage : relit l'historique ; les fichiers qui ne sont plus sur le disque sont oubliés.
+pub fn load_history(file: PathBuf) {
+    let mut l: Vec<Past> = std::fs::read(&file).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+    l.retain(|p| std::path::Path::new(&p.path).is_file());
+    l.truncate(PAST_MAX);
+    for p in &mut l {
+        p.id = NEXT.replace(NEXT.get() + 1);
+    }
+    PAST.with_borrow_mut(|x| *x = l);
+    PAST_FILE.with_borrow_mut(|f| *f = Some(file));
+}
+
+/// Un téléchargement vient de finir : gardé dans l'historique (une seule fois par fichier).
+fn remember(op: &ICoreWebView2DownloadOperation) {
+    let p = path(op);
+    if p.is_empty() || PAST.with_borrow(|l| l.iter().any(|x| x.path == p)) {
+        return;
+    }
+    let (mut got, url) = (0i64, text(|u| unsafe { op.Uri(u) }));
+    let _ = unsafe { op.BytesReceived(&mut got) };
+    let site = crate::cmp::site(&url).filter(|_| url.starts_with("http")).unwrap_or_default();
+    let id = NEXT.replace(NEXT.get() + 1);
+    PAST.with_borrow_mut(|l| {
+        l.insert(0, Past { id, name: name(&p), path: p, site, size: got });
+        l.truncate(PAST_MAX);
+    });
+    save_past();
 }
 type Waiting = (ICoreWebView2DownloadStartingEventArgs, ICoreWebView2Deferral, Box<dyn Fn(Option<u32>)>);
 
@@ -90,6 +142,9 @@ fn track(op: ICoreWebView2DownloadOperation, changed: impl Fn(Option<u32>) + 'st
     let c = std::rc::Rc::new(changed);
     let c2 = c.clone();
     let st = StateChangedEventHandler::create(Box::new(move |op, _| {
+        if let Some(o) = op.as_ref().filter(|o| state(o) == DONE) {
+            remember(o);
+        }
         c2(op.as_ref().filter(|o| state(o) == DONE).map(|_| id));
         Ok(())
     }));
@@ -134,7 +189,7 @@ pub fn ask_waiting(hwnd: isize) {
 /// [{id, name, path, site, got, total, state (0 en cours, 1 arrêté, 2 terminé), resume}] ; `total` vaut -1 quand le
 /// site n'annonce pas la taille.
 pub fn list() -> Value {
-    LIST.with_borrow(|l| {
+    let live: Vec<Value> = LIST.with_borrow(|l| {
         l.iter()
             .map(|(id, op)| unsafe {
                 let (mut got, mut total, mut resume) = (0i64, 0i64, BOOL(0));
@@ -145,11 +200,19 @@ pub fn list() -> Value {
                 json!({"id": id, "name": name(&p), "path": p, "site": site, "got": got, "total": total, "state": state(op), "resume": resume.as_bool()})
             })
             .collect()
-    })
+    });
+    // puis l'historique (lancements précédents), sans doubler un fichier encore dans la liste de cette session
+    let mut out = live.clone();
+    PAST.with_borrow(|l| {
+        for p in l.iter().filter(|p| !live.iter().any(|v| v["path"] == p.path.as_str())) {
+            out.push(json!({"id": p.id, "name": p.name, "path": p.path, "site": p.site, "got": p.size, "total": p.size, "state": DONE, "resume": false}));
+        }
+    });
+    Value::Array(out)
 }
 
 pub fn path_of(id: u32) -> Option<String> {
-    LIST.with_borrow(|l| l.iter().find(|x| x.0 == id).map(|x| path(&x.1)))
+    LIST.with_borrow(|l| l.iter().find(|x| x.0 == id).map(|x| path(&x.1))).or_else(|| PAST.with_borrow(|l| l.iter().find(|x| x.id == id).map(|x| x.path.clone())))
 }
 
 /// "pause", "resume", "cancel", ou "forget" (retiré de la liste ; un téléchargement en cours est d'abord annulé).
@@ -167,14 +230,24 @@ pub fn act(id: u32, what: &str) {
             }
         };
         if what == "forget" {
+            let p = path(&l[i].1);
             l.remove(i);
+            PAST.with_borrow_mut(|h| h.retain(|x| x.path != p));
+            save_past();
         }
     });
+    // élément de l'historique (lancement précédent) : seul « retirer » le concerne
+    if what == "forget" && PAST.with_borrow(|l| l.iter().any(|x| x.id == id)) {
+        PAST.with_borrow_mut(|l| l.retain(|x| x.id != id));
+        save_past();
+    }
 }
 
 /// Vide la liste, sauf ce qui est encore en cours.
 pub fn clear() {
     LIST.with_borrow_mut(|l| l.retain(|x| state(&x.1) == RUNNING));
+    PAST.with_borrow_mut(|l| l.clear());
+    save_past();
 }
 
 #[cfg(test)]

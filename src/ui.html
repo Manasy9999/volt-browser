@@ -47,6 +47,8 @@ svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-l
 .tab.ing::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--g)}
 #list .tab.gh{display:none}
 .tab.drag.out{opacity:.75;outline:1px dashed var(--a)} /* sorti de la barre : il partira dans une autre fenêtre */
+.tab.ghost{opacity:.8;outline:1px dashed var(--a);pointer-events:none;animation:ghostin .14s ease-out} /* onglet glissé depuis une autre fenêtre, pas encore lâché */
+@keyframes ghostin{from{opacity:0;transform:translateY(8px)}}
 /* fenêtre de navigation privée : pastille à côté de Volty, liseré sous la barre d'onglets */
 #priv{flex:none;align-self:center;margin:0 8px 0 2px;padding:3px 10px;border-radius:10px;background:color-mix(in srgb,var(--a) 22%,var(--bg2));color:var(--tx);font-size:11.5px;white-space:nowrap}
 #priv[hidden]{display:none}
@@ -826,7 +828,6 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 #rsico .rck{width:18px;height:18px}
 #rsico .rck svg{width:12px;height:12px}
 #rsico:hover .rck{box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 30%,transparent)}
-#url:has(+#rsico:not([hidden])){padding-right:40px}
 /* traduction : même place, à gauche de l'icône jaune quand elle est là ; accent si la page est en langue étrangère ou traduite */
 #dlbtn{position:relative}
 #dlbtn.on{color:var(--a)}
@@ -861,7 +862,8 @@ body #toast.dl{display:flex;align-items:center;gap:11px;max-width:min(400px,100v
 #toast.dl .bar.ind::after{content:"";display:block;height:100%;width:40%;background:var(--a);animation:dlslide 1.1s ease-in-out infinite}
 body.drawer #toast.dl{max-width:300px}
 /* cadenas à gauche de l'adresse : connexion chiffrée, ou « Non sécurisé » en http */
-#sec{display:flex;align-items:center;gap:5px;flex:none;margin:0 -2px 0 8px;color:#f5c542;font-size:11.5px;white-space:nowrap}
+/* cadenas : dans le champ d'adresse, à droite, juste avant la traduction (placé par layIcons) */
+#sec{position:relative;display:flex;align-items:center;justify-content:center;gap:5px;flex:none;height:26px;min-width:26px;padding:0 6px;border-radius:13px;color:#f5c542;font-size:11.5px;white-space:nowrap}
 #sec[hidden]{display:none}
 #sec svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #sec .open,#sec.no .shut{display:none}
@@ -874,16 +876,26 @@ body.drawer #toast.dl{max-width:300px}
 #urlmenu[hidden]{display:none}
 #urlmenu .umi{display:block;width:100%;text-align:left;height:32px;padding:0 12px;border-radius:7px;color:var(--tx);white-space:nowrap}
 #urlmenu .umi:hover{background:var(--bg2)}
-#urlmenu .usep{height:1px;margin:5px 8px;background:var(--bg2)}
+#urlmenu .usep{display:block;height:1px;margin:4px 8px;background:var(--bg2)}
+#urlmenu .umi:disabled{opacity:.4;cursor:default}#urlmenu .umi:disabled:hover{background:none}
 /* petit panneau des téléchargements (clic sur le bouton ⬇) : étend l'interface comme les suggestions */
 #dlpop{position:fixed;z-index:9;width:348px;max-width:calc(100vw - 16px);background:var(--bg3);border:1px solid #0006;border-radius:12px;box-shadow:0 16px 40px #000b;padding:6px 6px 4px;display:flex;flex-direction:column}
 #dlpop[hidden]{display:none}
+/* menu d'un dossier de favoris (réglage « en menu ») : icône du site + titre, défile si le dossier est long */
+#favpop{position:fixed;z-index:9;width:340px;max-width:calc(100vw - 16px);max-height:520px;overflow:auto;background:var(--bg3);border:1px solid #0006;border-radius:12px;box-shadow:0 16px 40px #000b;padding:5px}
+#favpop[hidden]{display:none}
+#favpop .fpi{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;border-radius:8px;color:var(--tx);text-align:left}
+#favpop .fpi:hover{background:var(--bg2)}
+#favpop .fpi .ico{flex:none;width:18px;height:18px;border-radius:4px;font-size:11px}
+#favpop .fpi .ico img{width:100%;height:100%;object-fit:contain}
+#favpop .fpi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#favpop .fpe{padding:12px;color:var(--mu)}
 #dlpop .dlpop-h{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 8px}
 #dlpop .dlpop-h b{font-size:13px}
 #dlpop .dlpop-x{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--mu)}
 #dlpop .dlpop-x:hover{color:var(--tx);background:var(--bg2)}
 #dlpop .dlpop-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-#dlpop .dlpop-l{display:flex;flex-direction:column;max-height:50vh;overflow:auto}
+#dlpop .dlpop-l{display:flex;flex-direction:column;max-height:420px;overflow:auto} /* en px : dans la bande de l'interface, vh vaut ~110 px */
 #dlpop .dlpop-e{color:var(--mu);padding:14px 8px;font-size:13px}
 #dlpop .dlpop-i{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;position:relative}
 #dlpop .dlpop-i:hover{background:var(--bg2)}
@@ -913,9 +925,6 @@ body.drawer #toast.dl{max-width:300px}
 #trico{position:relative;width:26px;height:26px;margin:0 10px 0 -40px;display:grid;place-items:center;border-radius:50%;flex:none;color:var(--mu);transition:color .15s,background .15s}
 #trico:hover{color:var(--tx);background:var(--bg3)}
 #trico.on{color:var(--a)}
-#rsico:not([hidden])+#trico{margin:0 40px 0 -70px}
-#url:has(+#rsico[hidden]+#trico:not([hidden])){padding-right:40px}
-#url:has(+#rsico:not([hidden])+#trico:not([hidden])){padding-right:70px}
 /* extensions dans la barre d'adresse : rangée d'icônes dépliée par la flèche (tween, extBar), bouton des fiches du Store */
 #exts{display:flex;overflow:hidden;flex:none;width:0}
 #exts .in{display:flex;gap:2px;flex:none}
@@ -961,6 +970,7 @@ body.drawer #toast.dl{max-width:300px}
 <div id="sugg" hidden></div>
 <div id="urlmenu" hidden></div>
 <div id="dlpop" hidden></div>
+<div id="favpop" hidden></div>
 <div id="tabs">
   <div id="logo" data-load="low"></div>
   <span id="priv" hidden title="Ni historique, ni cookies, ni session gardés pour cette fenêtre">Navigation privée</span>
@@ -982,8 +992,8 @@ body.drawer #toast.dl{max-width:300px}
   <button class="ib" data-c="fwd" title="Suivant"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
   <button class="ib" data-c="reload" title="Actualiser (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
   <button class="ib" data-c="home" title="Accueil"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3z"/></svg></button>
-  <span id="sec" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shut" d="M8 11V7a4 4 0 0 1 8 0v4"/><path class="open" d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><b></b></span>
   <input id="url" spellcheck="false" placeholder="Rechercher ou saisir une adresse">
+  <span id="sec" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shut" d="M8 11V7a4 4 0 0 1 8 0v4"/><path class="open" d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><b></b></span>
   <button id="rsico" hidden><span class="rck"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></button>
   <button id="trico" hidden><svg viewBox="0 0 24 24"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg></button>
   <button class="ib" id="popico" hidden><svg viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="11" rx="2"/><path d="M7 20h13a1 1 0 0 0 1-1V9M4 4l16 16"/></svg><b></b></button>
@@ -1367,6 +1377,15 @@ function tabIcon(b,t){
   if(src){const i=new Image();i.onload=()=>{if(b._i===src&&d.isConnected){d.replaceChildren(i);d.classList.add("fav")}};i.src=src}
 }
 // largeur d'un onglet -> classes de la barre : « tight » sous 104 px, « mini » (icône seule) sous 64 px
+// onglet glissé depuis une autre fenêtre, pas encore lâché : montré au bout de la barre, là où il arrivera ; null : retiré
+function ghost(t){
+  let g=$("#ghost");
+  if(!t){if(g){g.remove();fitTabs()}return}
+  if(!g){g=h("div","tab ghost");g.id="ghost";g.innerHTML='<i class="dot"></i><span></span>'}
+  g.children[1].textContent=(t.title||t.url).replace(/^https?:\/\/(www\.)?/,"");tabIcon(g,t);
+  if(g.parentNode!==$("#list")||g.nextSibling)$("#list").append(g);
+  fitTabs();g.scrollIntoView({inline:"nearest",block:"nearest"});
+}
 function fitTabs(){
   const l=$("#list"),t=l.querySelector(".tab:not(.pin):not(.on):not(.gh)")||l.querySelector(".tab:not(.pin):not(.gh)"),w=t?t.getBoundingClientRect().width:999;
   l.classList.toggle("tight",w<104);l.classList.toggle("mini",w<64);
@@ -1412,6 +1431,9 @@ addEventListener("pointermove",e=>{
   // tiré loin de la barre d'onglets (plus bas, ou hors de la fenêtre) : au lâcher il changera de fenêtre
   const out=e.clientY>90||e.clientY<-24||e.clientX<-24||e.clientX>innerWidth+24;
   if(!drag.on){if(Math.abs(dx)<6&&!out)return;drag.on=true;try{b.setPointerCapture(drag.p)}catch{}b.classList.add("drag")}
+  // au-dessus d'une autre fenêtre : Volt y montre l'onglet avant le lâcher (demande espacée, la souris bouge vite)
+  if(out&&performance.now()-(drag.hv||0)>60){drag.hv=performance.now();send({cmd:"tabhover",id:+b.dataset.id})}
+  else if(!out&&drag.out)send({cmd:"tabhover",id:0});
   drag.out=out;b.classList.toggle("out",out);
   if(out){b.style.transform=`translate(${dx}px,${Math.max(-6,Math.min(26,e.clientY-20))}px)`;return}
   for(let k=0;k<50;k++){ // borné : jamais de boucle sans fin si la mise en page surprend
@@ -1745,7 +1767,7 @@ const FBS={etageres,ruban,icones};
 function buildFavbar(anim){const fb=$("#favbar"),st=fbStyle();fb.className=st;fb.onwheel=null;FBS[st](fb,anim);favH()}
 function favDir(id,el){
   // « en menu » : Volt affiche la liste native sous le dossier (el), au lieu de le déplier dans la barre
-  if(S.fav_open==="menu"&&el){const r=el.getBoundingClientRect();return send({cmd:"favmenu",id,x:r.left,y:r.bottom})}
+  if(S.fav_open==="menu"&&el)return showFavPop(id,el);
   if(fbStyle()==="etageres")return etDir($("#favbar"),id);openDir=openDir===id?null:id;buildFavbar(1)}
 // appelé à chaque render : ne reconstruit que si favoris, dossiers, style, thème (largeurs) ou largeur ont changé
 function renderFavbar(){
@@ -2419,7 +2441,8 @@ $$("[data-c]").forEach(b=>b.onclick=()=>send({cmd:b.dataset.c}));
 // TB : onglets du dernier rendu ; sgTab : la barre d'adresse cherche dans les onglets ouverts (Ctrl+Maj+A, bouton ˅)
 let SG=[],sgK=-1,sgQ="",TB=[],sgTab=false;
 const URL_PH=$("#url").placeholder;
-function sgHide(){SG=[];sgK=-1;if(!$("#sugg").hidden){$("#sugg").hidden=true;send({cmd:"over",h:0})}}
+const anyPop=()=>["#sugg","#urlmenu","#dlpop","#favpop"].some(q=>!$(q).hidden);
+function sgHide(){SG=[];sgK=-1;if(!$("#sugg").hidden){$("#sugg").hidden=true;if(!anyPop())send({cmd:"over",h:0})}}
 function sgMark(){$$("#sugg .sg").forEach((d,i)=>{d.classList.toggle("k",i===sgK);if(i===sgK)d.scrollIntoView({block:"nearest"})});if(!sgTab)$("#url").value=sgK<0?sgQ:SG[sgK][0]}
 // ligne choisie : un onglet ouvert (son id en 4e position) devient l'onglet affiché, sinon l'adresse est ouverte
 function sgGo(i){const [u,,,id]=SG[i];sgHide();if(id!=null){$("#url").blur();pick(id)}else{$("#url").value=u;send({cmd:"nav",url:u})}if(panel)setPanel(false)}
@@ -2455,9 +2478,9 @@ $("#url").onkeydown=e=>{
 $("#url").onfocus=e=>e.target.select();
 // ===== menu du clic droit sur la barre d'adresse : couper, copier, coller, coller et rechercher, tout sélectionner =====
 // Coller passe par Volt (lecture du presse-papiers côté moteur, fiable) ; « Coller et rechercher » y va directement.
-const UMENU=[["cut",T("Couper"),1],["copy",T("Copier"),0],["paste",T("Coller"),0],["pastego",T("Coller et rechercher"),0],["all",T("Tout sélectionner"),1]];
+const UMENU=[["cut",T("Couper"),0],["copy",T("Copier"),1],["paste",T("Coller"),0],["pastego",T("Coller et rechercher"),1],["all",T("Tout sélectionner"),0]];
 function pasted(t){const u=$("#url");const s=u.selectionStart??u.value.length,e=u.selectionEnd??s;u.value=u.value.slice(0,s)+t+u.value.slice(e);u.focus();const c=s+t.length;u.setSelectionRange(c,c);u.dispatchEvent(new Event("input"))}
-function hideUrlMenu(){const m=$("#urlmenu");if(m.hidden)return;m.hidden=true;if($("#sugg").hidden)send({cmd:"over",h:0})}
+function hideUrlMenu(){const m=$("#urlmenu");if(m.hidden)return;m.hidden=true;if(!anyPop())send({cmd:"over",h:0})}
 $("#url").oncontextmenu=e=>{
   e.preventDefault();const m=$("#urlmenu"),sel=$("#url").selectionStart!==$("#url").selectionEnd;
   m.replaceChildren(...UMENU.flatMap(([k,label,sep])=>{
@@ -2469,7 +2492,7 @@ $("#url").oncontextmenu=e=>{
   m.hidden=false;
   const bar=$("#bar").getBoundingClientRect();
   m.style.left=Math.min(e.clientX,innerWidth-m.offsetWidth-8)+"px";m.style.top=Math.ceil(bar.bottom+2)+"px";
-  send({cmd:"over",h:Math.ceil(m.getBoundingClientRect().bottom+6)});
+  overFor(m);
 };
 function doUrlMenu(k){
   const u=$("#url");u.focus();
@@ -2518,6 +2541,19 @@ $("#pwico").onclick=()=>send({cmd:"pw_fill"});
 function pwIcon(a){$("#pwico").hidden=panel||!(a&&a.pwfill)}
 // cadenas : https = connexion chiffrée ; http = « Non sécurisé ». shortcut: une page https affichée malgré une erreur de
 // certificat (l'utilisateur a passé l'avertissement du moteur) garde le cadenas ; à signaler si le moteur le rapporte.
+// icônes dans le champ d'adresse (cadenas, reprise de session, traduction), à droite et dans cet ordre : la première
+// remonte dans le champ de toute leur largeur, la barre garde de la place pour le texte
+const FIELD_ICONS=["#sec","#rsico","#trico"];
+function layIcons(){
+  const u=$("#url"),all=FIELD_ICONS.map(q=>$(q)),ic=all.filter(e=>!e.hidden);
+  for(const e of all)e.style.margin="";
+  if(!ic.length){u.style.paddingRight="";return}
+  const w=ic.reduce((t,e)=>t+e.offsetWidth,0)+(ic.length-1)*2;
+  ic.forEach((e,i)=>e.style.margin=i?"0 0 0 2px":`0 0 0 ${-(w+8)}px`);
+  ic.at(-1).style.marginRight="8px";
+  u.style.paddingRight=(w+14)+"px";
+}
+new MutationObserver(layIcons).observe($("#bar"),{subtree:true,attributes:true,attributeFilter:["hidden","class"],childList:true,characterData:true});
 function secIcon(a){
   const s=$("#sec"),u=a?a.url:"",k=panel?"":u.startsWith("https://")?"ok":u.startsWith("http://")?"no":"";
   s.hidden=!k;s.className=k;s.lastChild.textContent=k==="no"?T("Non sécurisé"):"";
@@ -2560,13 +2596,34 @@ function perms(l){
 $("#favimp").onclick=()=>send({cmd:"fav_import_html"});
 $("#favexp").onclick=()=>send({cmd:"fav_export_html"});
 // ===== petit panneau des téléchargements (clic sur le bouton ⬇) : liste des téléchargements récents + lien vers la page =====
-function hideDlPop(){const p=$("#dlpop");if(p.hidden)return;p.hidden=true;if($("#sugg").hidden&&$("#urlmenu").hidden)send({cmd:"over",h:0})}
+// l'interface s'étend juste assez pour ce panneau, et seul son rectangle (plus la barre) cache la page
+function overFor(el){const r=el.getBoundingClientRect();send({cmd:"over",h:Math.ceil(r.bottom+8),r:[r.left,r.top,r.width,r.height]})}
+function hideDlPop(){const p=$("#dlpop");if(p.hidden)return;p.hidden=true;if(!anyPop())send({cmd:"over",h:0})}
+function hideFavPop(){const p=$("#favpop");if(p.hidden)return;p.hidden=true;favPopId=null;if(!anyPop())send({cmd:"over",h:0})}
+let favPopId=null;
+// favori sans titre : le nom du site plutôt que l'adresse brute
+const favName=f=>f.title||host(f.url);
+function showFavPop(id,el){
+  if(favPopId===id)return hideFavPop();
+  sgHide();hideUrlMenu();hideDlPop();
+  const p=$("#favpop"),list=S.favs.filter(f=>f.folder===id);favPopId=id;
+  p.replaceChildren(...(list.length?list.map(f=>{
+    const b=h("button","fpi");b.append(fico(f),h("span",null,favName(f)));b.title=(f.title?f.title+"\n":"")+f.url;
+    // Ctrl+clic ou clic molette : nouvel onglet ; clic : dans l'onglet affiché
+    b.onclick=e=>{hideFavPop();send(e.ctrlKey?{cmd:"tab",url:f.url}:{cmd:"go",url:f.url})};
+    b.onauxclick=e=>{if(e.button===1){e.preventDefault();hideFavPop();send({cmd:"tab",url:f.url})}};
+    return b}):[h("div","fpe",T("(vide)"))]));
+  p.hidden=false;const r=el.getBoundingClientRect();
+  p.style.left=Math.max(8,Math.min(r.left,innerWidth-p.offsetWidth-8))+"px";p.style.top=Math.ceil(r.bottom+3)+"px";
+  overFor(p);
+}
+addEventListener("mousedown",e=>{if(!$("#favpop").hidden&&!e.target.closest("#favpop")&&!e.target.closest(".dir,.it"))hideFavPop()});
 function showDlPop(){
-  sgHide();$("#urlmenu").hidden=true;
+  sgHide();$("#urlmenu").hidden=true;hideFavPop();send({cmd:"dls"}); // liste à jour, historique compris
   const p=$("#dlpop");renderDlPop();p.hidden=false;
   const r=$("#dlbtn").getBoundingClientRect();
   p.style.right=Math.max(8,Math.round(innerWidth-r.right-2))+"px";p.style.top=Math.ceil($("#bar").getBoundingClientRect().bottom+3)+"px";
-  send({cmd:"over",h:Math.ceil(p.getBoundingClientRect().bottom+8)});
+  overFor(p);
 }
 function renderDlPop(){
   const head=h("div","dlpop-h");head.append(h("b",null,T("Téléchargements")));
@@ -2603,7 +2660,7 @@ function dls(l){
   else if(act)bar.classList.add("ind");
   clearInterval(dlT);dlT=act?setInterval(()=>send({cmd:"dls"}),1000):0;
   if(cur==="dl")drawDls();
-  if(!$("#dlpop").hidden&&!$("#dlpop").matches(":hover"))renderDlPop(); // suit l'avancement, sauf si la souris est sur un bouton
+  if(!$("#dlpop").hidden&&!$("#dlpop").matches(":hover")){renderDlPop();overFor($("#dlpop"))} // suit l'avancement, sauf si la souris est sur un bouton
   if(dlN&&!$("#toast").matches(":hover"))dlDraw(); // sous la souris, on ne remplace pas un bouton qu'on s'apprête à cliquer
 }
 // nom du fichier, état et barre d'avancement d'un téléchargement : pour sa ligne de la page et pour sa petite notif
@@ -2765,6 +2822,7 @@ addEventListener("keydown",e=>{
   if(e.key==="Escape"&&!$("#ved").hidden){closeVigEd();return}
   if(e.key==="Escape"&&dOpen&&!panel){if(dConfirm)DACT.cancel();else toggleDrawer(false);return}
   if(e.key==="/"&&panel&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();if(cur==="board"){boardSort(false);return $("#bq").focus()}if(cur!=="home")openSection("home");$("#sq").focus()}
+  if(e.key==="Escape"&&!$("#favpop").hidden){hideFavPop();return}
   if(e.key==="Escape"&&!panel&&openDir)favDir(openDir);
   if(e.key==="Escape"&&panel&&(cur==="board"||cur==="hello")){if(cur==="board"&&!$("#bsort").hidden)boardSort(false);else if(cur==="board"&&$("#bq").value){$("#bq").value="";boardBody()}else setPanel(false)}
   else if(e.key==="Escape"&&panel){if($("#sq").value){$("#sq").value="";searchSettings("")}else if(cur!=="home")openSection("home");else setPanel(false)}
