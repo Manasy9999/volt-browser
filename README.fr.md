@@ -23,7 +23,7 @@ Volt est un navigateur léger, une alternative à Chrome pour qui veut un naviga
 
 - Un seul exécutable d'environ 1,5 Mo, sans installation.
 - A besoin de WebView2, déjà présent dans Windows 11.
-- Version 0.3.0, développée par une personne. Interface en français ou en anglais.
+- Version 0.3.5, développée par une personne. Interface en français ou en anglais.
 
 ## Mémoire comparée à Chrome, Edge et Opera GX
 
@@ -74,8 +74,8 @@ Autres mesures sur la même machine :
 ## Fonctions
 
 **Onglets, fenêtres et sessions**
-- Plusieurs fenêtres : un onglet se glisse hors de sa fenêtre pour en ouvrir une nouvelle, ou dans une autre fenêtre de Volt, sans se recharger.
-- Navigation privée (Ctrl+Maj+N) : ni historique, ni cookies, ni session gardés.
+- Plusieurs fenêtres : un onglet se glisse hors de sa fenêtre pour en ouvrir une nouvelle, ou dans une autre fenêtre de Volt, sans se recharger ; pendant le glisser, l'onglet apparaît déjà dans la fenêtre sous la souris.
+- Navigation privée (Ctrl+Maj+N, ou le bouton à côté des onglets) : ni historique, ni cookies, ni session gardés.
 - Groupes d'onglets nommés et colorés, qu'on replie d'un clic et qui reviennent avec la session.
 - Onglets épinglés. Quand la barre se remplit, les onglets rétrécissent jusqu'à ne montrer que l'icône du site.
 - Recherche dans les onglets ouverts (Ctrl+Maj+A).
@@ -84,22 +84,23 @@ Autres mesures sur la même machine :
 - Gestionnaire de tâches (Maj+Échap) : mémoire et processeur de chaque onglet, avec un bouton pour décharger les plus lourds.
 
 **Navigation**
-- Suggestions dans la barre d'adresse, tirées de vos favoris et de votre historique ; elles sont cherchées sur votre machine, rien n'est envoyé à un moteur de recherche pendant la frappe.
+- Suggestions dans la barre d'adresse, tirées de vos favoris et de votre historique ; elles sont cherchées sur votre machine, rien n'est envoyé à un moteur de recherche pendant la frappe. Menu du clic droit avec « Coller et rechercher », et cadenas dans le champ pour les connexions sécurisées.
+- La flèche Retour sur les Réglages, les Favoris et les autres pages de Volt les ferme et réaffiche la page web derrière.
 - Recherche dans la page (Ctrl+F), zoom par page, impression, plein écran (F11), Ctrl+1 à 9 pour aller à un onglet.
-- Ouvre les PDF et les fichiers de votre PC. « Remplir et signer » un PDF : texte, dessin, signature dessinée à la souris, tapée ou posée depuis une image transparente.
-- Page des téléchargements avec progression, pause, reprise et annulation ; dossier de téléchargement au choix, ou fenêtre « Enregistrer sous » à chaque fichier.
+- Ouvre les PDF et les fichiers de votre PC. Ouvrir un PDF ouvre l'éditeur de Volt : lecture, impression, texte (déplaçable), dessin, signature dessinée à la souris, tapée ou posée depuis une image transparente. Une signature par page, et une page signée est verrouillée contre les modifications (déverrouillable). Un mode Édition supprime et réordonne les pages.
+- Téléchargements : petite notification sous la barre des favoris (pause, annuler, masquer, 10 secondes), panneau sous le bouton de téléchargement et page des téléchargements ; pause, reprise, annulation, affichage dans le dossier avec le fichier sélectionné. Le bouton s'anime pendant le téléchargement et passe en jaune à la fin. La liste est gardée d'un lancement à l'autre. Dossier de téléchargement au choix, ou fenêtre « Enregistrer sous » à chaque fichier.
 - Fenêtres surgissantes bloquées quand un site en ouvre sans clic, avec une liste de sites autorisés.
 - Liste des autorisations données aux sites (caméra, micro, position, notifications), pour retirer un choix.
 - Alerte sur les sites dangereux par Microsoft Defender SmartScreen, que vous pouvez couper : les adresses visitées lui sont envoyées pour vérification.
 
 **Mots de passe, cartes et formulaires**
-- Gestionnaire de mots de passe propre à Volt : enregistrement proposé à la connexion, remplissage d'un clic, liste consultable, import et export en CSV. Voir, modifier, supprimer ou exporter demande Windows Hello.
+- Gestionnaire de mots de passe propre à Volt : enregistrement proposé à la connexion, formulaire de connexion rempli tout seul quand un seul compte enregistré correspond au site, liste consultable, import et export en CSV. Voir, modifier, supprimer ou exporter demande Windows Hello.
 - Cartes de paiement : enregistrées chiffrées sur votre PC, sans le cryptogramme. Sur une page de paiement, la carte n'est remplie qu'à votre demande, après Windows Hello, et seulement dans le formulaire où vous avez cliqué ; Volt vous montre d'abord le site qui va la recevoir.
 - Remplissage des formulaires (nom, adresse, e-mail, téléphone) par le moteur, que vous pouvez couper.
 
 **Favoris et historique**
-- Barre de favoris en trois styles, dossiers qui s'ouvrent dans la barre ou en menu, et page de favoris en tuiles.
-- Import des favoris de Chrome, Edge, Brave, Vivaldi, Opera et Opera GX, et import ou export au format HTML commun à tous les navigateurs (Firefox compris).
+- Barre de favoris en trois styles, dossiers qui s'ouvrent dans la barre ou en menu avec l'icône de chaque site, et page de favoris en tuiles.
+- Page Migration dans les réglages : reprenez cookies, favoris, mots de passe et historique de Chrome, Edge, Brave, Vivaldi, Opera, Opera GX et Chromium. Chrome et Edge récents verrouillent leurs cookies et mots de passe pour eux seuls (chiffrement lié à l'application) : ceux-là ne sont pas repris. Import ou export des favoris au format HTML commun à tous les navigateurs (Firefox compris).
 - Rangement automatique des favoris par catégorie (jeux compris), calculé sur votre machine ; rien n'est envoyé.
 - Panneau latéral d'historique classé par jour, avec suppression des cookies par site.
 
@@ -112,7 +113,7 @@ Autres mesures sur la même machine :
 - Bouton de traduction de la page dans la barre d'adresse, par Google Traduction, avec « voir l'original » sur une page traduite. La traduction automatique des pages en langue étrangère est une option, désactivée par défaut.
 
 **Le reste**
-- Recherche de mise à jour depuis les réglages : le nouvel exécutable est téléchargé depuis les versions publiées de ce dépôt, vérifié contre son empreinte SHA-256 publiée, puis Volt redémarre en reprenant votre session.
+- Mises à jour automatiques, comme Chrome : la nouvelle version est téléchargée en arrière-plan depuis les versions publiées de ce dépôt, vérifiée contre son empreinte SHA-256 publiée, et installée au lancement suivant. Les réglages affichent la version et un bouton quand une mise à jour est prête.
 - Mode Jeu, pour un navigateur qui se fait discret pendant que vous jouez : priorité basse et gel rapide des onglets.
 - Six thèmes.
 - Interface en français ou en anglais : elle suit la langue d'affichage de Windows, ou la langue que vous choisissez dans les réglages ; la traduction des pages et le moteur (menus des pages, pages d'erreur, langue demandée aux sites) passent alors dans cette langue aussi.
@@ -139,7 +140,6 @@ Autres mesures sur la même machine :
 - Les mots de passe et les cartes sont dans un coffre propre à Volt, chiffré par Windows et lié à votre session : un programme lancé sous votre compte peut le lire, comme pour Chrome. Ce coffre n'a pas été audité.
 - La carte n'est remplie que dans le formulaire où vous avez cliqué : un champ tenu par un autre site que celui-là (le nom du titulaire, parfois) reste à remplir à la main.
 - La signature posée sur un PDF est une image, pas une signature électronique certifiée.
-- La liste des téléchargements repart de zéro à chaque lancement.
 - Exécutable non signé : Windows SmartScreen ou Defender peuvent afficher un avertissement.
 - Mémoire vidéo élevée quand on garde beaucoup d'onglets chargés.
 - La traduction de page passe par le relais de Google : l'adresse et le contenu de la page lui sont envoyés, vous n'êtes pas connecté sur la page traduite, les formulaires y sont bloqués, et les applications web lourdes peuvent ne pas s'afficher.
