@@ -2616,7 +2616,8 @@ function dlText(d){
 // puis quand il est là ; affichée, elle suit l'avancement, et propose d'ouvrir le fichier une fois terminé =====
 // shortcut: une seule notif à la fois (le dernier fichier remplace le précédent), la page Téléchargements montre tout.
 let dlN=0;
-function dlNote(id){dlN=id;if(!dlDraw())return;$("#toast").classList.add("on","dl")}
+// la notif reste 5 s puis s'efface (le minuteur est posé ici, à l'apparition : les mises à jour d'avancement ne le réarment pas)
+function dlNote(id){dlN=id;if(!dlDraw())return;$("#toast").classList.add("on","dl");clearTimeout(tt);tt=setTimeout(dlHide,5000)}
 function dlHide(){dlN=0;$("#toast").classList.remove("on")}
 // pendant le téléchargement, la notif reste et porte Pause / Annuler (ou Reprendre) ; terminée, elle propose Ouvrir /
 // Afficher puis s'efface seule ; la croix la referme à tout moment (le bouton de la barre garde l'avancement).
@@ -2637,11 +2638,10 @@ function dlDraw(){
   const kids=[ico,tx,bar];
   if(d.state===0){const p=h("i","bar"+(pct<0?" ind":""));if(pct>=0)p.style.setProperty("--p",pct+"%");kids.push(p)}
   $("#toast").replaceChildren(...kids);
-  clearTimeout(tt);if(d.state===2)tt=setTimeout(dlHide,8000); // seul un téléchargement fini disparaît tout seul
-  return true;
+  return true; // le minuteur de 5 s est posé par dlNote (à l'apparition), pas ici : l'avancement ne le relance pas
 }
 $("#toast").onmouseenter=()=>clearTimeout(tt); // tant que la souris est dessus, la notif reste
-$("#toast").onmouseleave=()=>{const d=DLS.find(x=>x.id===dlN);if(d&&d.state===2){clearTimeout(tt);tt=setTimeout(dlHide,1500)}};
+$("#toast").onmouseleave=()=>{if(dlN){clearTimeout(tt);tt=setTimeout(dlHide,2000)}}; // souris partie : courte grâce puis elle s'efface
 function drawDls(){
   const act=DLS.filter(d=>d.state===0).length;
   $("#dlsum").textContent=DLS.length?T("{n} fichier|{n} fichiers",{n:DLS.length})+(act?" · "+T("{n} en cours",{n:act}):""):T("Aucun téléchargement pour l'instant");

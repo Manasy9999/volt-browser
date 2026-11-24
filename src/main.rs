@@ -1821,6 +1821,18 @@ fn main() {
                     // formulaire de connexion repéré : propose le remplissage si le coffre a l'origine exacte (fait dans sync)
                     Ev::PwForm(id) => {
                         pw_forms.insert(id);
+                        // remplissage automatique : un seul identifiant enregistré pour ce site -> posé tout de suite
+                        // (comme Chrome). Plusieurs identifiants : l'utilisateur choisit par l'icône de la barre d'adresse.
+                        if let Some(tab) = tabs.iter().find(|t| t.id == id)
+                            && let Some(origin) = vault::origin_of(&tab.url)
+                            && let Some(w) = tab.wv.as_ref()
+                        {
+                            let accounts = vault::for_origin(&vault, &origin);
+                            if let [e] = accounts[..] {
+                                let esc = |x: &str| serde_json::to_string(x).unwrap_or_default().replace('<', "\\u003c");
+                                let _ = w.evaluate_script(&format!("window.__voltFill&&__voltFill({},{})", esc(&e.username), esc(&e.password)));
+                            }
+                        }
                         dirty = true;
                         return;
                     }
