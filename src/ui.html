@@ -2548,10 +2548,13 @@ function layIcons(){
   const u=$("#url"),all=FIELD_ICONS.map(q=>$(q)),ic=all.filter(e=>!e.hidden);
   for(const e of all)e.style.margin="";
   if(!ic.length){u.style.paddingRight="";return}
-  const w=ic.reduce((t,e)=>t+e.offsetWidth,0)+(ic.length-1)*2;
-  ic.forEach((e,i)=>e.style.margin=i?"0 0 0 2px":`0 0 0 ${-(w+8)}px`);
-  ic.at(-1).style.marginRight="8px";
-  u.style.paddingRight=(w+14)+"px";
+  // la barre espace ses éléments (gap G) et le champ a sa marge m : les icônes remontent dans le champ de leur largeur
+  // + m + G + 8 px d'écart avec le bord ; la dernière rend m + 8, pour que la suite de la barre ne bouge pas
+  const G=parseFloat(getComputedStyle(u.parentNode).columnGap)||0,m=parseFloat(getComputedStyle(u).marginRight)||0,gap=8;
+  const w=ic.reduce((t,e)=>t+e.offsetWidth,0)+(ic.length-1)*G;
+  ic.forEach((e,i)=>e.style.margin=i?"0":`0 0 0 ${-(w+m+G+gap)}px`);
+  ic.at(-1).style.marginRight=(m+gap)+"px";
+  u.style.paddingRight=(w+gap+6)+"px";
 }
 new MutationObserver(layIcons).observe($("#bar"),{subtree:true,attributes:true,attributeFilter:["hidden","class"],childList:true,characterData:true});
 function secIcon(a){
