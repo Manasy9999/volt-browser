@@ -86,6 +86,8 @@ nav h3:first-child{padding-top:0}
 .tag{padding:4px 10px;border-radius:12px;background:color-mix(in srgb,var(--a) 20%,transparent);color:var(--a);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 #add,#tsbtn{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
 #tsbtn{width:24px;flex:none}#tsbtn:hover{color:var(--tx);background:var(--bg2)}#tsbtn svg{width:14px;height:14px}
+#privbtn{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu);flex:none}
+#privbtn:hover{color:var(--tx);background:var(--bg2)}#privbtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #add:hover{color:var(--a);background:var(--bg2)}
 /* boutons de fenêtre (plus de barre de titre Windows) */
 .wc{display:flex;align-self:stretch;margin:0 -8px 0 auto;padding-left:6px}
@@ -836,25 +838,30 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 #dlbtn .dlbar::after{content:"";display:block;height:100%;width:var(--p,0%);background:var(--a);border-radius:2px;transition:width .3s}
 #dlbtn .dlbar.ind::after{width:40%;animation:dlslide 1.1s ease-in-out infinite} /* taille inconnue : va-et-vient */
 @keyframes dlslide{0%{margin-left:-45%}100%{margin-left:105%}}
-#toast.dl .x{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;opacity:.6;font-size:18px;line-height:1}
-#toast.dl .x:hover{opacity:1;background:#8883}
-.dl>div{flex:1;min-width:0}
-.dl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.dl>div{flex:1;min-width:0}
+.row.dl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row.dl .bs{display:flex;gap:6px;flex:none}
-.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),#8884 var(--p))}
-/* petite notif d'un téléchargement : le bandeau des messages, cliquable, avec le fichier, son avancement puis ses boutons */
-/* sur une ligne (elle tient dans la barre d'adresse) ; `body` : passe devant le remplissage que les thèmes donnent au bandeau */
-body #toast.dl{display:flex;align-items:center;gap:10px;max-width:min(600px,100vw - 32px);padding-block:5px;overflow:hidden}
+.row.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),#8884 var(--p))}
+/* petite notif d'un téléchargement (compacte) : icône du fichier, nom, taille • état, barre fine ; une fois fini, un
+   bouton dossier pour ouvrir l'emplacement et une croix pour le retirer. `body` : passe devant le fond des thèmes. */
+body #toast.dl{display:flex;align-items:center;gap:11px;max-width:min(400px,100vw - 32px);padding:9px 9px 10px 13px;overflow:hidden;border-radius:12px}
 #toast.on.dl{pointer-events:auto}
-#toast.dl>div{display:flex;align-items:baseline;gap:8px;line-height:28px}
-#toast.dl b{min-width:0;max-width:240px}
-#toast.dl small{flex:none;opacity:.7;white-space:nowrap}
-#toast.dl .bar{position:absolute;left:0;right:0;bottom:0;margin:0}
-#toast.dl .btn{height:28px;padding:0 12px;flex:none}
-#toast.dl .btn.g{background:none;border:1px solid color-mix(in srgb,currentColor 30%,transparent);color:inherit}
-body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} /* pas plus large que le tiroir */
+#toast.dl .dico{flex:none;width:22px;height:22px;color:var(--a)}
+#toast.dl .dico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#toast.dl .dtx{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.3}
+#toast.dl .dtx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}
+#toast.dl .dtx small{opacity:.6;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast.dl .dact{flex:none;display:flex;gap:1px}
+#toast.dl .dact button{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--mu)}
+#toast.dl .dact button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#toast.dl .dact button:hover{color:var(--tx);background:#ffffff14}
+#toast.dl .dact .x:hover{color:#fff;background:#c0344d}
+#toast.dl .bar{position:absolute;left:0;right:0;bottom:0;height:3px;margin:0;border-radius:0 0 12px 12px;background:linear-gradient(90deg,var(--a) var(--p),#8884 var(--p))}
+#toast.dl .bar.ind{background:#8884;overflow:hidden}
+#toast.dl .bar.ind::after{content:"";display:block;height:100%;width:40%;background:var(--a);animation:dlslide 1.1s ease-in-out infinite}
+body.drawer #toast.dl{max-width:300px}
 /* cadenas à gauche de l'adresse : connexion chiffrée, ou « Non sécurisé » en http */
-#sec{display:flex;align-items:center;gap:5px;flex:none;margin:0 -2px 0 8px;color:var(--mu);font-size:11.5px;white-space:nowrap}
+#sec{display:flex;align-items:center;gap:5px;flex:none;margin:0 -2px 0 8px;color:#f5c542;font-size:11.5px;white-space:nowrap}
 #sec[hidden]{display:none}
 #sec svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #sec .open,#sec.no .shut{display:none}
@@ -934,6 +941,7 @@ body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} 
   <div id="list"></div>
   <button id="add" title="Nouvel onglet (Ctrl+T)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
   <button id="tsbtn" title="Rechercher dans les onglets (Ctrl+Maj+A)"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+  <button id="privbtn" title="Nouvelle fenêtre de navigation privée (Ctrl+Maj+N)"><svg viewBox="0 0 24 24"><path d="M3 13h18"/><path d="M6.5 13 8 8.3A2 2 0 0 1 9.9 7h4.2a2 2 0 0 1 1.9 1.3L17.5 13"/><circle cx="7.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M10 16.5h4"/></svg></button>
   <div class="wc">
     <button id="wmin" title="Réduire"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
     <button id="wmax" title="Agrandir"><svg class="m" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg><svg class="r" viewBox="0 0 24 24"><rect x="5" y="8" width="11" height="11" rx="1"/><path d="M8 8V5h11v11h-3"/></svg></button>
@@ -2368,6 +2376,7 @@ function save(p){Object.assign(S,p);send({cmd:"save",s:S})}
 function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o});updateVigsScroll()}
 
 $("#add").onclick=()=>send({cmd:"new"});
+$("#privbtn").onclick=()=>window.ipc.postMessage("csn"); // comme Ctrl+Maj+N
 // zone vide de la barre d'onglets = poignée de la fenêtre
 const grip=e=>e.target===$("#tabs")||e.target===$("#list");
 // le déplacement capture la souris : le double-clic se détecte au 2e appui
@@ -2556,16 +2565,24 @@ function dlNote(id){dlN=id;if(!dlDraw())return;$("#toast").classList.add("on","d
 function dlHide(){dlN=0;$("#toast").classList.remove("on")}
 // pendant le téléchargement, la notif reste et porte Pause / Annuler (ou Reprendre) ; terminée, elle propose Ouvrir /
 // Afficher puis s'efface seule ; la croix la referme à tout moment (le bouton de la barre garde l'avancement).
+const DLICO='<svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>';
 function dlDraw(){
   const d=DLS.find(x=>x.id===dlN);if(!d)return false;
-  const it=[dlText(d)];
-  const act=(t,a,c)=>{const b=h("button","btn "+(c||"g"),t);b.onclick=()=>{send({cmd:"dl_act",id:d.id,a});if(a==="open"||a==="show")dlHide()};it.push(b)};
-  if(d.state===2){act(T("Ouvrir"),"open","");act(T("Afficher dans le dossier"),"show")}
-  else if(d.state===0){act(T("Pause"),"pause");act(T("Annuler"),"cancel")}
-  else if(d.resume){act(T("Reprendre"),"resume","");act(T("Annuler"),"cancel")}
-  const x=h("button","x","×");x.title=T("Masquer");x.onclick=dlHide;it.push(x);
-  $("#toast").replaceChildren(...it);
-  clearTimeout(tt);if(d.state===2)tt=setTimeout(dlHide,6000); // seul un téléchargement fini disparaît tout seul
+  const pct=d.total>0?Math.min(100,Math.round(d.got*100/d.total)):-1;
+  const st=d.state===2?octets(d.got)+" • "+T("OK"):d.state===0?(pct<0?octets(d.got):octets(d.total)+" • "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
+  const ico=h("div","dico");ico.innerHTML=DLICO;
+  const tx=h("div","dtx");tx.append(h("b",null,d.name||"…"),h("small",null,st));
+  const bar=h("div","dact");
+  const ib=(svg,title,fn,cls)=>{const b=h("button",cls);b.innerHTML=`<svg viewBox="0 0 24 24">${svg}</svg>`;b.title=title;b.onclick=fn;bar.append(b)};
+  if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>send({cmd:"dl_act",id:d.id,a:"pause"}));
+  else if(d.state===1&&d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>send({cmd:"dl_act",id:d.id,a:"resume"}));
+  // une fois fini : juste le dossier (ouvrir l'emplacement) et la croix (retirer des téléchargements)
+  if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>{send({cmd:"dl_act",id:d.id,a:"show"});dlHide()});
+  ib('<path d="M6 6l12 12M18 6 6 18"/>',d.state===2?T("Retirer des téléchargements"):T("Annuler"),()=>{send({cmd:"dl_act",id:d.id,a:d.state===2?"forget":"cancel"});dlHide()},"x");
+  const kids=[ico,tx,bar];
+  if(d.state===0){const p=h("i","bar"+(pct<0?" ind":""));if(pct>=0)p.style.setProperty("--p",pct+"%");kids.push(p)}
+  $("#toast").replaceChildren(...kids);
+  clearTimeout(tt);if(d.state===2)tt=setTimeout(dlHide,8000); // seul un téléchargement fini disparaît tout seul
   return true;
 }
 $("#toast").onmouseenter=()=>clearTimeout(tt); // tant que la souris est dessus, la notif reste
