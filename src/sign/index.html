@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- Rien ne sort de la machine : aucune connexion permise, scripts locaux seulement. Pas d'eval non plus : pdf.js 3.x
      doit en être privé (CVE-2024-4367, un PDF piégé y faisait exécuter du code). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:; frame-src blob:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Remplir et signer</title>
 <style>
@@ -36,7 +36,10 @@ svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke
 .sw{flex:none;width:20px;height:20px;margin:0 3px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px #fff4}
 .sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--a)}
 #zVal{min-width:58px;justify-content:center}
-@media (max-width:1180px){#bar .b>span[data-t]{display:none}}
+.lockmsg{display:inline-flex;align-items:center;gap:6px;color:var(--warn);font-size:12.5px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+#pages.locked .layer{pointer-events:none} /* document signé : plus d'interaction avec les éléments posés */
+#pages.locked .el .h{display:none}
+@media (max-width:1180px){#bar .b>span[data-t],.lockmsg{display:none}}
 
 /* --- pages --- */
 #view{flex:1;overflow:auto;position:relative;outline:0}
@@ -135,6 +138,10 @@ dialog h3{font-size:12px;font-weight:600;color:var(--mu);margin-bottom:8px}
   <i class="sep"></i>
   <label class="f"><span data-t="page"></span><input class="need" id="pno" type="number" min="1" value="1"><span id="pcount">/ 0</span></label>
   <i class="sep"></i>
+  <span class="lockmsg" id="lockMsg" hidden data-t="signedLock"></span>
+  <button class="btn g need" id="bUnsign" hidden data-tt="unsignTip"><svg class="i" viewBox="0 0 24 24"><path d="M3 21h18M5 17l2-6 9-9 4 4-9 9zM14 3l4 4"/><path d="M4 15l-1 4 4-1"/></svg><span data-t="unsign"></span></button>
+  <button class="b ic need" id="bPrint" data-tt="printTip"><svg class="i" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg></button>
+  <i class="sep"></i>
   <button class="btn" id="bSave" data-tt="saveTip"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span data-t="save"></span></button>
 </header>
 
@@ -227,6 +234,9 @@ fr: {
   noLibs: "Les composants PDF ne sont pas encore installés. Fermez cet onglet puis rouvrez « Remplir et signer ».",
   replace: "Les éléments posés sur ce document ne sont pas enregistrés. Ouvrir un autre PDF quand même ?",
   asImage: "Des caractères absents de la police du PDF : le texte concerné a été incrusté en image.",
+  print: "Imprimer", printTip: "Imprimer le document (Ctrl+P)", printing: "Préparation de l'impression…",
+  unsign: "Retirer la signature", unsignTip: "Retirer la signature pour modifier de nouveau le document",
+  signedLock: "Document signé — pour le modifier, retirez la signature.",
   suffix: "-signé",
 },
 en: {
@@ -265,6 +275,9 @@ en: {
   noLibs: "The PDF components are not installed yet. Close this tab, then open “Fill & Sign” again.",
   replace: "The items placed on this document are not saved. Open another PDF anyway?",
   asImage: "Some characters are missing from the PDF font: that text was embedded as an image.",
+  print: "Print", printTip: "Print the document (Ctrl+P)", printing: "Preparing to print…",
+  unsign: "Remove signature", unsignTip: "Remove the signature to edit the document again",
+  signedLock: "Signed document — to change it, remove the signature.",
   suffix: "-signed",
 },
 };
@@ -454,8 +467,13 @@ function sync() {
   $("#size").value = Math.round(size * 10) / 10;
   for (const b of $$(".sw")) b.ariaPressed = b.dataset.c === color;
   for (const b of $$(".need")) b.disabled = !pdf;
+  // document signé : édition verrouillée (réversible par « Retirer la signature »), mais impression et enregistrement restent possibles
+  const lock = pdf && els.some(e => e.t === "img");
+  pagesEl.classList.toggle("locked", lock);
+  $("#lockMsg").hidden = $("#bUnsign").hidden = !lock;
+  if (lock) for (const b of $$('[data-pick]:not([data-pick="select"]), #size, #bar .sw')) b.disabled = true;
   $("#bUndo").disabled = hi <= 0; $("#bRedo").disabled = hi >= hist.length - 1;
-  $("#bDel").disabled = !el; $("#bSave").disabled = !els.length;
+  $("#bDel").disabled = !el || lock; $("#bSave").disabled = !els.length;
 }
 function setTool(t, sig) {
   endEdit(); tool = t; pend = sig || null; if (t !== "select") select(null);
@@ -525,6 +543,7 @@ pagesEl.addEventListener("pointerdown", e => {
   e.preventDefault(); document.activeElement?.blur(); endEdit();
   if (!pe) return select(null);
   const pg = pgs[pe.dataset.i], p = pt(pg, e);
+  if (els.some(e2 => e2.t === "img")) return select(null); // signé : document verrouillé (la 1re pose passe, aucun img encore)
   if (tool === "place") return place(pg, p);
   if (tool === "ink") {
     const svg = inkSvg(color, 1.6); svg.setAttribute("width", pg.w); svg.setAttribute("height", pg.h); pg.layer.append(svg);
@@ -708,8 +727,42 @@ async function save() {
   busy = false;
 }
 
+// ===== impression : le PDF avec ce qui est posé dessus, ouvert dans un cadre caché qui s'imprime lui-même =====
+// Le PDF part en data: dans une page qui l'embarque et appelle sa PROPRE fenêtre d'impression : depuis une page
+// file://, le parent ne peut pas appeler print() sur le cadre (origine opaque), mais le cadre le peut sur lui-même.
+function u8ToB64(u8) {
+  let s = ""; const C = 0x8000;
+  for (let i = 0; i < u8.length; i += C) s += String.fromCharCode.apply(null, u8.subarray(i, i + C));
+  return btoa(s);
+}
+async function printPdf() {
+  if (!pdf || busy) return;
+  busy = true; msg(T.printing); await paint();
+  try {
+    const out = els.length ? (await buildPdf()).out : bytes;
+    const src = "data:application/pdf;base64," + u8ToB64(out);
+    const html = '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%}embed{width:100%;height:100%}</style></head><body>'
+      + '<embed type="application/pdf" src="' + src + '">'
+      + '<' + 'script>onload=function(){parent.postMessage("sign-print-ready","*");setTimeout(function(){try{focus();print()}catch(e){}},700)}<' + '/script></body></html>';
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    const f = document.createElement("iframe");
+    f.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0";
+    f.src = url; document.body.append(f);
+    setTimeout(() => { f.remove(); URL.revokeObjectURL(url); }, 120000); // le temps de la fenêtre d'impression
+    msg("");
+  } catch (e) { console.error(e); msg(T.saveFail, true); }
+  busy = false;
+}
+// retire toutes les signatures posées : le document redevient modifiable
+$("#bUnsign").onclick = () => {
+  const pages = new Set(els.filter(e => e.t === "img").map(e => e.p));
+  if (!pages.size) return;
+  els = els.filter(e => e.t !== "img"); sel = null; drawLayers(pages); commit(); setTool("select");
+};
+
 // ===== commandes =====
 $("#bOpen").onclick = $("#bOpen2").onclick = () => $("#fPdf").click();
+$("#bPrint").onclick = printPdf;
 $("#fPdf").onchange = e => { const f = e.target.files[0]; e.target.value = ""; openFile(f); };
 for (const b of $$("[data-pick]")) b.onclick = () => b.dataset.pick === "place" ? openSig() : setTool(b.dataset.pick);
 for (const b of $$(".sw")) b.onclick = () => {
@@ -736,15 +789,16 @@ view.addEventListener("scroll", () => {
 
 addEventListener("keydown", e => {
   if (dlg.open) return;
-  const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), el = sel != null && elOf(sel);
+  const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), el = sel != null && elOf(sel), lock = els.some(x => x.t === "img");
   if (k === "escape") return edit != null ? endEdit() : tool !== "select" ? setTool("select") : select(null);
   if (c && k === "s") { e.preventDefault(); return save(); }
+  if (c && k === "p") { e.preventDefault(); return printPdf(); }
   if (c && k === "o") { e.preventDefault(); return $("#fPdf").click(); }
   if (e.target.matches("input, textarea")) return;   // dans un champ : ses propres raccourcis
   if (c && k === "z") { e.preventDefault(); go(e.shiftKey ? 1 : -1); }
   else if (c && k === "y") { e.preventDefault(); go(1); }
-  else if (el && (k === "delete" || k === "backspace")) { e.preventDefault(); del(); }
-  else if (el && k.startsWith("arrow")) {   // réglage fin au clavier (Maj : 10 points)
+  else if (el && !lock && (k === "delete" || k === "backspace")) { e.preventDefault(); del(); }
+  else if (el && !lock && k.startsWith("arrow")) {   // réglage fin au clavier (Maj : 10 points)
     e.preventDefault(); const n = nodeOf(sel), s = e.shiftKey ? 10 : 1;
     el.x += k === "arrowleft" ? -s : k === "arrowright" ? s : 0; el.y += k === "arrowup" ? -s : k === "arrowdown" ? s : 0;
     fit(el, n.offsetWidth, n.offsetHeight); geom(n, el); commit();
