@@ -872,17 +872,17 @@ body.drawer #toast.dl{max-width:300px}
 #sugg{position:fixed;left:0;right:0;top:84px;z-index:8;max-height:386px;overflow-y:auto;padding:4px 0 8px;background:var(--bg3);border-bottom:1px solid #000;box-shadow:0 14px 26px #0009}
 #sugg[hidden]{display:none}
 /* menu du clic droit sur la barre d'adresse (étend l'interface comme les suggestions, sinon il serait coupé) */
-#urlmenu{position:fixed;z-index:9;min-width:200px;padding:5px;background:var(--bg3);border:1px solid #0006;border-radius:10px;box-shadow:0 14px 30px #000a}
+#urlmenu{position:fixed;z-index:9;min-width:200px;padding:5px;background:var(--bg3);border:1px solid #ffffff14;border-radius:10px;box-shadow:0 14px 30px #000a}
 #urlmenu[hidden]{display:none}
 #urlmenu .umi{display:block;width:100%;text-align:left;height:32px;padding:0 12px;border-radius:7px;color:var(--tx);white-space:nowrap}
 #urlmenu .umi:hover{background:var(--bg2)}
 #urlmenu .usep{display:block;height:1px;margin:4px 8px;background:var(--bg2)}
 #urlmenu .umi:disabled{opacity:.4;cursor:default}#urlmenu .umi:disabled:hover{background:none}
 /* petit panneau des téléchargements (clic sur le bouton ⬇) : étend l'interface comme les suggestions */
-#dlpop{position:fixed;z-index:9;width:348px;max-width:calc(100vw - 16px);background:var(--bg3);border:1px solid #0006;border-radius:12px;box-shadow:0 16px 40px #000b;padding:6px 6px 4px;display:flex;flex-direction:column}
+#dlpop{position:fixed;z-index:9;width:348px;max-width:calc(100vw - 16px);background:var(--bg3);border:1px solid #ffffff14;border-radius:12px;box-shadow:0 16px 40px #000b;padding:6px 6px 4px;display:flex;flex-direction:column}
 #dlpop[hidden]{display:none}
 /* menu d'un dossier de favoris (réglage « en menu ») : icône du site + titre, défile si le dossier est long */
-#favpop{position:fixed;z-index:9;width:340px;max-width:calc(100vw - 16px);max-height:520px;overflow:auto;background:var(--bg3);border:1px solid #0006;border-radius:12px;box-shadow:0 16px 40px #000b;padding:5px}
+#favpop{position:fixed;z-index:9;width:340px;max-width:calc(100vw - 16px);max-height:520px;overflow:auto;background:var(--bg3);border:1px solid #ffffff14;border-radius:12px;box-shadow:0 16px 40px #000b;padding:5px}
 #favpop[hidden]{display:none}
 #favpop .fpi{display:flex;align-items:center;gap:10px;width:100%;height:34px;padding:0 10px;border-radius:8px;color:var(--tx);text-align:left}
 #favpop .fpi:hover{background:var(--bg2)}
@@ -2597,7 +2597,8 @@ $("#favimp").onclick=()=>send({cmd:"fav_import_html"});
 $("#favexp").onclick=()=>send({cmd:"fav_export_html"});
 // ===== petit panneau des téléchargements (clic sur le bouton ⬇) : liste des téléchargements récents + lien vers la page =====
 // l'interface s'étend juste assez pour ce panneau, et seul son rectangle (plus la barre) cache la page
-function overFor(el){const r=el.getBoundingClientRect();send({cmd:"over",h:Math.ceil(r.bottom+8),r:[r.left,r.top,r.width,r.height]})}
+// la découpe suit le panneau au pixel près, coins arrondis compris : rien du fond de l'interface ne dépasse autour
+function overFor(el){const r=el.getBoundingClientRect();send({cmd:"over",h:Math.ceil(r.bottom+8),r:[r.left,r.top,r.width,r.height,parseFloat(getComputedStyle(el).borderTopLeftRadius)||0]})}
 function hideDlPop(){const p=$("#dlpop");if(p.hidden)return;p.hidden=true;if(!anyPop())send({cmd:"over",h:0})}
 function hideFavPop(){const p=$("#favpop");if(p.hidden)return;p.hidden=true;favPopId=null;if(!anyPop())send({cmd:"over",h:0})}
 let favPopId=null;

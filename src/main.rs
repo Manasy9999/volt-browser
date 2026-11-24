@@ -2367,14 +2367,15 @@ fn main() {
                                 // petit panneau ou menu (r = [x, y, l, h] en px CSS) : l'interface n'occupe que la barre et ce
                                 // rectangle (région de fenêtre), la page reste visible autour au lieu d'une bande opaque
                                 unsafe {
-                                    use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, RGN_OR, SetWindowRgn};
+                                    use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, RGN_OR, SetWindowRgn};
                                     // pas quand l'interface dessine elle-même la page (nouvel onglet, réglages, tiroir) : la découpe l'effacerait
-                                    let rgn = match v["r"].as_array().filter(|r| h > 0 && r.len() == 4 && !panel && drawer_w() == 0.0) {
+                                    let rgn = match v["r"].as_array().filter(|r| h > 0 && r.len() >= 4 && !panel && drawer_w() == 0.0) {
                                         Some(r) => {
                                             let k = win.scale_factor();
-                                            let f = |i: usize| (r[i].as_f64().unwrap_or(0.0) * k).round() as i32;
+                                            let f = |i: usize| (r.get(i).and_then(|x| x.as_f64()).unwrap_or(0.0) * k).round() as i32;
                                             let strip = CreateRectRgn(0, 0, 100_000, (top() * k).ceil() as i32);
-                                            let pop = CreateRectRgn(f(0) - 2, f(1) - 2, f(0) + f(2) + 2, f(1) + f(3) + 2);
+                                            let d = 2 * f(4); // r[4] : rayon des coins ; la région exclut ses bords droit et bas, d'où le +1
+                                            let pop = CreateRoundRectRgn(f(0), f(1), f(0) + f(2) + 1, f(1) + f(3) + 1, d, d);
                                             let _ = CombineRgn(Some(strip), Some(strip), Some(pop), RGN_OR);
                                             let _ = DeleteObject(pop.into());
                                             Some(strip)
