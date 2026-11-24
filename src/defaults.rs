@@ -255,9 +255,20 @@ pub fn open_path(p: &str) -> bool {
     r.0 as usize > 32
 }
 
-/// Ouvre l'Explorateur sur le dossier du fichier, fichier sélectionné.
+/// Ouvre l'Explorateur sur le dossier du fichier, fichier sélectionné ; fichier disparu : son dossier.
+/// Par le Shell et non `explorer /select,…` : Rust met entre guillemets un chemin à espaces, et l'Explorateur, qui ne
+/// comprend pas « "/select,C:\a b\f" », ouvrait alors un autre dossier sans rien sélectionner.
 pub fn reveal(p: &str) {
-    let _ = std::process::Command::new("explorer").arg(format!("/select,{p}")).spawn();
+    use windows::Win32::UI::Shell::{ILFree, SHOpenFolderAndSelectItems, SHParseDisplayName};
+    unsafe {
+        let mut pidl: *mut windows::Win32::UI::Shell::Common::ITEMIDLIST = std::ptr::null_mut();
+        if SHParseDisplayName(&HSTRING::from(p), None, &mut pidl, 0, None).is_ok() && !pidl.is_null() {
+            let _ = SHOpenFolderAndSelectItems(pidl, None, 0);
+            ILFree(Some(pidl));
+        } else if let Some(d) = std::path::Path::new(p).parent() {
+            open_path(&d.to_string_lossy());
+        }
+    }
 }
 
 /// Dossier « Téléchargements » de Windows (il peut avoir été déplacé).

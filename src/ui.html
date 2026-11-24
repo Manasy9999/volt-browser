@@ -2641,6 +2641,18 @@ function showDlPop(){
   p.style.right=Math.max(8,Math.round(innerWidth-r.right-2))+"px";p.style.top=Math.ceil($("#bar").getBoundingClientRect().bottom+3)+"px";
   overFor(p);
 }
+// action sur un téléchargement : envoyée à Volt, et montrée tout de suite (le relevé suivant confirme)
+function dlDo(id,a){
+  send({cmd:"dl_act",id,a});
+  const d=DLS.find(x=>x.id===id);
+  if(a==="forget")DLS=DLS.filter(x=>x.id!==id);
+  else if(d&&a==="pause"){d.state=1;d.resume=true}
+  else if(d&&a==="resume")d.state=0;
+  else if(d&&a==="cancel"){d.state=1;d.resume=false}
+  if(!$("#dlpop").hidden){renderDlPop();overFor($("#dlpop"))}
+  if(cur==="dl")drawDls();
+  if(dlN===id&&a!=="forget")dlDraw();
+}
 function renderDlPop(){
   const head=h("div","dlpop-h");head.append(h("b",null,T("Téléchargements")));
   const x=h("button","dlpop-x");x.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';x.title=T("Fermer");x.onclick=hideDlPop;head.append(x);
@@ -2650,10 +2662,10 @@ function renderDlPop(){
     const r=h("div","dlpop-i"),ico=h("div","dico");ico.innerHTML=DLICO;
     const act=h("div","dact");
     const ib=(svg,title,fn,cls)=>{const b=h("button",cls);b.innerHTML=`<svg viewBox="0 0 24 24">${svg}</svg>`;b.title=title;b.onclick=fn;act.append(b)};
-    if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>send({cmd:"dl_act",id:d.id,a:"show"}));
-    else if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>send({cmd:"dl_act",id:d.id,a:"pause"}));
-    else if(d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>send({cmd:"dl_act",id:d.id,a:"resume"}));
-    ib('<path d="M6 6l12 12M18 6 6 18"/>',d.state===2?T("Retirer des téléchargements"):T("Annuler"),()=>send({cmd:"dl_act",id:d.id,a:d.state===2?"forget":"cancel"}),"x");
+    if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>{send({cmd:"dl_act",id:d.id,a:"show"});hideDlPop()});
+    else if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>dlDo(d.id,"pause"));
+    else if(d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>dlDo(d.id,"resume"));
+    ib('<path d="M6 6l12 12M18 6 6 18"/>',d.state===0?T("Annuler"):T("Retirer des téléchargements"),()=>dlDo(d.id,d.state===0?"cancel":"forget"),"x");
     r.append(ico,dlText(d),act);list.append(r);
   }
   const foot=h("button","dlpop-f",T("Voir tous les téléchargements"));foot.onclick=()=>{hideDlPop();openSection("dl")};
@@ -2719,13 +2731,13 @@ function dlDraw(){
   const tx=h("div","dtx");tx.append(h("b",null,d.name||"…"),h("small",null,st));
   const bar=h("div","dact");
   const ib=(svg,title,fn,cls)=>{const b=h("button",cls);b.innerHTML=`<svg viewBox="0 0 24 24">${svg}</svg>`;b.title=title;b.onclick=fn;bar.append(b)};
-  if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>send({cmd:"dl_act",id:d.id,a:"pause"}));
-  if(d.state===0)ib('<rect x="6" y="6" width="12" height="12" rx="2"/>',T("Annuler"),()=>{send({cmd:"dl_act",id:d.id,a:"cancel"});dlHide()},"x");
-  else if(d.state===1&&d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>send({cmd:"dl_act",id:d.id,a:"resume"}));
+  if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>dlDo(d.id,"pause"));
+  if(d.state===0)ib('<rect x="6" y="6" width="12" height="12" rx="2"/>',T("Annuler"),()=>{dlDo(d.id,"cancel");dlHide()},"x");
+  else if(d.state===1&&d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>dlDo(d.id,"resume"));
   // une fois fini : juste le dossier (ouvrir l'emplacement) et la croix (retirer des téléchargements)
   if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>{send({cmd:"dl_act",id:d.id,a:"show"});dlHide()});
-  if(d.state===2)ib('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',T("Retirer des téléchargements"),()=>{send({cmd:"dl_act",id:d.id,a:"forget"});dlHide()},"x");
-  if(d.state===1)ib('<path d="M6 6l12 12M18 6 6 18"/>',T("Retirer des téléchargements"),()=>{send({cmd:"dl_act",id:d.id,a:"forget"});dlHide()},"x");
+  if(d.state===2)ib('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',T("Retirer des téléchargements"),()=>{dlHide();dlDo(d.id,"forget")},"x");
+  if(d.state===1)ib('<path d="M6 6l12 12M18 6 6 18"/>',T("Retirer des téléchargements"),()=>{dlHide();dlDo(d.id,"forget")},"x");
   ib('<path d="M6 6l12 12M18 6 6 18"/>',T("Masquer la notification"),dlHide,"hd"); // le téléchargement continue, le bouton de la barre le suit
   const kids=[ico,tx,bar];
   if(d.state===0){const p=h("i","bar"+(pct<0?" ind":""));if(pct>=0)p.style.setProperty("--p",pct+"%");kids.push(p)}
@@ -2741,11 +2753,11 @@ function drawDls(){
   $("#dlclear").hidden=!DLS.some(d=>d.state!==0);
   $("#dllist").replaceChildren(...DLS.map(d=>{
     const r=h("div","row dl"),tx=dlText(d),bs=h("span","bs");
-    const btn=(t,a,cls)=>{const b=h("button","btn "+(cls||"g"),t);b.onclick=()=>send({cmd:"dl_act",id:d.id,a});bs.append(b)};
+    const btn=(t,a,cls)=>{const b=h("button","btn "+(cls||"g"),t);b.onclick=()=>/^(pause|resume|cancel|forget)$/.test(a)?dlDo(d.id,a):send({cmd:"dl_act",id:d.id,a});bs.append(b)};
     if(d.state===2){btn(T("Ouvrir"),"open","");btn(T("Afficher dans le dossier"),"show")}
     if(d.state===0){btn(T("Pause"),"pause");btn(T("Annuler"),"cancel")}
     if(d.state===1&&d.resume)btn(T("Reprendre"),"resume","");
-    const x=delBtn(()=>send({cmd:"dl_act",id:d.id,a:"forget"}));x.title=T("Retirer de la liste");
+    const x=delBtn(()=>dlDo(d.id,"forget"));x.title=T("Retirer de la liste");
     r.append(tx,bs,x);return r;
   }));
 }

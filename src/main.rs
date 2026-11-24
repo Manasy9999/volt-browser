@@ -2015,6 +2015,10 @@ fn main() {
                                 }
                                 return;
                             }
+                            // réglages, favoris… ouverts par-dessus la page : « retour » les ferme et réaffiche la page derrière
+                            "back" if panel => {
+                                let _ = ui.evaluate_script("setPanel(false)");
+                            }
                             "back" => { wv.map(|w| w.evaluate_script("history.back()")); }
                             "fwd" => { wv.map(|w| w.evaluate_script("history.forward()")); }
                             "reload" => { wv.map(|w| w.reload()); }
