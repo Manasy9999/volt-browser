@@ -37,8 +37,7 @@ svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke
 .sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--a)}
 #zVal{min-width:58px;justify-content:center}
 .lockmsg{display:inline-flex;align-items:center;gap:6px;color:var(--warn);font-size:12.5px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
-#pages.locked .layer{pointer-events:none} /* document signé : plus d'interaction avec les éléments posés */
-#pages.locked .el .h{display:none}
+.pg.signed .el .h{display:none} /* page signée (une signature par page) : signature non redimensionnable ; le déplacement est bloqué côté script */
 @media (max-width:1180px){#bar .b>span[data-t],.lockmsg{display:none}}
 
 /* --- pages --- */
@@ -532,14 +531,19 @@ function sync() {
   $("#size").value = Math.round(size * 10) / 10;
   for (const b of $$(".sw")) b.ariaPressed = b.dataset.c === color;
   for (const b of $$(".need")) b.disabled = !pdf;
-  // document signé : édition verrouillée (réversible par « Retirer la signature »), mais impression et enregistrement restent possibles
-  const lock = pdf && els.some(e => e.t === "img");
-  pagesEl.classList.toggle("locked", lock);
-  $("#lockMsg").hidden = $("#bUnsign").hidden = !lock;
-  if (lock || pagesMode) for (const b of $$('[data-pick]:not([data-pick="select"]), #size, #bar .sw')) b.disabled = true;
+  // une signature par page : la page signée est verrouillée (réversible), les autres restent modifiables. On peut signer
+  // plusieurs pages. « Retirer la signature » apparaît quand une signature est sélectionnée.
+  markSigned();
+  $("#lockMsg").hidden = true;
+  $("#bUnsign").hidden = !(el && el.t === "img");
+  if (pagesMode) for (const b of $$('[data-pick]:not([data-pick="select"]), #size, #bar .sw')) b.disabled = true;
   $("#bUndo").disabled = hi <= 0; $("#bRedo").disabled = hi >= hist.length - 1;
-  $("#bDel").disabled = !el || lock; $("#bSave").disabled = !edited();
+  $("#bDel").disabled = !el; $("#bSave").disabled = !edited();
 }
+// une page est verrouillée si elle porte une signature (image posée)
+const pageLocked = pi => els.some(e => e.t === "img" && e.p === pi);
+// marque les pages signées (CSS : poignées masquées sur ces pages)
+function markSigned() { for (const pg of pgs) pg.el?.classList.toggle("signed", pageLocked(pg.i)); }
 function setTool(t, sig) {
   endEdit(); tool = t; pend = sig || null; if (t !== "select") select(null);
   pagesEl.dataset.tool = t; $("#hint").textContent = pdf ? T["hint_" + t] : "";
@@ -608,7 +612,11 @@ pagesEl.addEventListener("pointerdown", e => {
   e.preventDefault(); document.activeElement?.blur(); endEdit();
   if (!pe) return select(null);
   const pg = pgs[pe.dataset.i], p = pt(pg, e);
-  if (els.some(e2 => e2.t === "img")) return select(null); // signé : document verrouillé (la 1re pose passe, aucun img encore)
+  // page signée : on ne peut que sélectionner sa signature (pour la retirer), pas la déplacer ni rien ajouter d'autre
+  if (pageLocked(pg.i)) {
+    const el2 = node && elOf(+node.dataset.id);
+    return select(el2 && el2.t === "img" ? el2.id : null);
+  }
   if (tool === "place") return place(pg, p);
   if (tool === "ink") {
     const svg = inkSvg(color, 1.6); svg.setAttribute("width", pg.w); svg.setAttribute("height", pg.h); pg.layer.append(svg);
@@ -822,12 +830,8 @@ async function printPdf() {
   } catch (e) { console.error(e); msg(T.saveFail, true); }
   busy = false;
 }
-// retire toutes les signatures posées : le document redevient modifiable
-$("#bUnsign").onclick = () => {
-  const pages = new Set(els.filter(e => e.t === "img").map(e => e.p));
-  if (!pages.size) return;
-  els = els.filter(e => e.t !== "img"); sel = null; drawLayers(pages); commit(); setTool("select");
-};
+// retire la signature sélectionnée : sa page redevient modifiable (une signature par page)
+$("#bUnsign").onclick = () => { const el = sel != null && elOf(sel); if (el && el.t === "img") del(); };
 
 // ===== commandes =====
 $("#bOpen").onclick = $("#bOpen2").onclick = () => $("#fPdf").click();
@@ -859,7 +863,7 @@ view.addEventListener("scroll", () => {
 
 addEventListener("keydown", e => {
   if (dlg.open) return;
-  const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), el = sel != null && elOf(sel), lock = els.some(x => x.t === "img");
+  const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), el = sel != null && elOf(sel);
   if (k === "escape") return edit != null ? endEdit() : tool !== "select" ? setTool("select") : select(null);
   if (c && k === "s") { e.preventDefault(); return save(); }
   if (c && k === "p") { e.preventDefault(); return printPdf(); }
@@ -867,8 +871,8 @@ addEventListener("keydown", e => {
   if (e.target.matches("input, textarea")) return;   // dans un champ : ses propres raccourcis
   if (c && k === "z") { e.preventDefault(); go(e.shiftKey ? 1 : -1); }
   else if (c && k === "y") { e.preventDefault(); go(1); }
-  else if (el && !lock && (k === "delete" || k === "backspace")) { e.preventDefault(); del(); }
-  else if (el && !lock && k.startsWith("arrow")) {   // réglage fin au clavier (Maj : 10 points)
+  else if (el && (k === "delete" || k === "backspace")) { e.preventDefault(); del(); }
+  else if (el && !pageLocked(el.p) && k.startsWith("arrow")) {   // réglage fin au clavier (Maj : 10 points) ; pas sur une page signée
     e.preventDefault(); const n = nodeOf(sel), s = e.shiftKey ? 10 : 1;
     el.x += k === "arrowleft" ? -s : k === "arrowright" ? s : 0; el.y += k === "arrowup" ? -s : k === "arrowdown" ? s : 0;
     fit(el, n.offsetWidth, n.offsetHeight); geom(n, el); commit();
