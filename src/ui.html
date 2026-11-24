@@ -862,6 +862,12 @@ body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} 
 /* suggestions de la barre d'adresse : bande sous la barre, par-dessus la page (Volt étend l'interface, commande « over ») */
 #sugg{position:fixed;left:0;right:0;top:84px;z-index:8;max-height:386px;overflow-y:auto;padding:4px 0 8px;background:var(--bg3);border-bottom:1px solid #000;box-shadow:0 14px 26px #0009}
 #sugg[hidden]{display:none}
+/* menu du clic droit sur la barre d'adresse (étend l'interface comme les suggestions, sinon il serait coupé) */
+#urlmenu{position:fixed;z-index:9;min-width:200px;padding:5px;background:var(--bg3);border:1px solid #0006;border-radius:10px;box-shadow:0 14px 30px #000a}
+#urlmenu[hidden]{display:none}
+#urlmenu .umi{display:block;width:100%;text-align:left;height:32px;padding:0 12px;border-radius:7px;color:var(--tx);white-space:nowrap}
+#urlmenu .umi:hover{background:var(--bg2)}
+#urlmenu .usep{height:1px;margin:5px 8px;background:var(--bg2)}
 .row.tk{padding:9px 16px;margin-bottom:5px}.row.tk>div{flex:1 1 0;min-width:0}.row.tk b,.row.tk small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row.tk .n{flex:none;width:84px;text-align:right;font-variant-numeric:tabular-nums}.row.tk .btn{flex:none;width:104px}.row.tk .btn:disabled{opacity:.35}
 #sugg .sg{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-radius:8px;white-space:nowrap;cursor:default}
@@ -921,6 +927,7 @@ body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} 
 <body class="nofav">
 <div id="vuse" hidden></div>
 <div id="sugg" hidden></div>
+<div id="urlmenu" hidden></div>
 <div id="tabs">
   <div id="logo" data-load="low"></div>
   <span id="priv" hidden title="Ni historique, ni cookies, ni session gardés pour cette fenêtre">Navigation privée</span>
@@ -2409,6 +2416,33 @@ $("#url").onkeydown=e=>{
   if(e.key==="Enter"&&sgTab){if(SG.length)sgGo(Math.max(0,sgK));return}
   if(e.key==="Enter"&&e.target.value.trim()){sgHide();send({cmd:"nav",url:e.target.value});if(panel)setPanel(false)}};
 $("#url").onfocus=e=>e.target.select();
+// ===== menu du clic droit sur la barre d'adresse : couper, copier, coller, coller et rechercher, tout sélectionner =====
+// Coller passe par Volt (lecture du presse-papiers côté moteur, fiable) ; « Coller et rechercher » y va directement.
+const UMENU=[["cut",T("Couper"),1],["copy",T("Copier"),0],["paste",T("Coller"),0],["pastego",T("Coller et rechercher"),0],["all",T("Tout sélectionner"),1]];
+function pasted(t){const u=$("#url");const s=u.selectionStart??u.value.length,e=u.selectionEnd??s;u.value=u.value.slice(0,s)+t+u.value.slice(e);u.focus();const c=s+t.length;u.setSelectionRange(c,c);u.dispatchEvent(new Event("input"))}
+function hideUrlMenu(){const m=$("#urlmenu");if(m.hidden)return;m.hidden=true;if($("#sugg").hidden)send({cmd:"over",h:0})}
+$("#url").oncontextmenu=e=>{
+  e.preventDefault();const m=$("#urlmenu"),sel=$("#url").selectionStart!==$("#url").selectionEnd;
+  m.replaceChildren(...UMENU.flatMap(([k,label,sep])=>{
+    const b=h("button","umi",label);
+    if((k==="cut"||k==="copy")&&!sel)b.disabled=true;
+    b.onmousedown=ev=>{ev.preventDefault();doUrlMenu(k);hideUrlMenu()};
+    return sep?[b,h("i","usep")]:[b];
+  }));
+  m.hidden=false;
+  const bar=$("#bar").getBoundingClientRect();
+  m.style.left=Math.min(e.clientX,innerWidth-m.offsetWidth-8)+"px";m.style.top=Math.ceil(bar.bottom+2)+"px";
+  send({cmd:"over",h:Math.ceil(m.getBoundingClientRect().bottom+6)});
+};
+function doUrlMenu(k){
+  const u=$("#url");u.focus();
+  if(k==="all")u.select();
+  else if(k==="cut")document.execCommand("cut");
+  else if(k==="copy")document.execCommand("copy");
+  else send({cmd:"clip",go:k==="pastego"});
+}
+addEventListener("mousedown",e=>{if(!$("#urlmenu").hidden&&!e.target.closest("#urlmenu"))hideUrlMenu()});
+$("#urlmenu").oncontextmenu=e=>e.preventDefault();
 $("#gear").onclick=()=>panel?setPanel(false):openSection("home");
 $("#sq").oninput=e=>searchSettings(e.target.value);
 $$("[data-go]").forEach(b=>b.onclick=()=>openSection(b.dataset.go));

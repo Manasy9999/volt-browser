@@ -456,6 +456,38 @@ fn set_cmp(tabs: &mut [Tab], js: &str) {
 }
 
 /// Texte de la barre d'adresse -> URL (adresse directe ou recherche).
+/// Texte du presse-papiers Windows (None s'il est vide ou n'est pas du texte). Pour « Coller » et « Coller et rechercher ».
+fn clipboard_text() -> Option<String> {
+    use windows::Win32::{
+        Foundation::{HANDLE, HGLOBAL},
+        System::{
+            DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard},
+            Memory::{GlobalLock, GlobalUnlock},
+        },
+    };
+    const CF_UNICODETEXT: u32 = 13;
+    unsafe {
+        OpenClipboard(None).ok()?;
+        let r = (|| {
+            let h: HANDLE = GetClipboardData(CF_UNICODETEXT).ok()?;
+            let g = HGLOBAL(h.0);
+            let p = GlobalLock(g) as *const u16;
+            if p.is_null() {
+                return None;
+            }
+            let mut len = 0;
+            while *p.add(len) != 0 {
+                len += 1;
+            }
+            let s = String::from_utf16_lossy(std::slice::from_raw_parts(p, len));
+            let _ = GlobalUnlock(g);
+            Some(s)
+        })();
+        let _ = CloseClipboard();
+        r.filter(|s| !s.is_empty())
+    }
+}
+
 fn to_url(input: &str, engine: &str) -> String {
     let t = input.trim();
     // chemin complet d'un fichier (collé depuis l'Explorateur, avec ou sans guillemets) : ouvert comme dans Chrome
@@ -1913,6 +1945,23 @@ fn main() {
                                     let _ = w.load_url(&to_url(&str_of("url"), &s.search));
                                     let _ = w.focus();
                                 }
+                            }
+                            // menu de la barre d'adresse : Coller (le texte revient dans le champ) ou Coller et rechercher (on y va)
+                            "clip" => {
+                                let text = clipboard_text().unwrap_or_default();
+                                if v["go"].as_bool().unwrap_or(false) {
+                                    if !text.trim().is_empty() {
+                                        if let Some(sec) = internal(&text) {
+                                            let _ = ui.evaluate_script(&format!("openSection('{sec}')"));
+                                        } else if let Some(w) = wv {
+                                            let _ = w.load_url(&to_url(&text, &s.search));
+                                            let _ = w.focus();
+                                        }
+                                    }
+                                } else {
+                                    let _ = ui.evaluate_script(&format!("pasted({})", json!(text)));
+                                }
+                                return;
                             }
                             "back" => { wv.map(|w| w.evaluate_script("history.back()")); }
                             "fwd" => { wv.map(|w| w.evaluate_script("history.forward()")); }
