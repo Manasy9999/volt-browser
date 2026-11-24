@@ -875,6 +875,31 @@ body.drawer #toast.dl{max-width:300px}
 #urlmenu .umi{display:block;width:100%;text-align:left;height:32px;padding:0 12px;border-radius:7px;color:var(--tx);white-space:nowrap}
 #urlmenu .umi:hover{background:var(--bg2)}
 #urlmenu .usep{height:1px;margin:5px 8px;background:var(--bg2)}
+/* petit panneau des téléchargements (clic sur le bouton ⬇) : étend l'interface comme les suggestions */
+#dlpop{position:fixed;z-index:9;width:348px;max-width:calc(100vw - 16px);background:var(--bg3);border:1px solid #0006;border-radius:12px;box-shadow:0 16px 40px #000b;padding:6px 6px 4px;display:flex;flex-direction:column}
+#dlpop[hidden]{display:none}
+#dlpop .dlpop-h{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 8px}
+#dlpop .dlpop-h b{font-size:13px}
+#dlpop .dlpop-x{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--mu)}
+#dlpop .dlpop-x:hover{color:var(--tx);background:var(--bg2)}
+#dlpop .dlpop-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+#dlpop .dlpop-l{display:flex;flex-direction:column;max-height:50vh;overflow:auto}
+#dlpop .dlpop-e{color:var(--mu);padding:14px 8px;font-size:13px}
+#dlpop .dlpop-i{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;position:relative}
+#dlpop .dlpop-i:hover{background:var(--bg2)}
+#dlpop .dlpop-i .dico{flex:none;width:22px;height:22px;color:var(--a)}
+#dlpop .dlpop-i .dico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#dlpop .dlpop-i>div{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+#dlpop .dlpop-i b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
+#dlpop .dlpop-i small{opacity:.6;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dlpop .dlpop-i .bar{margin-top:5px}
+#dlpop .dlpop-i .dact{flex:none;display:flex;gap:1px}
+#dlpop .dlpop-i .dact button{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--mu)}
+#dlpop .dlpop-i .dact button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#dlpop .dlpop-i .dact button:hover{color:var(--tx);background:var(--bg3)}
+#dlpop .dlpop-i .dact .x:hover{color:#fff;background:#c0344d}
+#dlpop .dlpop-f{margin-top:4px;padding:9px;border-top:1px solid var(--bg2);border-radius:0;color:var(--a);font-size:13px;font-weight:500;text-align:left}
+#dlpop .dlpop-f:hover{background:var(--bg2);border-radius:8px}
 .row.tk{padding:9px 16px;margin-bottom:5px}.row.tk>div{flex:1 1 0;min-width:0}.row.tk b,.row.tk small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row.tk .n{flex:none;width:84px;text-align:right;font-variant-numeric:tabular-nums}.row.tk .btn{flex:none;width:104px}.row.tk .btn:disabled{opacity:.35}
 #sugg .sg{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-radius:8px;white-space:nowrap;cursor:default}
@@ -935,6 +960,7 @@ body.drawer #toast.dl{max-width:300px}
 <div id="vuse" hidden></div>
 <div id="sugg" hidden></div>
 <div id="urlmenu" hidden></div>
+<div id="dlpop" hidden></div>
 <div id="tabs">
   <div id="logo" data-load="low"></div>
   <span id="priv" hidden title="Ni historique, ni cookies, ni session gardés pour cette fenêtre">Navigation privée</span>
@@ -2531,7 +2557,35 @@ function perms(l){
 }
 $("#favimp").onclick=()=>send({cmd:"fav_import_html"});
 $("#favexp").onclick=()=>send({cmd:"fav_export_html"});
-$("#dlbtn").onclick=()=>panel&&cur==="dl"?setPanel(false):openSection("dl");
+// ===== petit panneau des téléchargements (clic sur le bouton ⬇) : liste des téléchargements récents + lien vers la page =====
+function hideDlPop(){const p=$("#dlpop");if(p.hidden)return;p.hidden=true;if($("#sugg").hidden&&$("#urlmenu").hidden)send({cmd:"over",h:0})}
+function showDlPop(){
+  sgHide();$("#urlmenu").hidden=true;
+  const p=$("#dlpop");renderDlPop();p.hidden=false;
+  const r=$("#dlbtn").getBoundingClientRect();
+  p.style.right=Math.max(8,Math.round(innerWidth-r.right-2))+"px";p.style.top=Math.ceil($("#bar").getBoundingClientRect().bottom+3)+"px";
+  send({cmd:"over",h:Math.ceil(p.getBoundingClientRect().bottom+8)});
+}
+function renderDlPop(){
+  const head=h("div","dlpop-h");head.append(h("b",null,T("Téléchargements")));
+  const x=h("button","dlpop-x");x.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';x.title=T("Fermer");x.onclick=hideDlPop;head.append(x);
+  const list=h("div","dlpop-l");
+  if(!DLS.length)list.append(h("div","dlpop-e",T("Aucun téléchargement pour l'instant")));
+  else for(const d of DLS.slice(0,8)){
+    const r=h("div","dlpop-i"),ico=h("div","dico");ico.innerHTML=DLICO;
+    const act=h("div","dact");
+    const ib=(svg,title,fn,cls)=>{const b=h("button",cls);b.innerHTML=`<svg viewBox="0 0 24 24">${svg}</svg>`;b.title=title;b.onclick=fn;act.append(b)};
+    if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>send({cmd:"dl_act",id:d.id,a:"show"}));
+    else if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>send({cmd:"dl_act",id:d.id,a:"pause"}));
+    else if(d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>send({cmd:"dl_act",id:d.id,a:"resume"}));
+    ib('<path d="M6 6l12 12M18 6 6 18"/>',d.state===2?T("Retirer des téléchargements"):T("Annuler"),()=>send({cmd:"dl_act",id:d.id,a:d.state===2?"forget":"cancel"}),"x");
+    r.append(ico,dlText(d),act);list.append(r);
+  }
+  const foot=h("button","dlpop-f",T("Voir tous les téléchargements"));foot.onclick=()=>{hideDlPop();openSection("dl")};
+  $("#dlpop").replaceChildren(head,list,foot);
+}
+$("#dlbtn").onclick=()=>{if(panel&&cur==="dl")return setPanel(false);$("#dlpop").hidden?showDlPop():hideDlPop()};
+addEventListener("mousedown",e=>{if(!$("#dlpop").hidden&&!e.target.closest("#dlpop")&&!e.target.closest("#dlbtn"))hideDlPop()});
 $("#dlfolder").onclick=()=>send({cmd:"dl_act",a:"folder"});
 $("#dlclear").onclick=()=>send({cmd:"dl_act",a:"clear"});
 // ===== téléchargements : liste tenue par Volt (dl.rs), envoyée à chaque changement d'état ; tant qu'un fichier arrive,
@@ -2547,12 +2601,13 @@ function dls(l){
   else if(act)bar.classList.add("ind");
   clearInterval(dlT);dlT=act?setInterval(()=>send({cmd:"dls"}),1000):0;
   if(cur==="dl")drawDls();
+  if(!$("#dlpop").hidden&&!$("#dlpop").matches(":hover"))renderDlPop(); // suit l'avancement, sauf si la souris est sur un bouton
   if(dlN&&!$("#toast").matches(":hover"))dlDraw(); // sous la souris, on ne remplace pas un bouton qu'on s'apprête à cliquer
 }
 // nom du fichier, état et barre d'avancement d'un téléchargement : pour sa ligne de la page et pour sa petite notif
 function dlText(d){
   const tx=h("div"),pct=d.total>0?Math.min(100,Math.round(d.got*100/d.total)):-1;
-  const st=d.state===2?T("Terminé")+" · "+octets(d.got):d.state===0?(pct<0?octets(d.got):T("{a} sur {b}",{a:octets(d.got),b:octets(d.total)})+" · "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
+  const st=d.state===2?octets(d.got)+" • "+T("OK"):d.state===0?(pct<0?octets(d.got):T("{a} sur {b}",{a:octets(d.got),b:octets(d.total)})+" • "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
   tx.append(h("b",null,d.name||"…"),h("small",null,st+(d.site?" · "+d.site:"")));
   if(d.state===0&&pct>=0){const p=h("i","bar");p.style.setProperty("--p",pct+"%");tx.append(p)}
   return tx;
