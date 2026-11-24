@@ -558,6 +558,7 @@
   "{n} cookie|{n} cookies": "{n} cookie|{n} cookies",
   "{n} mot de passe|{n} mots de passe": "{n} password|{n} passwords",
   "Repris : {x}": "Brought over: {x}",
+  "Rechargez vos sites (ou rouvrez-les) pour être connecté.": "Reload your sites (or reopen them) to be signed in.",
   "certains cookies récents de Chrome sont protégés et n'ont pas pu être repris": "some recent Chrome cookies are protected and could not be brought over",
   "Migration": "Migration",
   "Reprendre cookies, favoris, mots de passe et historique": "Bring over cookies, bookmarks, passwords and history",

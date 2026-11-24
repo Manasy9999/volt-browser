@@ -2310,7 +2310,9 @@ function migrateDone(o){
   if("favorites"in c)parts.push(T("{n} favori|{n} favoris",{n:c.favorites}));
   if("passwords"in c)parts.push(T("{n} mot de passe|{n} mots de passe",{n:c.passwords}));
   if("history"in c)parts.push(T("{n} page|{n} pages",{n:c.history}));
-  st.textContent=T("Repris : {x}",{x:parts.join(", ")})+(o.appbound?" · "+T("certains cookies récents de Chrome sont protégés et n'ont pas pu être repris"):"");
+  // après l'import des cookies, les sites déjà ouverts ne les prennent qu'au rechargement
+  const reload=c.cookies>0?" · "+T("Rechargez vos sites (ou rouvrez-les) pour être connecté."):"";
+  st.textContent=T("Repris : {x}",{x:parts.join(", ")})+reload+(o.appbound?" · "+T("certains cookies récents de Chrome sont protégés et n'ont pas pu être repris"):"");
   st.className="migst ok";
   if($("#hvolty"))$("#hvolty").classList.add("wink");
 }
