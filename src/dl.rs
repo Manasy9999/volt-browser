@@ -52,7 +52,11 @@ fn state(op: &ICoreWebView2DownloadOperation) -> u8 {
     if s == COREWEBVIEW2_DOWNLOAD_STATE_COMPLETED {
         DONE
     } else if s == COREWEBVIEW2_DOWNLOAD_STATE_IN_PROGRESS {
-        RUNNING
+        // certains téléchargements (mesuré : un .exe servi par GitHub) restent « en cours » alors que tous les octets
+        // sont reçus et le fichier écrit : quand tout est là, on les considère terminés (sinon l'animation tournerait sans fin).
+        let (mut got, mut total) = (0i64, 0i64);
+        let _ = unsafe { (op.BytesReceived(&mut got), op.TotalBytesToReceive(&mut total)) };
+        if total > 0 && got >= total { DONE } else { RUNNING }
     } else {
         STOPPED
     }
