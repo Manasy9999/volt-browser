@@ -50,6 +50,18 @@ svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke
 .pg canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* calque des éléments posés : en points PDF (page à 100 % = 1 px par point), mis à l'échelle d'un bloc par le zoom */
 .layer{position:absolute;left:0;top:0;width:calc(var(--w)*1px);height:calc(var(--h)*1px);transform-origin:0 0;transform:scale(var(--z))}
+/* mode « Édition de PDF » : gérer les pages (supprimer, réordonner) */
+.pgctrl{display:none;position:absolute;top:8px;right:8px;z-index:3;gap:6px;background:#1b1e28e0;border:1px solid #fff2;border-radius:10px;padding:5px;backdrop-filter:blur(6px)}
+#pages.pagesmode .pgctrl{display:flex}
+#pages.pagesmode .layer{pointer-events:none}
+#pages.pagesmode .pg{cursor:default}
+.pgctrl button{width:30px;height:30px;border-radius:7px;color:var(--tx);display:grid;place-items:center}
+.pgctrl button:not(:disabled):hover{background:#ffffff1a}
+.pgctrl button:disabled{opacity:.3}
+.pgctrl .del:not(:disabled):hover{background:#c0344d;color:#fff}
+.pgnum{position:absolute;top:8px;left:8px;z-index:3;min-width:24px;height:22px;padding:0 7px;border-radius:6px;background:#1b1e28cc;color:var(--mu);font-size:12px;display:none;align-items:center;justify-content:center}
+#pages.pagesmode .pgnum{display:flex}
+.pg.del{display:none}
 [data-tool=text] .layer{cursor:text}
 [data-tool=ink] .layer,[data-tool=ink] .el{cursor:crosshair}
 [data-tool=place] .layer,[data-tool=place] .el{cursor:copy}
@@ -123,6 +135,8 @@ dialog h3{font-size:12px;font-weight:600;color:var(--mu);margin-bottom:8px}
   <button class="b need" id="bSig" data-pick="place" data-tt="signTip"><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-6 5-11 7-11s0 9 2 9 3-5 5-5 1 4 4 4"/><path d="M3 21h18"/></svg><span data-t="sign"></span></button>
   <button class="b need" data-pick="text" data-tt="textTip"><svg class="i" viewBox="0 0 24 24"><path d="M5 7V4h14v3M12 4v16M9 20h6"/></svg><span data-t="text"></span></button>
   <button class="b need" data-pick="ink" data-tt="drawTip"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg><span data-t="draw"></span></button>
+  <i class="sep"></i>
+  <button class="b need" id="bPages" data-tt="pagesTip"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="3" width="11" height="14" rx="1.5"/><path d="M8 7h4M8 10h4"/><path d="M18 7v12a1.5 1.5 0 0 1-1.5 1.5H8"/></svg><span data-t="pages"></span></button>
   <i class="sep"></i>
   <label class="f" data-tt="sizeTip"><span data-t="size"></span><input class="need" id="size" type="number" min="4" max="200" step="1" value="12"></label>
   <button class="sw need" data-c="#000000" style="--c:#000000;margin-left:8px" data-tt="black"></button>
@@ -237,6 +251,10 @@ fr: {
   print: "Imprimer", printTip: "Imprimer le document (Ctrl+P)", printing: "Préparation de l'impression…",
   unsign: "Retirer la signature", unsignTip: "Retirer la signature pour modifier de nouveau le document",
   signedLock: "Document signé — pour le modifier, retirez la signature.",
+  pages: "Pages", pagesTip: "Gérer les pages : supprimer, réordonner",
+  hint_pages: "Réordonnez ou supprimez des pages avec les boutons sur chaque page.",
+  pageUp: "Monter la page", pageDown: "Descendre la page", pageDel: "Supprimer la page",
+  lastPage: "Au moins une page doit rester.",
   suffix: "-signé",
 },
 en: {
@@ -278,6 +296,10 @@ en: {
   print: "Print", printTip: "Print the document (Ctrl+P)", printing: "Preparing to print…",
   unsign: "Remove signature", unsignTip: "Remove the signature to edit the document again",
   signedLock: "Signed document — to change it, remove the signature.",
+  pages: "Pages", pagesTip: "Manage pages: delete, reorder",
+  hint_pages: "Reorder or delete pages with the buttons on each page.",
+  pageUp: "Move page up", pageDown: "Move page down", pageDel: "Delete page",
+  lastPage: "At least one page must remain.",
   suffix: "-signed",
 },
 };
@@ -297,7 +319,10 @@ const LIBS = !!(window.pdfjsLib && window.pdfjsWorker && window.PDFLib);
 let pdf = null, bytes = null, fname = "", pgs = [], z = PT, busy = false;
 let els = [], imgs = new Map(), uid = 1;   // éléments posés (coordonnées en points, origine en haut à gauche de la page affichée)
 let sel = null, edit = null, tool = "select", pend = null, drag = null;
-let hist = ["[]"], hi = 0, dirty = false;
+let order = [], delPages = new Set(), pagesMode = false; // mode Édition : ordre d'affichage des pages (indices d'origine) et pages supprimées
+const snap = () => JSON.stringify({ e: els, o: order, d: [...delPages] }); // instantané pour l'annulation (éléments + pages)
+const edited = () => els.length || delPages.size || order.some((pi, i) => pi !== i); // quelque chose à enregistrer ?
+let hist = ["{}"], hi = 0, dirty = false;
 let color = "#000000", size = 12;
 
 // Ligne de base de la première ligne d'un texte de ce corps (en points sous le haut du bloc). Mesurée dans le moteur et
@@ -352,18 +377,27 @@ async function openPdf(u8, name) {
       const page = await d.getPage(i), vp = page.getViewport({ scale: 1 });   // tient compte de /Rotate et du cadre de la page
       pgs.push({ i: i - 1, page, vp, w: vp.width, h: vp.height, s: 0 });
     }
+    order = pgs.map(p => p.i); delPages = new Set();
     const frag = document.createDocumentFragment();
     for (const pg of pgs) {
       pg.el = document.createElement("div"); pg.el.className = "pg"; pg.el.dataset.i = pg.i;
       pg.el.style.setProperty("--w", pg.w); pg.el.style.setProperty("--h", pg.h);
       pg.cv = document.createElement("canvas"); pg.layer = document.createElement("div"); pg.layer.className = "layer";
-      pg.el.append(pg.cv, pg.layer); frag.append(pg.el);
+      pg.num = document.createElement("div"); pg.num.className = "pgnum";
+      // commandes de page (mode Édition) : monter, descendre, supprimer
+      const ctrl = document.createElement("div"); ctrl.className = "pgctrl";
+      const btn = (act, tt, svg) => { const b = document.createElement("button"); b.className = act; b.title = b.ariaLabel = T[tt]; b.innerHTML = `<svg class="i" viewBox="0 0 24 24">${svg}</svg>`; b.onclick = () => pageAct(pg.i, act); ctrl.append(b); };
+      btn("up", "pageUp", '<path d="M12 19V5M5 12l7-7 7 7"/>');
+      btn("down", "pageDown", '<path d="M12 5v14M5 12l7 7 7-7"/>');
+      btn("del", "pageDel", '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>');
+      pg.el.append(pg.cv, pg.layer, pg.num, ctrl); frag.append(pg.el);
     }
     pagesEl.append(frag);
     $("#empty").hidden = true; document.title = fname + " — " + T.title;
-    $("#pcount").textContent = "/ " + pgs.length; pno.max = pgs.length; pno.value = 1;
+    applyPages(); pno.value = 1;
     setZoom(fitZoom()); view.scrollTop = 0;
     for (const pg of pgs) io.observe(pg.el);
+    hist = [snap()]; hi = 0;
     setTool("select"); clearTimeout(toastT); $("#toast").className = "";
     return true;
   } finally { busy = false; }
@@ -371,7 +405,38 @@ async function openPdf(u8, name) {
 function closePdf() {
   io.disconnect(); for (const pg of pgs) pg.task?.cancel();
   pdf?.destroy(); pdf = bytes = null; pgs = []; pagesEl.textContent = "";
-  els = []; imgs.clear(); sel = edit = drag = null; hist = ["[]"]; hi = 0; dirty = false;
+  els = []; imgs.clear(); sel = edit = drag = null; hist = ["{}"]; hi = 0; dirty = false;
+  order = []; delPages = new Set(); setPagesMode(false);
+}
+// applique l'ordre et les suppressions : classe les pages (flex order), cache les supprimées, renumérote
+function applyPages() {
+  order.forEach((pi, pos) => { const pg = pgs[pi]; pg.el.style.order = pos; pg.el.classList.toggle("del", delPages.has(pi)); });
+  let n = 0;
+  for (const pi of order) if (!delPages.has(pi)) pgs[pi].num.textContent = ++n;
+  $("#pcount").textContent = "/ " + n; pno.max = Math.max(1, n);
+}
+// mode Édition : monter/descendre/supprimer une page (par son indice d'origine)
+function pageAct(pi, act) {
+  const pos = order.indexOf(pi); if (pos < 0) return;
+  if (act === "del") {
+    if (order.filter(p => !delPages.has(p)).length <= 1) return msg(T.lastPage, true); // garder au moins une page
+    delPages.add(pi);
+  } else {
+    // monter/descendre : échange avec la page visible voisine (saute les supprimées)
+    const dir = act === "up" ? -1 : 1;
+    let j = pos + dir; while (j >= 0 && j < order.length && delPages.has(order[j])) j += dir;
+    if (j < 0 || j >= order.length) return;
+    [order[pos], order[j]] = [order[j], order[pos]];
+  }
+  applyPages(); commit();
+}
+function setPagesMode(on) {
+  pagesMode = on && !!pdf;
+  pagesEl.classList.toggle("pagesmode", pagesMode);
+  $("#bPages").ariaPressed = pagesMode;
+  if (pagesMode) { setTool("select"); select(null); }
+  $("#hint").textContent = pagesMode ? T.hint_pages : (pdf ? T["hint_" + tool] : "");
+  sync();
 }
 window.voltOpen = d => {
   let u;
@@ -471,9 +536,9 @@ function sync() {
   const lock = pdf && els.some(e => e.t === "img");
   pagesEl.classList.toggle("locked", lock);
   $("#lockMsg").hidden = $("#bUnsign").hidden = !lock;
-  if (lock) for (const b of $$('[data-pick]:not([data-pick="select"]), #size, #bar .sw')) b.disabled = true;
+  if (lock || pagesMode) for (const b of $$('[data-pick]:not([data-pick="select"]), #size, #bar .sw')) b.disabled = true;
   $("#bUndo").disabled = hi <= 0; $("#bRedo").disabled = hi >= hist.length - 1;
-  $("#bDel").disabled = !el || lock; $("#bSave").disabled = !els.length;
+  $("#bDel").disabled = !el || lock; $("#bSave").disabled = !edited();
 }
 function setTool(t, sig) {
   endEdit(); tool = t; pend = sig || null; if (t !== "select") select(null);
@@ -482,16 +547,16 @@ function setTool(t, sig) {
   sync();
 }
 
-// --- historique : une photo de la liste à chaque geste terminé ---
+// --- historique : une photo (éléments + pages) à chaque geste terminé ---
 function commit() {
-  hist.length = hi + 1; hist.push(JSON.stringify(els)); if (hist.length > 200) hist.shift();
+  hist.length = hi + 1; hist.push(snap()); if (hist.length > 200) hist.shift();
   hi = hist.length - 1; dirty = true; sync();
 }
 function go(d) {
   endEdit(); if (!hist[hi + d]) return;
-  const touched = new Set(els.map(e => e.p)); hi += d; els = JSON.parse(hist[hi]);
-  for (const e of els) touched.add(e.p);
-  sel = null; drawLayers(touched); dirty = true; sync();
+  hi += d; const s = JSON.parse(hist[hi]);
+  els = s.e || []; order = s.o || pgs.map(p => p.i); delPages = new Set(s.d || []);
+  sel = null; applyPages(); drawLayers(new Set(pgs.map(p => p.i))); dirty = true; sync();
 }
 function del() {
   const el = sel != null && elOf(sel); if (!el) return;
@@ -684,15 +749,19 @@ $("#sUse").onclick = () => {
 // ===== enregistrement : un nouveau PDF, l'original n'est jamais réécrit =====
 async function buildPdf() {
   const { PDFDocument, StandardFonts, rgb, pushGraphicsState, popGraphicsState, concatTransformationMatrix, setLineJoin, LineCapStyle, LineJoinStyle } = PDFLib;
-  const doc = await PDFDocument.load(bytes), pages = doc.getPages(), cache = new Map();
+  // nouveau document : pages gardées, dans l'ordre choisi (mode Édition) ; l'original n'est jamais réécrit
+  const srcDoc = await PDFDocument.load(bytes), doc = await PDFDocument.create(), cache = new Map();
+  const kept = order.filter(pi => !delPages.has(pi));
+  const copied = await doc.copyPages(srcDoc, kept);
   const font = els.some(e => e.t === "text") && await doc.embedFont(StandardFonts.Helvetica);
   const rgbOf = c => rgb(...[1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255));
   const image = async src => { if (!cache.has(src)) cache.set(src, await (src.startsWith("data:image/jpeg") ? doc.embedJpg(src) : doc.embedPng(src))); return cache.get(src); };
   const encodable = s => { try { font.encodeText(s); return true; } catch { return false; } };
   let asImage = false;
-  for (const pg of pgs) {
-    const list = els.filter(e => e.p === pg.i); if (!list.length) continue;
-    const page = pages[pg.i], H = pg.h;
+  for (let idx = 0; idx < kept.length; idx++) {
+    const pi = kept[idx], page = copied[idx]; doc.addPage(page);
+    const list = els.filter(e => e.p === pi); if (!list.length) continue;
+    const pg = pgs[pi], H = pg.h;
     // Repère « page affichée » (points, y vers le haut) -> repère du PDF : pdf.js connaît la rotation et le cadre de la
     // page, on lui demande où tombent l'origine et les deux axes.
     const P = (x, y) => pg.vp.convertToPdfPoint(x, H - y), [e, f] = P(0, 0), [ax, ay] = P(1, 0), [cx, cy] = P(0, 1);
@@ -715,7 +784,7 @@ async function buildPdf() {
   return { out: await doc.save(), asImage };
 }
 async function save() {
-  endEdit(); if (!pdf || !els.length || busy) return;
+  endEdit(); if (!pdf || !edited() || busy) return;
   busy = true; msg(T.saving); await paint();
   try {
     const { out, asImage } = await buildPdf(), a = document.createElement("a");
@@ -763,6 +832,7 @@ $("#bUnsign").onclick = () => {
 // ===== commandes =====
 $("#bOpen").onclick = $("#bOpen2").onclick = () => $("#fPdf").click();
 $("#bPrint").onclick = printPdf;
+$("#bPages").onclick = () => setPagesMode(!pagesMode);
 $("#fPdf").onchange = e => { const f = e.target.files[0]; e.target.value = ""; openFile(f); };
 for (const b of $$("[data-pick]")) b.onclick = () => b.dataset.pick === "place" ? openSig() : setTool(b.dataset.pick);
 for (const b of $$(".sw")) b.onclick = () => {
@@ -778,12 +848,12 @@ $("#size").onchange = e => {
 $("#bUndo").onclick = () => go(-1); $("#bRedo").onclick = () => go(1); $("#bDel").onclick = del; $("#bSave").onclick = save;
 $("#zOut").onclick = () => setZoom(z / 1.25); $("#zIn").onclick = () => setZoom(z * 1.25); $("#zVal").onclick = () => setZoom(fitZoom());
 view.addEventListener("wheel", e => { if (e.ctrlKey && pdf) { e.preventDefault(); setZoom(z * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
-pno.onchange = () => { pgs[clamp(pno.value - 1, 0, pgs.length - 1)]?.el.scrollIntoView(); pno.blur(); };   // le champ rend la main : il suit de nouveau le défilement
+pno.onchange = () => { const kept = order.filter(pi => !delPages.has(pi)); pgs[kept[clamp(pno.value - 1, 0, kept.length - 1)]]?.el.scrollIntoView(); pno.blur(); };   // suit l'ordre d'affichage ; le champ rend la main au défilement
 let scrollT = 0;
 view.addEventListener("scroll", () => {
   scrollT ||= requestAnimationFrame(() => {
     scrollT = 0; const r = view.getBoundingClientRect(), n = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest(".pg");
-    if (n && document.activeElement !== pno) pno.value = +n.dataset.i + 1;
+    if (n && document.activeElement !== pno) pno.value = pgs[+n.dataset.i].num.textContent; // numéro d'affichage (ordre, suppressions)
   });
 }, { passive: true });
 
