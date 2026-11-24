@@ -350,6 +350,7 @@ enum Ev {
     Perms(Value), // autorisations données aux sites, pour la page Confidentialité
     Tasks(Value), // relevé du gestionnaire de tâches
     Sign(Result<Option<(String, String)>, String>), // « Remplir et signer » prêt : (nom, contenu en base64) du PDF à y ouvrir
+    SignTab(u32, String, Result<(String, String), String>), // PDF ouvert dans un onglet : (onglet, adresse, (nom, base64)) à basculer vers l'éditeur
     SignReady(u32),        // la page de signature de cet onglet attend son document
     SignSigs(u32, String), // elle envoie la liste des signatures à garder
     Fullscreen(u32, bool),
@@ -372,7 +373,7 @@ impl Ev {
     fn dest(&self, asked: WindowId, front: WindowId) -> Dest {
         match self {
             Ev::Ui(w, _) | Ev::Key(Src::Win(w), _) => Dest::Win(*w),
-            Ev::Key(Src::Tab(t), _) | Ev::Title(t, _) | Ev::Load(t, ..) | Ev::Url(t, _) | Ev::Audio(t, _) | Ev::Icon(t, _) | Ev::Blocked(t, _) | Ev::Zoom(t, _) | Ev::Bg(t) | Ev::DlAsk(t) | Ev::DlNote(t, _) | Ev::SignReady(t) | Ev::SignSigs(t, _) | Ev::Fullscreen(t, _) | Ev::State(t, _) | Ev::Lang(t, ..) | Ev::PwForm(t) | Ev::PwSave(t, _) | Ev::Card(t, ..) | Ev::CardTarget(t, _) | Ev::Open(Some(t), _) => Dest::Tab(*t),
+            Ev::Key(Src::Tab(t), _) | Ev::Title(t, _) | Ev::Load(t, ..) | Ev::Url(t, _) | Ev::Audio(t, _) | Ev::Icon(t, _) | Ev::Blocked(t, _) | Ev::Zoom(t, _) | Ev::Bg(t) | Ev::DlAsk(t) | Ev::DlNote(t, _) | Ev::SignTab(t, ..) | Ev::SignReady(t) | Ev::SignSigs(t, _) | Ev::Fullscreen(t, _) | Ev::State(t, _) | Ev::Lang(t, ..) | Ev::PwForm(t) | Ev::PwSave(t, _) | Ev::Card(t, ..) | Ev::CardTarget(t, _) | Ev::Open(Some(t), _) => Dest::Tab(*t),
             Ev::Cmd(_) | Ev::Sign(_) | Ev::Perms(_) | Ev::Tasks(_) | Ev::Cookies(_) | Ev::Hello(..) | Ev::Vicon(..) | Ev::Toast(_) | Ev::ExtFolder(_) | Ev::Update(_) => Dest::Win(asked),
             Ev::Open(None, _) | Ev::Raise => Dest::Win(front),
             Ev::Exts(_) | Ev::ExtChanged | Ev::Cpu(_) | Ev::Dls => Dest::Here,
@@ -456,6 +457,12 @@ fn set_cmp(tabs: &mut [Tab], js: &str) {
 }
 
 /// Texte de la barre d'adresse -> URL (adresse directe ou recherche).
+/// Adresse d'un PDF à ouvrir dans l'éditeur plutôt que dans le lecteur du moteur : http(s) ou fichier local, chemin
+/// (hors paramètres) finissant par .pdf.
+fn is_pdf_url(u: &str) -> bool {
+    (u.starts_with("http") || u.starts_with("file:")) && u.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase().ends_with(".pdf")
+}
+
 /// Texte du presse-papiers Windows (None s'il est vide ou n'est pas du texte). Pour « Coller » et « Coller et rechercher ».
 fn clipboard_text() -> Option<String> {
     use windows::Win32::{
@@ -1242,6 +1249,7 @@ fn main() {
     let mut closed: Vec<(usize, String)> = vec![]; // (position, adresse) des onglets fermés, pour « Rouvrir »
     let mut ext_at: Option<Instant> = None; // dernière installation d'extension (page d'accueil en arrière-plan)
     let mut sign_docs: HashMap<u32, (String, String)> = HashMap::new(); // PDF à remettre à la page de signature de cet onglet
+    let mut pdf_opening: HashSet<u32> = HashSet::new(); // onglets dont le PDF est en cours d'ouverture dans l'éditeur (évite de relancer)
     let mut pw_forms: HashSet<u32> = HashSet::new(); // onglets où un formulaire de connexion est repéré
     // onglets où un champ de numéro de carte est annoncé : par la page ou un de ses cadres (l'icône s'affiche), et par
     // la page elle-même (elle peut alors être remplie sans cadre désigné)
@@ -1436,6 +1444,17 @@ fn main() {
                         }
                     }
                     Ev::Load(id, url, l) => {
+                        // Ouvrir un PDF = ouvrir l'éditeur (voir + remplir + signer). Le lecteur du moteur affiche le PDF le
+                        // temps de le lire ; un PDF local ou public bascule vers l'éditeur, un PDF du web illisible (derrière
+                        // une connexion) y reste. L'éditeur lui-même (file://…/sign/index.html) n'est pas un .pdf : pas de boucle.
+                        if l && is_pdf_url(&url) && !pdf_opening.contains(&id) {
+                            pdf_opening.insert(id);
+                            let (p, d, u) = (proxy.clone(), dir.clone(), url.clone());
+                            std::thread::spawn(move || {
+                                let r = sign::install(&d).and_then(|_| sign::fetch(&u).map(|(n, b)| (n, sign::b64(&b))));
+                                let _ = p.send_event(Ev::SignTab(id, u, r));
+                            });
+                        }
                         if l {
                             pw_forms.remove(&id); // nouvelle page : le repère du formulaire est remis par PW_JS si besoin
                             cc_forms.remove(&id);
@@ -1696,6 +1715,24 @@ fn main() {
                     }
                     Ev::Update(v) => {
                         let _ = ui.evaluate_script(&format!("upd({v})"));
+                        return;
+                    }
+                    // PDF chargé dans un onglet : bascule cet onglet vers l'éditeur, s'il est toujours sur ce PDF (sinon
+                    // l'utilisateur a changé de page) ; échec (PDF du web illisible) : on laisse le lecteur du moteur.
+                    Ev::SignTab(id, url, r) => {
+                        pdf_opening.remove(&id);
+                        // toujours sur ce PDF ? Le lecteur du moteur affiche le PDF via une page d'extension dont l'adresse
+                        // porte le chemin du fichier ; on vérifie que l'onglet montre encore ce PDF (sinon l'utilisateur a changé de page).
+                        let still = |w: &WebView| w.url().ok().is_some_and(|live| live == url || live.contains(url.as_str()));
+                        if let Ok((name, data)) = r
+                            && let Some(tab) = tabs.iter().find(|t| t.id == id)
+                            && let Some(w) = &tab.wv
+                            && still(w)
+                            && let Some(page) = sign::page_url(&dir)
+                        {
+                            sign_docs.insert(id, (name, data));
+                            let _ = w.load_url(&format!("{page}?lang={}&a={}", lang::code(), enc(&s.accent)));
+                        }
                         return;
                     }
                     // « Remplir et signer » installé (et le PDF lu) : la page s'ouvre dans un nouvel onglet
