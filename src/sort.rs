@@ -25,7 +25,7 @@ pub enum Mode {
 }
 
 struct Category {
-    name: &'static str,
+    name: &'static str, // en français : traduit quand le dossier est proposé (lang.rs)
     icon: &'static str,
     color: &'static str,
     synonyms: &'static [&'static str], // noms de dossiers équivalents (casse, accents et pluriel ignorés)
@@ -40,20 +40,50 @@ struct Category {
 // ---------------------------------------------------------------------------------------------
 
 const JEUX: &[&str] = &[
-    "activision.com", "ankama.com", "battle.net", "blizzard.com", "bungie.net", "callofduty.com",
-    "chess.com", "crazygames.com", "curseforge.com", "dexerto.com", "dofus.com", "ea.com",
-    "eneba.com", "epicgames.com", "faceit.com", "fextralife.com", "fortnite.com", "g2a.com",
-    "gameblog.fr", "gamekult.com", "gamergen.com", "gamesplanet.com", "gamespot.com",
-    "gaming.amazon.com", "geoguessr.com", "gog.com", "greenmangaming.com", "gx.games",
-    "howlongtobeat.com", "hoyolab.com", "hoyoverse.com", "humblebundle.com", "igdb.com", "ign.com",
-    "instant-gaming.com", "itch.io", "jeuxactu.com", "jeuxvideo.com", "kinguin.net",
-    "kongregate.com", "leagueoflegends.com", "lichess.org", "maxroll.gg", "micromania.fr",
-    "millenium.org", "minecraft.net", "miniclip.com", "mobalytics.gg", "modrinth.com",
-    "nexusmods.com", "nintendo.com", "nintendo.fr", "op.gg", "overwolf.com", "pathofexile.com",
-    "pcgamer.com", "playstation.com", "playvalorant.com", "pokemon.com", "poki.com", "polygon.com",
-    "rawg.io", "riotgames.com", "roblox.com", "rockstargames.com", "runescape.com", "speedrun.com",
-    "steamcommunity.com", "steamdb.info", "steampowered.com", "store.steampowered.com",
-    "tracker.gg", "u.gg", "ubisoft.com", "wowhead.com", "xbox.com", "y8.com",
+    "2k.com", "activision.com", "actugaming.net", "allkeyshop.com", "ankama.com", "armorgames.com",
+    "aternos.org", "backloggd.com", "battle.net", "battlefy.com", "bethesda.net", "blitz.gg",
+    "blizzard.com", "boardgamearena.com", "boardgamegeek.com", "boosteroid.com", "bukkit.org",
+    "bulbagarden.net", "bungie.net", "callofduty.com", "canardpc.com", "capcom.com", "ccugame.app",
+    "cdkeys.com", "cdprojektred.com", "challengermode.com", "chess.com", "coolmathgames.com",
+    "coriolis.io", "counter-strike.net", "crazygames.com", "cstone.space", "curseforge.com",
+    "cyberpunk.net", "d4builds.gg", "devolverdigital.com", "dexerto.com", "dlcompare.fr",
+    "dndbeyond.com", "dofus.com", "dofusbook.net", "dota2.com", "dotabuff.com", "dotesports.com",
+    "ea.com", "edsm.net", "elitedangerous.com", "eneba.com", "epicgames.com", "erkul.games",
+    "escapefromtarkov.com", "eslgaming.com", "eurogamer.net", "eveonline.com", "exophase.com",
+    "fabricmc.net", "faceit.com", "factorio.com", "factornews.com", "fanatical.com",
+    "feedthebeast.com", "fextralife.com", "finalfantasyxiv.com", "fleetyards.net", "fortnite.com",
+    "foundryvtt.com", "g2a.com", "gallog.co", "game8.co", "gamebanana.com", "gameblog.fr",
+    "gamejolt.com", "gamekult.com", "gamerant.com", "gamergen.com", "gamersgate.com",
+    "gamesplanet.com", "gamespot.com", "gamesradar.com", "gamewith.net", "gaming.amazon.com",
+    "geoguessr.com", "gg.deals", "gog.com", "greenmangaming.com", "guildwars2.com", "gx.games",
+    "hangar.link", "heroicgameslauncher.com", "hltv.org", "howlongtobeat.com", "hoyolab.com",
+    "hoyoverse.com", "hsreplay.net", "humblebundle.com", "hypixel.net", "icy-veins.com", "igdb.com",
+    "ign.com", "inara.cz", "instant-gaming.com", "isthereanydeal.com", "itch.io", "jeuxactu.com",
+    "jeuxvideo.com", "judgehype.com", "kinguin.net", "kongregate.com", "kotaku.com",
+    "leagueofgraphs.com", "leagueoflegends.com", "lichess.org", "liquipedia.net", "lolalytics.com",
+    "lolesports.com", "lutris.net", "maxroll.gg", "metasrc.com", "method.gg", "micromania.fr",
+    "millenium.org", "minecraft.fr", "minecraft.net", "minecraft.wiki", "minecraftforum.net",
+    "miniclip.com", "mmo-champion.com", "mobafire.com", "mobalytics.gg", "moddb.com",
+    "modrinth.com", "moxfield.com", "mtggoldfish.com", "namemc.com", "newgrounds.com",
+    "nexusmods.com", "nintendo.com", "nintendo.fr", "nintendolife.com", "nofrag.com", "op.gg",
+    "opencritic.com", "optifine.net", "origin.com", "overwolf.com", "paimon.moe", "papermc.io",
+    "paradoxplaza.com", "pathofexile.com", "pcgamer.com", "pcgamingwiki.com", "planetminecraft.com",
+    "playlostark.com", "playstation.com", "playvalorant.com", "poe.ninja", "poewiki.net",
+    "pokebip.com", "pokemon.com", "pokemondb.net", "pokemonshowdown.com", "pokemontrash.com",
+    "pokepedia.fr", "poki.com", "polygon.com", "porofessor.gg", "probuilds.net", "protondb.com",
+    "prydwen.gg", "psnprofiles.com", "pushsquare.com", "raider.io", "rawg.io", "regolith.rocks",
+    "retroachievements.org", "riotgames.com", "robertsspaceindustries.com", "roblox.com",
+    "rockpapershotgun.com", "rockstargames.com", "roll20.net", "runescape.com", "sc-trade.tools",
+    "scryfall.com", "sega.com", "serebii.net", "shadow.tech", "smogon.com", "speedrun.com",
+    "spigotmc.org", "spviewer.eu", "square-enix-games.com", "starcitizen.tools", "start.gg",
+    "steamcharts.com", "steamcommunity.com", "steamdb.info", "steamdeck.com", "steamgifts.com",
+    "steamgriddb.com", "steampowered.com", "store.steampowered.com", "supercell.com",
+    "tarkov-market.com", "tarkov.dev", "thegamer.com", "thunderstore.io", "toornament.com",
+    "totalwar.com", "tracker.gg", "trueachievements.com", "u.gg", "ubisoft.com",
+    "ubisoftconnect.com", "uexcorp.space", "valvesoftware.com", "verseguide.com", "versemate.com",
+    "vg247.com", "vlr.gg", "vrchat.com", "warcraftlogs.com", "warframe.com", "wargaming.net",
+    "warthunder.com", "worldoftanks.eu", "worldofwarcraft.com", "wowhead.com", "wowprogress.com",
+    "xbox.com", "y8.com", "zkillboard.com",
 ];
 
 const VIDEOS: &[&str] = &[
@@ -216,6 +246,31 @@ const SPORT: &[&str] = &[
     "worldrugby.org", "wtatennis.com", "zwift.com",
 ];
 
+// Noms de jeux, en minuscules sans accents ni ponctuation (« Baldur's » s'écrit « baldur s »). Un nom reconnu dans
+// l'hôte ou le titre classe en Jeux avant les mots génériques : « Star Citizen Wiki » est un favori de jeu, pas de
+// savoir. Aucun nom qui soit aussi un mot courant, un film ou une série (rust, portal, fallout, the witcher…).
+const GAMES: &[&str] = &[
+    "age of empires", "albion online", "animal crossing", "apex legends", "ark survival",
+    "assassin s creed", "assetto corsa", "baldur s gate", "battlefield", "black desert",
+    "brawl stars", "call of duty", "cities skylines", "clash of clans", "clash royale",
+    "counter strike", "crusader kings", "cs2", "csgo", "cyberpunk 2077", "dark souls", "dayz",
+    "dead by daylight", "destiny 2", "diablo", "dofus", "dota", "dota 2", "elden ring",
+    "elite dangerous", "escape from tarkov", "euro truck simulator", "europa universalis",
+    "eve online", "factorio", "fall guys", "farming simulator", "ffxiv", "final fantasy",
+    "fortnite", "forza horizon", "forza motorsport", "garry s mod", "genshin", "geometry dash",
+    "god of war", "gran turismo", "grand theft auto", "gta", "guild wars", "hearthstone",
+    "hearts of iron", "helldivers", "hogwarts legacy", "hollow knight", "honkai", "iracing",
+    "kerbal space program", "league of legends", "left 4 dead", "lethal company", "mario kart",
+    "marvel rivals", "metal gear", "minecraft", "monster hunter", "mortal kombat", "no man s sky",
+    "overwatch", "palworld", "path of exile", "phasmophobia", "pokemon", "pubg", "rainbow six",
+    "red dead redemption", "resident evil", "roblox", "rocket league", "runescape",
+    "sea of thieves", "skyrim", "squadron 42", "star citizen", "starcraft", "stardew valley",
+    "starfield", "stellaris", "street fighter", "subnautica", "super mario", "super smash bros",
+    "team fortress", "teamfight tactics", "tekken", "terraria", "the sims", "valheim", "valorant",
+    "wakfu", "war thunder", "warcraft", "warframe", "warzone", "world of tanks",
+    "world of warcraft", "world of warships", "wuthering waves", "zelda", "zenless zone zero",
+];
+
 // Mots volontairement peu nombreux : un mot qui pourrait désigner deux catégories rend le
 // favori ambigu, et un favori ambigu n'est pas classé.
 const CATEGORIES: &[Category] = &[
@@ -224,7 +279,7 @@ const CATEGORIES: &[Category] = &[
         synonyms: &["Jeux", "Jeu", "Jeux vidéo", "Games", "Game", "Gaming"],
         domains: JEUX,
         host_words: &["game", "games", "gaming*", "jeux*", "esport*"],
-        title_words: &["jeu", "jeux", "game", "games", "gaming", "gamer", "esport", "esports", "speedrun", "minecraft", "pokemon"],
+        title_words: &["jeu", "jeux", "game", "games", "gaming", "gamer", "esport", "esports", "speedrun"],
     },
     Category {
         name: "Vidéos", icon: "🎬", color: "#f87171",
@@ -335,7 +390,7 @@ fn suggest_theme(items: &[(String, String)], folders: &[String]) -> Vec<Proposal
                 return None;
             }
             Some(Proposal {
-                folder: existing.cloned().unwrap_or_else(|| c.name.to_string()),
+                folder: existing.cloned().unwrap_or_else(|| crate::lang::t(c.name)),
                 new: existing.is_none(),
                 icon: c.icon,
                 color: c.color,
@@ -483,7 +538,15 @@ fn host_of(url: &str) -> Option<String> {
 }
 
 fn classify(host: &str, title: &str) -> Option<usize> {
-    by_domain(host).or_else(|| by_words(host, title))
+    by_domain(host).or_else(|| by_game(host, title)).or_else(|| by_words(host, title))
+}
+
+/// Jeux (catégorie 0) si l'hôte ou le titre porte un nom de jeu, en mots entiers (« Star Citizen ») ou collé
+/// (« starcitizen.tools »). Jamais au milieu d'un mot.
+fn by_game(host: &str, title: &str) -> Option<usize> {
+    let folded = fold(&format!("{host} {title}"));
+    let text = format!(" {} ", folded.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" "));
+    GAMES.iter().any(|g| text.contains(&format!(" {g} ")) || text.contains(&format!(" {} ", g.replace(' ', "")))).then_some(0)
 }
 
 /// Catégorie du domaine connu le plus long qui couvre l'hôte.
@@ -529,7 +592,7 @@ fn hits_of(pred: impl Fn(&Category) -> bool) -> Vec<usize> {
 
 fn equivalent(folder: &str, c: &Category) -> bool {
     let f = fold_name(folder);
-    !f.is_empty() && (fold_name(c.name) == f || c.synonyms.iter().any(|s| fold_name(s) == f))
+    !f.is_empty() && (fold_name(c.name) == f || fold_name(&crate::lang::t(c.name)) == f || c.synonyms.iter().any(|s| fold_name(s) == f))
 }
 
 /// Minuscules sans accents.
@@ -617,6 +680,32 @@ mod tests {
     }
 
     #[test]
+    fn jeux_reconnus() {
+        assert_eq!(CATEGORIES[0].name, "Jeux"); // by_game renvoie 0
+        assert!(GAMES.windows(2).all(|w| w[0] < w[1]), "GAMES non triée ou doublon");
+        assert!(GAMES.iter().all(|g| !g.is_empty() && *g == g.trim() && !g.contains("  ") && g.chars().all(|c| c == ' ' || c.is_ascii_lowercase() || c.is_ascii_digit())));
+        // sites de Star Citizen, par domaine (sous-domaine compris)
+        assert_eq!(cat("https://robertsspaceindustries.com/account/settings", "Account"), Some("Jeux"));
+        assert_eq!(cat("https://portal.uexcorp.space/terminal", "Terminal"), Some("Jeux"));
+        assert_eq!(cat("https://sc-trade.tools/home", ""), Some("Jeux"));
+        // nom du jeu dans l'hôte (collé ou coupé) ou dans le titre, avant les mots génériques « wiki », « forum »…
+        assert_eq!(cat("https://starcitizen.exemple.org/", ""), Some("Jeux"));
+        assert_eq!(cat("https://star-citizen.exemple.fr/", ""), Some("Jeux"));
+        assert_eq!(cat("https://exemple.org/", "STAR CITIZEN Wiki"), Some("Jeux"));
+        assert_eq!(cat("https://exemple.org/", "StarCitizen : forum"), Some("Jeux"));
+        assert_eq!(cat("https://exemple.org/post", "Necromancer Build | Baldur's Gate 3 (BG3)"), Some("Jeux"));
+        assert_eq!(cat("https://exemple.org/", "Overwatch Workshop Codes"), Some("Jeux"));
+        assert_eq!(cat("https://exemple.org/", "Pokémon GO : la communauté"), Some("Jeux"));
+        assert_eq!(cat("https://minecraft.exemple.net/wiki", "Communauté"), Some("Jeux"));
+        // le domaine connu reste prioritaire : une vidéo sur un jeu est une vidéo
+        assert_eq!(cat("https://www.youtube.com/watch?v=1", "Star Citizen"), Some("Vidéos"));
+        assert_eq!(cat("https://docs.google.com/spreadsheets/d/1", "Star Citizen | Price"), Some("Outils"));
+        // jamais au milieu d'un mot
+        assert_eq!(cat("https://exemple.org/", "Superstar citizens"), None);
+        assert_eq!(cat("https://gtalent.exemple.org/", "Zeldaris"), None);
+    }
+
+    #[test]
     fn dans_le_doute_on_ne_classe_pas() {
         assert_eq!(cat("https://exemple.org/", "Accueil"), None);
         assert_eq!(cat("https://photoshop-astuces.fr/", ""), None); // « shop » au milieu d'un mot
@@ -685,6 +774,7 @@ mod tests {
                 assert!(syns.insert(f.clone()), "synonyme partagé entre catégories : {f}");
             }
             assert!(colors.insert(c.color) && c.color.len() == 7 && c.color.starts_with('#'));
+            assert!(crate::lang::missing(c.name).is_empty(), "dossier « {} » sans traduction", c.name);
         }
         assert!(CATEGORIES.len() <= 12);
     }

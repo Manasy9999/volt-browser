@@ -21,9 +21,9 @@
 
 Volt is a lightweight browser and Chrome alternative for people who want a low RAM browser without giving up site compatibility. It is a small Rust application (built on the `tao` and `wry` libraries) around the Chromium engine that Microsoft ships with Windows, WebView2. It is not a new engine: pages render exactly as they do in Chromium. The savings come from how Volt manages tabs, not from the engine.
 
-- One executable of about 1 MB, no installer.
+- One executable of about 1.5 MB, no installer.
 - Needs WebView2, which is already part of Windows 11.
-- Version 0.1.0, developed by one person. The interface is in French only for now.
+- Version 0.2.0, developed by one person. The interface is in English or French.
 
 ## Memory usage compared with Chrome, Edge and Opera GX
 
@@ -73,15 +73,34 @@ Other measurements on the same machine:
 
 ## Features
 
-**Tabs and sessions**
-- Pinned tabs.
-- Tab right-click menu: new tab to the right, duplicate, pin, mute, close other tabs, close tabs to the right, reopen closed tab (Ctrl+Shift+T).
+**Tabs, windows and sessions**
+- Several windows: drag a tab out of its window to open a new one, or into another Volt window, without reloading it.
+- Private browsing (Ctrl+Shift+N): no history, cookies or session kept.
+- Named, colored tab groups that collapse with one click and come back with the session.
+- Pinned tabs. When the bar fills up, tabs shrink down to the site icon alone.
+- Search open tabs (Ctrl+Shift+A).
+- Tab right-click menu: new tab to the right, add to a group, duplicate, move to a new window, pin, mute, close other tabs, close tabs to the right, reopen closed tab (Ctrl+Shift+T).
 - Offers to restore the last session at startup.
+- Task manager (Shift+Esc): memory and processor use of each tab, with a button to unload the heaviest ones.
+
+**Browsing**
+- Address bar suggestions from your bookmarks and history; they are looked up on your machine, nothing is sent to a search engine while you type.
+- Find in page (Ctrl+F), per-page zoom, printing, full screen (F11), Ctrl+1 to 9 to jump to a tab.
+- Opens PDFs and files from your PC. Fill and sign a PDF: text, drawing, and a signature drawn with the mouse, typed, or placed from a transparent image.
+- Downloads page with progress, pause, resume and cancel; a download folder of your choice, or a Save As window for each file.
+- Pop-ups are blocked when a site opens one without a click, with a list of allowed sites.
+- List of the permissions given to sites (camera, microphone, location, notifications), to take one back.
+- Dangerous-site warnings from Microsoft Defender SmartScreen, which you can turn off: the addresses you visit are sent to it for checking.
+
+**Passwords, cards and forms**
+- Volt's own password manager: offers to save at sign-in, fills in with one click, a list you can browse, CSV import and export. Viewing, editing, deleting or exporting asks for Windows Hello.
+- Payment cards: saved encrypted on your PC, without the security code. On a payment page the card is filled in only when you ask, after Windows Hello, and only in the form you clicked in; Volt first shows you the site that will receive it.
+- Form filling (name, address, email, phone) by the engine, which you can turn off.
 
 **Bookmarks and history**
-- Bookmarks bar in three styles, and a bookmarks page laid out as tiles.
-- Import bookmarks from Chrome, Edge, Brave, Vivaldi, Opera and Opera GX.
-- Automatic sorting of bookmarks into categories, computed on your machine; nothing is sent anywhere.
+- Bookmarks bar in three styles, folders that open in the bar or as a menu, and a bookmarks page laid out as tiles.
+- Import bookmarks from Chrome, Edge, Brave, Vivaldi, Opera and Opera GX, and import or export in the HTML format every browser shares (Firefox included).
+- Automatic sorting of bookmarks into categories (games included), computed on your machine; nothing is sent anywhere.
 - Side panel with history grouped by day, and per-site cookie deletion.
 
 **Chrome extensions and blocking**
@@ -94,10 +113,11 @@ Other measurements on the same machine:
 
 **Everything else**
 - Update check from the settings: the new executable is downloaded from this repository's releases, checked against its published SHA-256, and Volt restarts with your session restored.
-- Passwords saved and filled in by the engine, with a button to delete the saved passwords.
 - Game Mode, for a gaming browser that stays out of the way: low priority and fast tab freezing while you play.
 - Six themes.
-- Can be set as the default browser.
+- Interface in English or French: it follows the Windows display language, or the language you pick in the settings; page translation and the engine (page menus, error pages, the language requested from websites) then use that language too.
+- Can be set as the default browser; desktop and Start menu shortcuts, and uninstall from the Windows installed apps list.
+- Hover the mascot to see the memory, processor and graphics card Volt is using.
 
 <p align="center">
   <img src="docs/img/favbar.png" width="860" alt="The Volt bookmarks bar under the address bar">
@@ -111,11 +131,15 @@ Other measurements on the same machine:
 ## Limitations
 
 - Windows 10 and 11 only.
-- Interface in French only.
+- Interface in English and French only for now.
 - Uses Microsoft's Chromium engine (WebView2); it is not its own engine.
 - An unloaded tab reloads and loses state that existed only in the page.
 - Extension popups cannot be shown (the engine does not allow it); only an extension's options page opens.
-- No list where you can view your saved passwords.
+- No sync between devices.
+- Passwords and cards live in Volt's own vault, encrypted by Windows and tied to your session: a program running under your account can read it, as with Chrome. This vault has not been audited.
+- The card is filled in only in the form you clicked in: a field held by a different site (sometimes the cardholder name) is left for you to type.
+- A signature placed on a PDF is an image, not a certified electronic signature.
+- The downloads list starts empty at each launch.
 - The executable is not signed: Windows SmartScreen or Defender may show a warning.
 - High video memory use when you keep many tabs loaded.
 - Page translation goes through Google's relay: the page address and content are sent to Google, you are not signed in on the translated page, forms are blocked there, and heavy web apps may not display.

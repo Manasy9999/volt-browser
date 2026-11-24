@@ -18,6 +18,8 @@ use windows::{
 };
 use wry::{WebView, WebViewExtWindows};
 
+use crate::lang::t;
+
 /// Extrait l'ID (32 lettres a-p) d'un ID brut ou d'une URL du Chrome Web Store.
 pub fn parse_id(s: &str) -> Option<String> {
     let b = s.as_bytes();
@@ -35,14 +37,14 @@ pub fn parse_id(s: &str) -> Option<String> {
 pub fn crx_zip(b: &[u8]) -> Result<&[u8], String> {
     let u = |o: usize| b.get(o..o + 4).map(|x| u32::from_le_bytes(x.try_into().unwrap()) as usize);
     if b.get(..4) != Some(b"Cr24") {
-        return Err("fichier CRX invalide".into());
+        return Err(t("fichier CRX invalide"));
     }
     let start = match u(4) {
-        Some(3) => 12 + u(8).ok_or("CRX tronqué")?,
-        Some(2) => 16 + u(8).ok_or("CRX tronqué")? + u(12).ok_or("CRX tronqué")?,
-        _ => return Err("version CRX inconnue".into()),
+        Some(3) => 12 + u(8).ok_or_else(|| t("CRX tronqué"))?,
+        Some(2) => 16 + u(8).ok_or_else(|| t("CRX tronqué"))? + u(12).ok_or_else(|| t("CRX tronqué"))?,
+        _ => return Err(t("version CRX inconnue")),
     };
-    b.get(start..).ok_or_else(|| "CRX tronqué".into())
+    b.get(start..).ok_or_else(|| t("CRX tronqué"))
 }
 
 /// Télécharge et décompresse l'extension dans `dir/<id>`. Bloquant : à lancer hors du thread UI.
@@ -73,7 +75,7 @@ pub fn download(id: &str, dir: &Path) -> Result<PathBuf, String> {
             .is_ok_and(|s| s.success());
         if !ok {
             let _ = fs::remove_dir_all(&out);
-            return Err("archive de l'extension illisible".into());
+            return Err(t("archive de l'extension illisible"));
         }
         // Chromium refuse de charger un dossier non empaqueté contenant `_metadata`.
         let _ = fs::remove_dir_all(out.join("_metadata"));

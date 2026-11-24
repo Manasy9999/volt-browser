@@ -16,21 +16,50 @@ svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-l
 #logo,#add,.wc{flex-shrink:0}
 #logo{width:30px;height:30px;margin:0 6px 4px 0;display:grid;place-items:center;color:var(--a);filter:drop-shadow(0 0 6px var(--a))}
 #logo svg{width:20px;height:20px;fill:var(--a);stroke:none}
+/* bulle de consommation, à droite de Volty pendant son survol : par-dessus les onglets, elle tient dans la barre du haut */
+#vuse{position:fixed;left:46px;top:4px;height:30px;z-index:9;display:flex;align-items:center;gap:14px;padding:0 14px;border-radius:15px;background:var(--bg3);
+  border:1px solid color-mix(in srgb,var(--a) 45%,transparent);color:var(--mu);font-size:12px;white-space:nowrap;box-shadow:0 4px 16px #000a;pointer-events:none}
+#vuse[hidden]{display:none}
+#vuse b{color:var(--tx);font-weight:600}
 #list{flex:0 1 auto;min-width:0;height:100%;display:flex;align-items:flex-end;gap:inherit;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
-.tab{position:relative;height:32px;min-width:110px;max-width:220px;flex:0 1 220px;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;
+/* largeur fixée ici et non par le titre (sinon chaque titre qui change redimensionne toute la barre) ; elle se partage la
+   place quand les onglets sont nombreux, jusqu'à l'icône seule, et la liste ne défile qu'ensuite */
+.tab{position:relative;height:32px;width:220px;min-width:36px;max-width:220px;flex:0 1 auto;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;
   background:var(--bg2);border-radius:var(--r) var(--r) 0 0;color:var(--mu);transition:background .15s,color .15s}
 .tab:hover{background:var(--bg3);color:var(--tx)}
 .tab.on{background:var(--bg3);color:var(--tx)}
 .tab.on::before{content:"";position:absolute;left:10px;right:10px;top:0;height:2px;border-radius:2px;background:var(--a);box-shadow:0 0 10px var(--a)}
 .tab span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--mu);flex:none}
+/* icône du site à la place de la pastille (qui reste si le site n'en a pas) ; #list l'emporte sur les thèmes */
+#list .dot.fav{width:16px;height:16px;border-radius:3px;background:none;border:0;box-shadow:none}
+.dot.fav img{width:16px;height:16px;border-radius:3px;display:block}
 .tab.on .dot{background:var(--a)}
 .tab.ld .dot{animation:p .8s infinite alternate}
 .tab.drag{z-index:2;transition:none;box-shadow:0 6px 18px #0009}
+/* groupes d'onglets : pastille du groupe avant son premier onglet, liseré de sa couleur sous ses onglets ; replié, seuls
+   la pastille et l'onglet affiché restent */
+.grp{flex:none;align-self:center;min-width:14px;max-width:150px;height:20px;margin:2px 1px 0 3px;padding:0 7px;border-radius:7px;background:var(--g);color:#0b0c10;
+  font-size:11.5px;font-weight:700;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.grp.shut{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--g)}
+.grp.ed{overflow:visible;padding:0}
+.grp input{width:118px;height:20px;padding:0 7px;border:0;border-radius:7px;background:var(--tx);color:#0b0c10;font:inherit;outline:2px solid var(--g)}
+.tab.ing::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--g)}
+#list .tab.gh{display:none}
+.tab.drag.out{opacity:.75;outline:1px dashed var(--a)} /* sorti de la barre : il partira dans une autre fenêtre */
+/* fenêtre de navigation privée : pastille à côté de Volty, liseré sous la barre d'onglets */
+#priv{flex:none;align-self:center;margin:0 8px 0 2px;padding:3px 10px;border-radius:10px;background:color-mix(in srgb,var(--a) 22%,var(--bg2));color:var(--tx);font-size:11.5px;white-space:nowrap}
+#priv[hidden]{display:none}
+body.private #tabs{box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--a) 70%,transparent)}
 .tab.zz{opacity:.5}
 .tab.zz .dot{background:none;border:1px solid var(--mu)}
 /* épinglé : compact, sans titre ni croix (titre au survol) ; #list l'emporte sur les thèmes */
-#list .tab.pin{flex:none;min-width:0}
+#list .tab.pin{flex:none;width:36px;min-width:0;padding:0;justify-content:center}
+/* onglets serrés (classes posées par fitTabs) : d'abord plus de croix hors de l'onglet actif, puis l'icône seule */
+#list.tight .tab:not(.on) .c{display:none}
+#list.mini .tab:not(.pin){padding:0;gap:2px;justify-content:center}
+#list.mini .tab:not(.pin) span{display:none}
+#list.mini .tab.on:not(.pin){min-width:52px}
 .tab.pin span,.tab.pin .c{display:none}
 @keyframes p{to{opacity:.2;transform:scale(.6)}}
 .x{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;opacity:.6}
@@ -55,7 +84,8 @@ nav h3:first-child{padding-top:0}
 .soon{display:grid;place-items:center;gap:10px;padding:48px 16px;background:var(--bg2);border-radius:var(--r);border:1px dashed var(--bg3);text-align:center}
 .soon b{font-size:15px}
 .tag{padding:4px 10px;border-radius:12px;background:color-mix(in srgb,var(--a) 20%,transparent);color:var(--a);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-#add{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
+#add,#tsbtn{width:30px;height:30px;margin-bottom:2px;border-radius:8px;display:grid;place-items:center;color:var(--mu)}
+#tsbtn{width:24px;flex:none}#tsbtn:hover{color:var(--tx);background:var(--bg2)}#tsbtn svg{width:14px;height:14px}
 #add:hover{color:var(--a);background:var(--bg2)}
 /* boutons de fenêtre (plus de barre de titre Windows) */
 .wc{display:flex;align-self:stretch;margin:0 -8px 0 auto;padding-left:6px}
@@ -710,7 +740,7 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 #drawer .he .t{flex:1;min-width:0;line-height:17px}
 #drawer .he .t b{display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #drawer .he .t small{display:block;font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#drawer .he time{width:36px;text-align:right;font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums;flex:none}
+#drawer .he time{min-width:36px;white-space:nowrap;text-align:right;font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums;flex:none}
 #drawer .he .x{display:none;place-items:center}
 #drawer .he:hover time{display:none}
 #drawer .he:hover .x,#drawer .he:focus-within .x{display:grid}
@@ -784,6 +814,30 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 #rsico:hover .rck{box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 30%,transparent)}
 #url:has(+#rsico:not([hidden])){padding-right:40px}
 /* traduction : même place, à gauche de l'icône jaune quand elle est là ; accent si la page est en langue étrangère ou traduite */
+#dlbtn.on{color:var(--a)}
+.row.dl>div{flex:1;min-width:0}
+.row.dl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.dl .bs{display:flex;gap:6px;flex:none}
+.row.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),var(--bg3) var(--p))}
+/* cadenas à gauche de l'adresse : connexion chiffrée, ou « Non sécurisé » en http */
+#sec{display:flex;align-items:center;gap:5px;flex:none;margin:0 -2px 0 8px;color:var(--mu);font-size:11.5px;white-space:nowrap}
+#sec[hidden]{display:none}
+#sec svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#sec .open,#sec.no .shut{display:none}
+#sec.no{color:#ff9d6c}#sec.no .open{display:inline}
+/* suggestions de la barre d'adresse : bande sous la barre, par-dessus la page (Volt étend l'interface, commande « over ») */
+#sugg{position:fixed;left:0;right:0;top:84px;z-index:8;max-height:386px;overflow-y:auto;padding:4px 0 8px;background:var(--bg3);border-bottom:1px solid #000;box-shadow:0 14px 26px #0009}
+#sugg[hidden]{display:none}
+.row.tk{padding:9px 16px;margin-bottom:5px}.row.tk>div{flex:1 1 0;min-width:0}.row.tk b,.row.tk small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.tk .n{flex:none;width:84px;text-align:right;font-variant-numeric:tabular-nums}.row.tk .btn{flex:none;width:104px}.row.tk .btn:disabled{opacity:.35}
+#sugg .sg{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-radius:8px;white-space:nowrap;cursor:default}
+#sugg .sg.k,#sugg .sg:hover{background:var(--bg2)}
+#sugg .sg b{flex:0 1 auto;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis}
+#sugg .sg small{flex:1 1 0;min-width:0;color:var(--mu);overflow:hidden;text-overflow:ellipsis}
+#sugg .sg .st{flex:none;color:var(--a);font-style:normal}
+#signico{color:var(--a)}
+#popico,#zoomico{width:auto;min-width:30px;padding:0 6px;gap:3px;font-size:11.5px;color:var(--a)}
+#popico b{font-weight:600}
 #trico{position:relative;width:26px;height:26px;margin:0 10px 0 -40px;display:grid;place-items:center;border-radius:50%;flex:none;color:var(--mu);transition:color .15s,background .15s}
 #trico:hover{color:var(--tx);background:var(--bg3)}
 #trico.on{color:var(--a)}
@@ -831,10 +885,14 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 </style>
 </head>
 <body class="nofav">
+<div id="vuse" hidden></div>
+<div id="sugg" hidden></div>
 <div id="tabs">
   <div id="logo" data-load="low"></div>
+  <span id="priv" hidden title="Ni historique, ni cookies, ni session gardés pour cette fenêtre">Navigation privée</span>
   <div id="list"></div>
   <button id="add" title="Nouvel onglet (Ctrl+T)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button id="tsbtn" title="Rechercher dans les onglets (Ctrl+Maj+A)"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
   <div class="wc">
     <button id="wmin" title="Réduire"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
     <button id="wmax" title="Agrandir"><svg class="m" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></svg><svg class="r" viewBox="0 0 24 24"><rect x="5" y="8" width="11" height="11" rx="1"/><path d="M8 8V5h11v11h-3"/></svg></button>
@@ -849,13 +907,19 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
   <button class="ib" data-c="fwd" title="Suivant"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
   <button class="ib" data-c="reload" title="Actualiser (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
   <button class="ib" data-c="home" title="Accueil"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3z"/></svg></button>
+  <span id="sec" hidden><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="shut" d="M8 11V7a4 4 0 0 1 8 0v4"/><path class="open" d="M8 11V7a4 4 0 0 1 7.5-2"/></svg><b></b></span>
   <input id="url" spellcheck="false" placeholder="Rechercher ou saisir une adresse">
   <button id="rsico" hidden><span class="rck"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></button>
   <button id="trico" hidden><svg viewBox="0 0 24 24"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg></button>
+  <button class="ib" id="popico" hidden><svg viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="11" rx="2"/><path d="M7 20h13a1 1 0 0 0 1-1V9M4 4l16 16"/></svg><b></b></button>
+  <button class="ib" id="zoomico" hidden title="Revenir à 100 %"></button>
+  <button class="ib" id="signico" hidden title="Remplir et signer ce PDF"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4M3 22c2-1.5 3.5 1.5 6 0s3.500-1.5 6 0"/></svg></button>
+  <button class="ib" id="ccico" hidden title="Remplir une carte enregistrée"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg></button>
   <button class="ib" id="pwico" hidden title="Remplir l'identifiant enregistré"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg></button>
   <button id="storebtn" hidden></button>
   <div id="exts"><div class="in"></div></div>
   <button class="ib" id="extbtn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+  <button class="ib" id="dlbtn" title="Téléchargements (Ctrl+J)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
   <button class="ib" id="favtoggle" title="Afficher / masquer la barre de favoris"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
   <button class="ib" id="star" title="Ajouter aux favoris (Ctrl+D)"><svg viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
   <button class="ib" id="game" title="Mode Jeu"><svg viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg></button>
@@ -920,19 +984,32 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
       <div class="opts">
         <div><h3 class="cap">Importer vos favoris</h3><div class="implist"></div>
           <div class="row pw"><span class="gi"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg></span><div><b>Mots de passe</b><small>Volt propose d'enregistrer vos identifiants quand vous vous connectez. L'import depuis un autre navigateur n'est pas possible.</small></div><input type="checkbox" class="sw" data-k="save_passwords"></div></div>
-        <div><h3 class="cap">Navigateur par défaut</h3>
-          <div class="row"><div><b>Navigateur par défaut</b><small id="hdefs"></small></div><button class="btn g defbtn" id="hdefbtn">Faire de Volt le navigateur par défaut</button><span class="done" id="hdefok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Volt est votre navigateur par défaut</span></div></div>
+        <div><h3 class="cap">Dans Windows</h3>
+          <div class="row"><div><b>Navigateur par défaut</b><small id="hdefs"></small></div><button class="btn g defbtn" id="hdefbtn">Faire de Volt le navigateur par défaut</button><span class="done" id="hdefok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Volt est votre navigateur par défaut</span></div>
+          <div class="row"><div><b>Raccourci sur le bureau</b><small>Et dans le menu Démarrer, créés quand vous cliquez sur Commencer.</small></div><input type="checkbox" class="sw" id="hlnk" checked></div></div>
         <div><h3 class="cap">Apparence</h3><div class="themes" id="hthemes"></div><div class="row"><div><b>Couleur d'accent</b></div><div class="sw-c" id="hcolors"></div></div></div>
       </div>
     </section>
-    <section id="s-favs">
+    <section id="s-favs" data-cat>
       <h2>Favoris</h2>
       <div class="row"><div><b>Barre de favoris</b><small>Aussi avec la petite flèche de la barre d'adresse</small></div><input type="checkbox" class="sw" data-k="favbar"></div>
       <div class="row"><div><b>Style de la barre</b><small>Étagères : un dossier ouvert déplie une seconde rangée</small></div><select data-k="favbar_style"><option value="etageres">Étagères</option><option value="ruban">Ruban</option><option value="icones">Icônes</option></select></div>
+      <div class="row"><div><b>Ouverture des dossiers</b><small>En barre : le dossier déplie ses favoris dans la barre. En menu : une liste s'ouvre sous le dossier, comme dans Chrome (Ctrl + clic sur une ligne : nouvel onglet).</small></div><select data-k="fav_open"><option value="barre">En barre</option><option value="menu">En menu</option></select></div>
+      <div class="row"><div><b>Fichier de favoris</b><small>Format HTML que savent écrire et relire Chrome, Edge, Firefox et Opera : pour apporter vos favoris d'un autre navigateur, ou en garder une copie.</small></div><span style="display:flex;gap:6px;flex:none"><button class="btn g" id="favimp">Importer…</button><button class="btn g" id="favexp">Exporter…</button></span></div>
       <div class="row"><div><b>Dossiers</b></div><button class="btn" id="newdir">Nouveau dossier</button></div>
       <div id="dirlist"></div>
       <h2 style="margin-top:22px;font-size:16px">Sites favoris</h2>
       <div id="favlist"></div>
+    </section>
+    <section id="s-dl">
+      <h2>Téléchargements</h2>
+      <div class="row"><div><b id="dlsum"></b><small id="dlwhere"></small></div><span style="display:flex;gap:6px;flex:none"><button class="btn g" id="dlfolder">Ouvrir le dossier</button><button class="btn g" id="dlclear">Vider la liste</button></span></div>
+      <div id="dllist"></div>
+    </section>
+    <section id="s-tasks">
+      <h2>Gestionnaire de tâches</h2>
+      <div class="row"><div><b id="tksum"></b><small>Mémoire et processeur de chaque partie de Volt. Décharger un onglet libère sa mémoire : il reste dans la barre et se recharge au clic.</small></div></div>
+      <div id="tklist"></div>
     </section>
     <section id="s-hist">
       <h2>Historique</h2>
@@ -944,16 +1021,21 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
       <div class="row"><div><b>Mode Jeu</b><small>Les onglets en arrière-plan passent en mémoire minimale pour laisser la place à vos jeux</small></div><input type="checkbox" class="sw" data-k="game_mode"></div>
       <div class="row"><div><b>Mise en veille des onglets</b><small>Les onglets inutilisés libèrent la RAM et se rechargent au clic</small></div><select data-k="sleep_min" data-num><option value="5">Après 5 min</option><option value="10">Après 10 min</option><option value="20">Après 20 min</option><option value="30">Après 30 min</option><option value="60">Après 1 h</option><option value="0">Jamais</option></select></div>
       <div class="row"><div><b>Onglets gardés en mémoire</b><small>Au-delà, les onglets les plus anciens sont déchargés et se rechargent au clic · 7 ≈ 1 Go pour 100 onglets</small></div><select data-k="keep_loaded" data-num><option value="3">3 onglets</option><option value="5">5 onglets</option><option value="7">7 onglets</option><option value="10">10 onglets</option><option value="15">15 onglets</option><option value="25">25 onglets</option><option value="0">Illimité</option></select></div>
+      <div class="row"><div><b>Gestionnaire de tâches</b><small>Mémoire et processeur de chaque onglet, pour décharger les plus lourds (Maj + Échap)</small></div><button class="btn" data-go="tasks">Ouvrir</button></div>
       <div class="row"><div><b>Volt réduit = priorité basse</b><small>Automatique : quand vous réduisez Volt, Windows sert votre jeu en premier</small></div></div>
     </section>
     <section id="s-start" data-cat>
       <h2>Général</h2>
+      <div class="row"><div><b>Langue</b><small>Appliquée tout de suite à Volt · les sites et les menus des pages suivent au redémarrage</small></div><button class="btn" id="lrestart" hidden>Redémarrer</button><select data-k="lang" id="lang"><option value="auto">Automatique (langue de Windows)</option><option value="fr">Français</option></select></div>
       <div class="row"><div><b>Au démarrage</b><small>Les onglets de la dernière session · un redémarrage ou une mise à jour les rouvre toujours</small></div>
         <select data-k="startup"><option value="proposer">Proposer de reprendre</option><option value="auto">Reprendre automatiquement</option><option value="neuf">Toujours démarrer à neuf</option></select></div>
       <div class="row"><div><b>Page d'accueil</b><small>Ouverte par les nouveaux onglets et le bouton Accueil</small></div><input type="text" data-k="home"></div>
+      <div class="row"><div><b>Dossier des téléchargements</b><small id="dldir"></small></div><span style="display:flex;gap:6px;flex:none"><button class="btn g" id="dlreset" hidden>Par défaut</button><button class="btn" id="dlpick">Choisir…</button></span></div>
+      <div class="row"><div><b>Demander où enregistrer chaque fichier</b><small>Une fenêtre « Enregistrer sous » s'ouvre à chaque téléchargement, pour choisir le dossier et le nom</small></div><input type="checkbox" class="sw" data-k="download_ask"></div>
       <div class="row"><div><b>Moteur de recherche</b><small>Utilisé par la barre d'adresse</small></div>
         <select data-k="search"><option value="google">Google</option><option value="duckduckgo">DuckDuckGo</option><option value="bing">Bing</option><option value="brave">Brave Search</option></select></div>
       <div class="row"><div><b>Barre de favoris</b><small>Aussi avec la petite flèche de la barre d'adresse</small></div><input type="checkbox" class="sw" data-k="favbar"></div>
+      <div class="row"><div><b>Raccourci sur le bureau</b><small>Et dans le menu Démarrer. Un raccourci Volt déjà présent n'est pas modifié.</small></div><button class="btn g" id="mklnk">Créer</button></div>
       <div class="row"><div><b>Traduire automatiquement les pages en langue étrangère</b><small>En français, par Google Traduction, comme l'icône de la barre d'adresse : l'adresse et le contenu de la page sont envoyés à Google. Sur la version traduite, vous n'êtes pas connecté au site et les formulaires sont bloqués ; les applications lourdes (YouTube, Reddit) peuvent ne pas s'afficher. Jamais sur une page de connexion.</small></div><input type="checkbox" class="sw" data-k="translate_auto"></div>
       <div id="ntlist"></div>
       <h2 style="margin-top:22px;font-size:16px">Mises à jour</h2>
@@ -974,9 +1056,16 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
     <section id="s-priv" data-cat>
       <h2>Confidentialité</h2>
       <div class="row"><div><b>Bloqueur de pubs et traqueurs</b><small>uBlock Origin Lite : pages plus légères et plus rapides</small></div><input type="checkbox" class="sw" data-k="adblock"></div>
+      <div class="row"><div><b>Alerte sur les sites dangereux</b><small>Prévient avant d'ouvrir un site d'hameçonnage ou un téléchargement malveillant, grâce à Microsoft Defender SmartScreen : les adresses visitées lui sont envoyées pour vérification. Prend effet au prochain démarrage de Volt.</small></div><input type="checkbox" class="sw" data-k="safe_browsing"></div>
       <div class="row"><div><b>Proposer d'enregistrer les mots de passe</b><small>Volt propose d'enregistrer vos identifiants quand vous vous connectez ; rien n'est enregistré sans votre accord. Désactivé, Volt ne propose plus d'en enregistrer, mais ceux déjà enregistrés restent remplis tant que vous ne les avez pas supprimés.</small></div><input type="checkbox" class="sw" data-k="save_passwords"></div>
       <div class="row"><div><b>Gérer les mots de passe</b><small>Voir, modifier, importer ou exporter vos identifiants enregistrés dans Volt</small></div><button class="btn" data-go="pass">Ouvrir</button></div>
+      <div class="row"><div><b>Cartes de paiement</b><small>Vos cartes enregistrées dans Volt, pour remplir les pages de paiement : chiffrées sur ce PC, sans le cryptogramme</small></div><button class="btn" data-go="cards">Gérer</button></div>
+      <div class="row"><div><b>Remplir les formulaires</b><small>Volt retient ce que vous tapez dans les formulaires (nom, adresse, e-mail, téléphone) et vous le propose ensuite dans les champs. Jamais les mots de passe ni les cartes, gérés à part. « Effacer les données de navigation » vide aussi cette mémoire.</small></div><input type="checkbox" class="sw" data-k="autofill"></div>
       <div class="row" id="pwrow"><div><b>Supprimer les mots de passe enregistrés</b><small>Vide le coffre de Volt. Les cookies, l'historique et les autres données ne sont pas touchés.</small></div><button class="btn g" id="pwclear">Supprimer</button></div>
+      <div class="row"><div><b>Fenêtres surgissantes</b><small>Bloquées quand un site en ouvre sans que vous ayez cliqué. L'icône qui apparaît alors dans la barre d'adresse permet de les ouvrir, ou d'autoriser le site : les sites autorisés sont listés ici.</small></div></div>
+      <div id="palist"></div>
+      <div class="row"><div><b>Autorisations des sites</b><small>Caméra, micro, position, notifications… : ce que vous avez accepté ou refusé quand un site l'a demandé. Retirez une ligne pour que le site redemande.</small></div></div>
+      <div id="permlist"></div>
       <div class="row"><div><b>Effacer les données de navigation</b><small>Historique, cookies, cache et données des sites</small></div><button class="btn g" id="clear">Effacer</button></div>
     </section>
     <section id="s-pass" data-cat>
@@ -992,6 +1081,18 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
       <div id="pwform" hidden></div>
       <div id="pwlist"></div>
       <div id="pwempty" class="pwempty" hidden>Aucun mot de passe enregistré. Connectez-vous à un site, ou importez un fichier CSV.</div>
+    </section>
+    <section id="s-cards" data-cat>
+      <h2>Cartes de paiement</h2>
+      <div class="row"><div><b>Enregistrées dans Volt</b><small>Chiffrées sur votre PC. Sur une page de paiement, cliquez dans le champ du numéro de carte, puis sur l'icône de carte de la barre d'adresse : Volt vous montre le site qui va la recevoir, puis remplit le numéro, le nom et la date après Windows Hello (code PIN ou empreinte). Le cryptogramme n'est jamais enregistré : vous le tapez à chaque achat.</small></div></div>
+      <div class="pwtools">
+        <input type="text" id="ccname" placeholder="Nom sur la carte" autocomplete="off">
+        <input type="text" id="ccnum" placeholder="Numéro de carte" inputmode="numeric" autocomplete="off">
+        <input type="text" id="ccexp" placeholder="MM/AA" autocomplete="off" style="max-width:96px">
+        <button class="btn" id="ccadd">Ajouter</button>
+      </div>
+      <div id="cclist"></div>
+      <div id="ccempty" class="pwempty" hidden>Aucune carte enregistrée.</div>
     </section>
     <section id="s-exts" data-cat>
       <h2>Extensions</h2>
@@ -1027,13 +1128,37 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 <script>
 const $=q=>document.querySelector(q), $$=q=>[...document.querySelectorAll(q)];
 const send=o=>window.ipc.postMessage(JSON.stringify(o));
+// ===== langue : le français est le texte source, écrit tel quel dans cette page ; LANG.dict (src/lang/<code>.json, clé =
+// texte français) le traduit. Le Rust remplace la ligne LANG (lang::ui) ; laissée telle quelle : français. Changer de
+// langue recharge la page : tout texte est donc traduit une fois, à l'endroit où il est écrit. =====
+const LANG={code:"fr",dict:{},list:[],go:""};
+// dates et nombres : la variante régionale du moteur si elle est de cette langue (en-GB : 14:30, en-US : 2:30 PM)
+const LOC=navigator.language.startsWith(LANG.code)?navigator.language:LANG.code;
+// catégories de pluriel de la langue, dans l'ordre où un dictionnaire écrit ses formes (anglais : one|other)
+const PR=new Intl.PluralRules(LANG.code),PC=["zero","one","two","few","many","other"].filter(c=>PR.resolvedOptions().pluralCategories.includes(c));
+// T("texte") : sa traduction, ou le texte lui-même si elle manque. T("… {x} …",{x}) : {x} remplacé par a.x.
+// T("un|plusieurs",{n}) : accordé selon n (français : pluriel au-delà de 1 ; traduction : une forme par catégorie de PC).
+// Tout texte visible écrit dans ce script passe par T (test every_text_is_translated, src/lang.rs).
+function T(s,a){
+  const d=LANG.dict[s];let r=d??s;
+  if(a&&a.n!=null){const f=r.split("|");r=f[d==null?+(a.n>1):PC.indexOf(PR.select(a.n))]??f[f.length-1]}
+  return a?r.replace(/\{(\w+)\}/g,(m,k)=>a[k]??m):r;
+}
+document.documentElement.lang=LANG.code;
+// HTML écrit en français plus haut : textes et infobulles traduits ici, avant tout contenu venu de l'utilisateur
+if(LANG.code!=="fr"){
+  for(const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);w.nextNode();){const n=w.currentNode,x=n.nodeValue.trim();if(x&&n.parentNode.tagName!=="SCRIPT")n.nodeValue=n.nodeValue.replace(x,()=>T(x))}
+  for(const a of["title","placeholder","aria-label"])$$(`[${a}]`).forEach(e=>e.setAttribute(a,T(e.getAttribute(a))));
+}
+// réglage « Langue » : une entrée par dictionnaire, sous son propre nom
+LANG.list.forEach(([c,n])=>$("#lang").append(new Option(n,c)));
 const COLORS=["#9b5cff","#00e5ff","#2bff88","#ff3b5c","#ff8a00","#ff4fd8"];
 // palette de l'éditeur de dossier : icônes utiles et une douzaine de couleurs lisibles sur fond sombre
 const DIRICONS=["🎮","🎬","🎵","💬","💻","🛒","📰","🧰","🏦","📚","✈️","⚽","⭐","📁","🔧","🎨","📺","🖼️","🐙","🔖"];
 const DIRCOLORS=["#ff3b5c","#ff8a00","#ffcf3b","#2bff88","#00e5ff","#4f9cff","#9b5cff","#c084fc","#ff4fd8","#ff6b9a","#34d399","#d6a77a"];
 // thème -> [nom, accent par défaut, fond, surface]
-const THEMES={volt:["Volt","#9b5cff","#0b0c10","#1b1e28"],classique:["Classique","#8ab4f8","#1b1c1e","#323336"],verre:["Verre","#7aa2ff","#0c0e1b","#2a2f4a"],
-  esport:["Esport","#00e5ff","#09090e","#1e1e2a"],pastel:["Pastel","#f4a7c6","#1c1923","#2f2a3a"],angulaire:["Angulaire","#ff4655","#0f1923","#1f2e3c"]};
+const THEMES={volt:["Volt","#9b5cff","#0b0c10","#1b1e28"],classique:[T("Classique"),"#8ab4f8","#1b1c1e","#323336"],verre:[T("Verre"),"#7aa2ff","#0c0e1b","#2a2f4a"],
+  esport:["Esport","#00e5ff","#09090e","#1e1e2a"],pastel:["Pastel","#f4a7c6","#1c1923","#2f2a3a"],angulaire:[T("Angulaire"),"#ff4655","#0f1923","#1f2e3c"]};
 let S={}, panel=false;
 
 // ===== Volty =====
@@ -1041,11 +1166,11 @@ const VBOLT='M39 0L24 15h8l-4 10 15-15h-8z',VBODY='M22 22h20a14 14 0 0 1 14 14v8
 const VEYE='M17 37.5a4.5 4.5 0 0 1 9 0v4a4.5 4.5 0 0 1-9 0z',VEYE2='M38 37.5a4.5 4.5 0 0 1 9 0v4a4.5 4.5 0 0 1-9 0z';
 const VEX={normal:[VEYE,VEYE2],det:['M17 34.5l9 3.5v3.5a4.5 4.5 0 0 1-9 0z','M47 34.5l-9 3.5v3.5a4.5 4.5 0 0 0 9 0z'],wink:[VEYE,'M36.5 44a6 6 0 0 1 12 0h-3.6a2.4 2.4 0 0 0-4.8 0z']};
 // [id, nom, début MMJJ, fin MMJJ] : la première période qui correspond gagne (Nouvel an avant Noël)
-const PERIODS=[["nouvelan","Nouvel an",1230,102],["noel","Noël",1201,106],["halloween","Halloween",1015,1102],["valentin","Saint-Valentin",207,215],["paques","Pâques",320,420],["ete","Été",621,831]];
-const MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+const PERIODS=[["nouvelan",T("Nouvel an"),1230,102],["noel",T("Noël"),1201,106],["halloween","Halloween",1015,1102],["valentin",T("Saint-Valentin"),207,215],["paques",T("Pâques"),320,420],["ete",T("Été"),621,831]];
 const inPeriod=(k,[,,a,b])=>a<=b?k>=a&&k<=b:k>=a||k<=b;
 const seasonFor=d=>(PERIODS.find(p=>inPeriod((d.getMonth()+1)*100+d.getDate(),p))||[""])[0];
-const mmdd=v=>`${v%100===1?"1er":v%100} ${MOIS[(v/100|0)-1]}`;
+// « 6 janv. », « Jan 6 » : jour et mois abrégé dans la langue ; le premier du mois s'écrit « 1er » en français
+const mmdd=v=>{const d=new Date(2000,(v/100|0)-1,v%100).toLocaleDateString(LOC,{day:"numeric",month:"short"});return LANG.code==="fr"?d.replace(/^1 /,"1er "):d};
 const loadOf=p=>p<10?"idle":p<35?"low":p<65?"mid":p<90?"high":"max";
 function voltySvg(s,gaming){
   const hides=["halloween","noel","nouvelan"].includes(s),band='M3 36v-5a29 27 0 0 1 58 0v5';
@@ -1080,12 +1205,25 @@ function drawVolty(){
   l.dataset.season=s;l.innerHTML=`<div class="fx">${voltyFx(s)}</div>`+voltySvg(s,!!S.game_mode);
 }
 // appelé par Volt avec la charge processeur (%)
-function volty(p){const l=$("#logo");l.dataset.load=loadOf(p);l.title=`Volty · processeur ${p} %`}
+function volty(p){$("#logo").dataset.load=loadOf(p)}
+// Souris sur Volty : ce que consomme Volt tout entier (ses onglets compris). Demandé à Volt chaque seconde pendant le
+// survol seulement ; processeur et carte graphique sont des écarts entre deux relevés, donc « … » la première seconde.
+let vuT=0;
+$("#logo").addEventListener("mouseenter",()=>{if(vuT)return;const ask=()=>send({cmd:"usage"});ask();vuT=setInterval(ask,1000)});
+$("#logo").addEventListener("mouseleave",()=>{clearInterval(vuT);vuT=0;$("#vuse").hidden=true;send({cmd:"usage_stop"})});
+function voltyUse(u){
+  if(!vuT)return;
+  const mem=v=>v>=1024?T("{x} Go",{x:(v/1024).toLocaleString(LOC,{maximumFractionDigits:1})}):T("{x} Mo",{x:fmt(v)}),
+    pct=v=>v==null?"…":T("{x} %",{x:v<10?v.toLocaleString(LOC,{maximumFractionDigits:1}):Math.round(v)}),
+    it=(k,v)=>`<span>${k} <b>${v}</b></span>`;
+  $("#vuse").innerHTML=it(T("Mémoire"),mem(u.ram))+it(T("Processeur"),pct(u.cpu))+it(T("Carte graphique"),pct(u.gpu))+(u.vram==null?"":it(T("Mémoire vidéo"),mem(u.vram)));
+  $("#vuse").hidden=false;
+}
 function renderPeriods(){
   const cur=seasonFor(new Date());
   $("#periods").replaceChildren(...[...PERIODS].sort((a,b)=>a[2]-b[2]).map(p=>{
     const r=document.createElement("div");r.className="row per"+(p[0]===cur?" on":"");
-    r.innerHTML=`<div><b>${p[1]}</b><small>Du ${mmdd(p[2])} au ${mmdd(p[3])}</small></div>`+(p[0]===cur?'<span class="tag">En cours</span>':"");
+    r.innerHTML=`<div><b>${p[1]}</b><small>${T("Du {a} au {b}",{a:mmdd(p[2]),b:mmdd(p[3])})}</small></div>`+(p[0]===cur?`<span class="tag">${T("En cours")}</span>`:"");
     return r;
   }));
 }
@@ -1099,28 +1237,60 @@ addEventListener("pointerdown",e=>{if(e.button===0){clearTimeout(held);held=setT
 addEventListener("pointerup",()=>held&&setTimeout(flush),true); // après le clic
 addEventListener("blur",()=>held&&flush());
 // onglets : un élément par id, mis à jour sur place ; `want` : onglet choisi à l'appui, montré avant la réponse du Rust
-const TABS=new Map();let want=0,wantT=0,lastAct=0;
+const TABS=new Map(),CHIPS=new Map();let want=0,wantT=0,lastAct=0,GR=[]; // CHIPS : pastille de chaque groupe ; GR : groupes du dernier rendu
 const SND=(t)=>(t.audio&&!t.muted?'<i class="wave"><b></b><b></b><b></b><b></b></i>':'<i class="dot"></i>')
-  +(t.audio||t.muted?'<button class="x m'+(t.muted?' off':'')+'" title="'+(t.muted?'Réactiver le son':'Couper le son')+'"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/>'
+  +(t.audio||t.muted?'<button class="x m'+(t.muted?' off':'')+'" title="'+(t.muted?T('Réactiver le son'):T('Couper le son'))+'"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/>'
     +(t.muted?'<path d="m22 9-6 6M16 9l6 6"/>':'<path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>')+'</svg></button>':'');
 function drawTabs(st,act){
-  const l=$("#list");let prev=null;
+  const l=$("#list"),G=new Map((GR=st.groups||[]).map(g=>[g.id,g])),chips=new Set();let prev=null,lastG=0;
+  const put=el=>{if((prev?prev.nextSibling:l.firstChild)!==el)prev?prev.after(el):l.prepend(el);prev=el};
   for(const t of st.tabs){
+    const g=G.get(t.group);
+    // premier onglet d'un groupe : la pastille du groupe juste avant lui (son nom ; replié, le nombre d'onglets en plus)
+    if(g&&g.id!==lastG){
+      let ch=CHIPS.get(g.id);
+      if(!ch){ch=h("div","grp");ch.dataset.g=g.id;CHIPS.set(g.id,ch)}
+      const n=st.tabs.filter(x=>x.group===g.id).length,tx=g.name+(g.closed?(g.name?" · ":"")+n:"");
+      if(!ch.classList.contains("ed")&&ch.textContent!==tx)ch.textContent=tx;
+      ch.classList.toggle("shut",!!g.closed);ch.style.setProperty("--g",g.color);
+      ch.title=(g.name||T("Groupe sans nom"))+" · "+T("{n} onglet|{n} onglets",{n})+"\n"+T("Clic : replier ou déplier · double clic : renommer · clic droit : couleur, dissocier, fermer");
+      put(ch);chips.add(g.id);
+    }
+    lastG=g?g.id:0;
     let b=TABS.get(t.id);
     if(!b){b=h("div");b.dataset.id=t.id;b.innerHTML='<i class="dot"></i><span></span><button class="x c"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';b._s="";TABS.set(t.id,b)}
-    const c="tab"+(t.id===act?" on":"")+(t.loading?" ld":"")+(t.asleep?" zz":"")+(t.pinned?" pin":""),tx=(t.title||t.url).replace(/^https?:\/\/(www\.)?/,""),s=SND(t);
+    const c="tab"+(t.id===act?" on":"")+(t.loading?" ld":"")+(t.asleep?" zz":"")+(t.pinned?" pin":"")+(g?" ing":"")+(g&&g.closed&&t.id!==act?" gh":""),tx=(t.title||t.url).replace(/^https?:\/\/(www\.)?/,""),s=SND(t);
+    b.dataset.g=g?g.id:"";g?b.style.setProperty("--g",g.color):b.style.removeProperty("--g");
     if(b.className!==c)b.className=c;
     if(b.title!==t.title)b.title=t.title;
     if(b.children[1].textContent!==tx)b.children[1].textContent=tx;
     // son : icône et bouton refaits seulement quand l'état du son de cet onglet change
-    if(b._s!==s){b._s=s;b.querySelector(".m")?.remove();const k=document.createElement("template");k.innerHTML=s;b.firstChild.replaceWith(k.content.firstChild);if(k.content.firstChild)b.lastChild.before(k.content.firstChild)}
-    if((prev?prev.nextSibling:l.firstChild)!==b)prev?prev.after(b):l.prepend(b);
-    prev=b;
+    if(b._s!==s){b._s=s;b._i=null;b.querySelector(".m")?.remove();const k=document.createElement("template");k.innerHTML=s;b.firstChild.replaceWith(k.content.firstChild);if(k.content.firstChild)b.lastChild.before(k.content.firstChild)}
+    tabIcon(b,t);
+    put(b);
   }
   const ids=new Set(st.tabs.map(t=>t.id));
   for(const [id,b] of TABS)if(!ids.has(id)){b.remove();TABS.delete(id)}
+  for(const [id,ch] of CHIPS)if(!chips.has(id)){ch.remove();CHIPS.delete(id)}
+  if(st.gedit)groupRename(st.gedit);
+  fitTabs();
   if(act!==lastAct){lastAct=act;TABS.get(act)?.scrollIntoView({inline:"nearest",block:"nearest"})}
 }
+// icône du site dans la pastille : celle qu'annonce la page (t.icon), sinon /favicon.ico ; posée seulement une fois
+// chargée, donc jamais d'image cassée. Onglet qui joue du son : l'onde garde la place.
+function tabIcon(b,t){
+  const d=b.firstChild;let src="";
+  try{src=t.icon||(/^https?:/.test(t.url)?new URL(t.url).origin+"/favicon.ico":"")}catch{}
+  if(!d.classList.contains("dot")||b._i===src)return;
+  b._i=src;d.replaceChildren();d.classList.remove("fav");
+  if(src){const i=new Image();i.onload=()=>{if(b._i===src&&d.isConnected){d.replaceChildren(i);d.classList.add("fav")}};i.src=src}
+}
+// largeur d'un onglet -> classes de la barre : « tight » sous 104 px, « mini » (icône seule) sous 64 px
+function fitTabs(){
+  const l=$("#list"),t=l.querySelector(".tab:not(.pin):not(.on):not(.gh)")||l.querySelector(".tab:not(.pin):not(.gh)"),w=t?t.getBoundingClientRect().width:999;
+  l.classList.toggle("tight",w<104);l.classList.toggle("mini",w<64);
+}
+new ResizeObserver(fitTabs).observe($("#list"));
 // appui sur un onglet : actif tout de suite dans la barre, comme Chrome ; croix et sourdine restent au clic
 function pick(id){
   want=id;clearTimeout(wantT);wantT=setTimeout(()=>want=0,1000);
@@ -1132,8 +1302,21 @@ $("#list").onmousedown=e=>{
   if(e.button===1){send({cmd:"close",id:+b.dataset.id});e.preventDefault()}
   else if(e.button===0&&!e.target.closest(".x"))pick(+b.dataset.id);
 };
-$("#list").onclick=e=>{const b=e.target.closest(".tab"),x=e.target.closest(".x");if(b&&x)send({cmd:x.classList.contains("m")?"mute":"close",id:+b.dataset.id})};
-$("#list").oncontextmenu=e=>{const b=e.target.closest(".tab");if(b){e.preventDefault();send({cmd:"tabmenu",id:+b.dataset.id})}}; // menu natif : un menu HTML serait coupé par la page
+// pastille de groupe sous la souris (pas pendant la saisie de son nom)
+const chipOf=e=>{const c=e.target.closest(".grp");return c&&!c.classList.contains("ed")?c:null};
+$("#list").onclick=e=>{const b=e.target.closest(".tab"),x=e.target.closest(".x"),c=chipOf(e);if(b&&x)send({cmd:x.classList.contains("m")?"mute":"close",id:+b.dataset.id});if(c)send({cmd:"groupdo",id:+c.dataset.g,action:"toggle"})};
+$("#list").ondblclick=e=>{const c=chipOf(e);if(c)groupRename(+c.dataset.g)}; // les deux clics ont replié puis déplié : rien n'a bougé
+$("#list").oncontextmenu=e=>{const b=e.target.closest(".tab"),c=chipOf(e);if(b||c)e.preventDefault();if(b)send({cmd:"tabmenu",id:+b.dataset.id});if(c)send({cmd:"groupmenu",id:+c.dataset.g})}; // menus natifs : un menu HTML serait coupé par la page
+// nom d'un groupe saisi dans sa pastille : Entrée ou clic ailleurs valide, Échap annule
+function groupRename(id){
+  const c=CHIPS.get(id),g=GR.find(x=>x.id===id);if(!c||!g||c.classList.contains("ed"))return;
+  const i=document.createElement("input");i.value=g.name;i.maxLength=40;i.placeholder=T("Nom du groupe");i.spellcheck=false;
+  c.classList.add("ed");c.replaceChildren(i);i.focus();i.select();
+  const done=ok=>{if(!c.classList.contains("ed"))return;c.classList.remove("ed");c.textContent=ok?i.value.trim():g.name;if(ok&&i.value.trim()!==g.name)send({cmd:"groupdo",id,action:"name",name:i.value})};
+  i.onkeydown=e=>{e.stopPropagation();if(e.key==="Enter")done(1);if(e.key==="Escape")done(0)};
+  i.onblur=()=>done(1);
+  i.onpointerdown=i.onmousedown=i.onclick=i.ondblclick=e=>e.stopPropagation();
+}
 // Glisser un onglet pour le déplacer, comme Chrome : il suit le pointeur, ses voisins du même groupe (épinglés / autres) lui
 // cèdent la place, l'ordre part au Rust au lâcher. C'est le VOISIN qu'on déplace dans la barre : sortir l'onglet glissé du
 // document lui ferait perdre la capture du pointeur.
@@ -1145,10 +1328,15 @@ $("#list").addEventListener("pointerdown",e=>{
 addEventListener("pointermove",e=>{
   if(!drag)return;
   const b=drag.b;let dx=e.clientX-drag.x;
-  if(!drag.on){if(Math.abs(dx)<6)return;drag.on=true;try{b.setPointerCapture(drag.p)}catch{}b.classList.add("drag")}
+  // tiré loin de la barre d'onglets (plus bas, ou hors de la fenêtre) : au lâcher il changera de fenêtre
+  const out=e.clientY>90||e.clientY<-24||e.clientX<-24||e.clientX>innerWidth+24;
+  if(!drag.on){if(Math.abs(dx)<6&&!out)return;drag.on=true;try{b.setPointerCapture(drag.p)}catch{}b.classList.add("drag")}
+  drag.out=out;b.classList.toggle("out",out);
+  if(out){b.style.transform=`translate(${dx}px,${Math.max(-6,Math.min(26,e.clientY-20))}px)`;return}
   for(let k=0;k<50;k++){ // borné : jamais de boucle sans fin si la mise en page surprend
     const o=dx<0?b.previousElementSibling:b.nextElementSibling;
     if(!o||o.classList.contains("pin")!==b.classList.contains("pin")){dx=Math.max(-10,Math.min(10,dx));break} // bout de son groupe
+    if(o.classList.contains("gh")){dx<0?b.after(o):b.before(o);continue} // onglet d'un groupe replié, invisible : franchi d'un coup
     // échange après plus d'une demi-place (largeur du voisin + espace) : l'écart restant passe sous la demi-place, donc pas de va-et-vient
     const slot=dx<0?b.offsetLeft-o.offsetLeft:o.offsetLeft+o.offsetWidth-b.offsetLeft-b.offsetWidth;
     if(Math.abs(dx)<=slot/2)break;
@@ -1160,28 +1348,35 @@ addEventListener("pointermove",e=>{
   b.style.transform=`translateX(${dx}px)`;
 });
 function dropTab(){
-  if(!drag)return;const {b,on}=drag;drag=null;
+  if(!drag)return;const {b,on,out}=drag;drag=null;
   if(!on)return;
-  b.classList.remove("drag");b.style.transform="";
-  const ord=[...$("#list").children].map(x=>+x.dataset.id),st=later.get(render);
+  b.classList.remove("drag","out");b.style.transform="";
+  if(out){send({cmd:"tabout",id:+b.dataset.id});flush();return} // l'ordre de la barre revient au rendu suivant
+  // groupe de l'endroit où l'onglet est lâché : juste après une pastille, entre deux onglets d'un même groupe, ou à la
+  // suite de son propre groupe ; ailleurs, aucun
+  const kids=[...$("#list").children],k=kids.indexOf(b),pv=kids[k-1],nx=kids[k+1],gOf=el=>el&&el.classList.contains("tab")?+el.dataset.g||0:0,own=+b.dataset.g||0;
+  const g=b.classList.contains("pin")?0:pv&&pv.classList.contains("grp")?+pv.dataset.g:gOf(pv)&&(gOf(pv)===gOf(nx)||gOf(pv)===own)?gOf(pv):0;
+  const ord=kids.filter(x=>x.classList.contains("tab")).map(x=>+x.dataset.id),st=later.get(render);
   if(st)st.tabs.sort((x,y)=>ord.indexOf(x.id)-ord.indexOf(y.id)); // le rendu en attente a l'ancien ordre : pas de retour en arrière visible
-  send({cmd:"tabmove",id:+b.dataset.id,to:ord.indexOf(+b.dataset.id)});flush();
+  send({cmd:"tabmove",id:+b.dataset.id,to:ord.indexOf(+b.dataset.id),g});flush();
 }
 addEventListener("pointerup",dropTab);addEventListener("pointercancel",dropTab);
 function render(st){
   if(hold(render,st))return;
-  S=st.s;S.keep_loaded??=7;S.volty_anim??=false;S.favbar_style??="etageres";S.exts_open??=true; // absents tant qu'un ancien exe tourne
+  S=st.s;S.keep_loaded??=7;S.volty_anim??=false;S.favbar_style??="etageres";S.fav_open??="barre";S.safe_browsing??=true;S.exts_open??=true; // absents tant qu'un ancien exe tourne
   $("#logo").classList.toggle("still",!S.volty_anim);
   document.body.classList.toggle("max",!!st.max);
+  document.body.classList.toggle("private",!!st.private);$("#priv").hidden=!st.private;
   document.documentElement.dataset.theme=THEMES[S.theme]?S.theme:"volt";
   document.documentElement.style.setProperty("--a",S.accent);
   if(st.active===want||!st.tabs.some(t=>t.id===want))want=0;
   const act=want||st.active;
-  drawTabs(st,act);
+  TB=st.tabs;drawTabs(st,act);
   const a=st.tabs.find(t=>t.id===act);
   if(a&&!panel&&document.activeElement!==$("#url")) $("#url").value=a.url.startsWith("data:")?"":a.url;
   if(a)drawCur(a.url);
-  storeBtn(a?a.url:"");extBar();trIcon(a);pwIcon(a);renderNt();
+  storeBtn(a?a.url:"");extBar();trIcon(a);pwIcon(a);secIcon(a);pageIcons(a);renderNt();renderPa();
+  $("#dldir").textContent=S.download_dir||T("Le dossier Téléchargements de Windows");$("#dlreset").hidden=!S.download_dir;
   if(dOpen&&dView==="ck")drawCmp();
   $("#star").classList.toggle("on",!!a&&S.favs.some(f=>f.url===a.url));
   renderFavbar();
@@ -1205,11 +1400,12 @@ function render(st){
   })));
   // navigateur par défaut : bloc retiré dès que Volt l'est (relu par Volt quand sa fenêtre reprend le focus)
   setDef(st.def);
-  $("#uver").textContent=st.ver||"";
-  $("#bweb").placeholder=`Rechercher sur ${ENGINES[S.search]||"le web"} ou saisir une adresse`;
+  $("#uver").textContent=st.ver||"";$("#lrestart").hidden=!st.lrestart;
+  $("#bweb").placeholder=T("Rechercher sur {e} ou saisir une adresse",{e:ENGINES[S.search]||T("le web")});
   if(panel&&cur==="board")drawBoard();
-  // premier rendu : bienvenue au tout premier lancement, sinon favoris si rien n'a été restauré
-  if(!booted){booted=1;if(st.first)openSection("hello");else if(st.fresh)openSection("board")}
+  // premier rendu : retour aux réglages après un changement de langue (page rechargée) ; sinon bienvenue au tout premier
+  // lancement, ou favoris si rien n'a été restauré
+  if(!booted){booted=1;if(LANG.go)openSection(LANG.go);else if(st.first)openSection("hello");else if(st.fresh)openSection("board")}
 }
 // ===== traduction (Rust : translate.rs) : icône du champ d'adresse sur toute page web ; page du relais = « Voir l'original » =====
 const relayed=u=>/^https:\/\/[^/?#]+\.translate\.goog([/?#:]|$)/i.test(u);
@@ -1217,7 +1413,7 @@ function trIcon(a){
   const b=$("#trico"),u=a?a.url:"",r=relayed(u);
   b.hidden=panel||!(r||(a&&a.tr)); // tr : faux sur les pages que le relais refuse (Google, YouTube)
   b.classList.toggle("on",r||!!(a&&a.foreign));
-  const t=r?"Voir l'original (page non traduite)":a&&a.foreign?"Page en langue étrangère : la traduire en français (Google Traduction)":"Traduire la page en français (Google Traduction)";
+  const t=r?T("Voir l'original (page non traduite)"):a&&a.foreign?T("Page en langue étrangère : la traduire en français (Google Traduction)"):T("Traduire la page en français (Google Traduction)");
   if(b.title!==t){b.title=t;b.setAttribute("aria-label",t)}
 }
 $("#trico").onclick=()=>send({cmd:"translate"});
@@ -1225,8 +1421,8 @@ $("#trico").onclick=()=>send({cmd:"translate"});
 let ntKey="";
 function renderNt(){
   const l=S.no_translate||[],k=JSON.stringify(l);if(k===ntKey)return;ntKey=k;
-  $("#ntlist").replaceChildren(...(l.length?[Object.assign(h("div","row"),{innerHTML:"<div><b>Sites à ne pas traduire automatiquement</b><small>Ajoutés quand vous cliquez « Voir l'original ». Retirez-en un pour qu'il soit de nouveau traduit.</small></div>"}),
-    ...l.map(x=>{const r=h("div","row");r.append(h("span",null,x),delBtn(()=>save({no_translate:S.no_translate.filter(y=>y!==x)})));r.lastChild.title="Retirer "+x;return r})]:[]));
+  $("#ntlist").replaceChildren(...(l.length?[Object.assign(h("div","row"),{innerHTML:`<div><b>${T("Sites à ne pas traduire automatiquement")}</b><small>${T("Ajoutés quand vous cliquez « Voir l'original ». Retirez-en un pour qu'il soit de nouveau traduit.")}</small></div>`}),
+    ...l.map(x=>{const r=h("div","row");r.append(h("span",null,x),delBtn(()=>save({no_translate:S.no_translate.filter(y=>y!==x)})));r.lastChild.title=T("Retirer {x}",{x});return r})]:[]));
 }
 // appelé par Volt (update.rs) : st = busy (install : téléchargement) | ok | new (v) | done (v) | err (msg)
 function upd(o){
@@ -1234,8 +1430,8 @@ function upd(o){
   const t=$("#upst"),busy=o.st==="busy";
   $("#uprow").classList.toggle("busy",busy);
   t.className=o.st==="new"||o.st==="err"?o.st:"";
-  t.textContent=busy?(o.install?"Téléchargement et vérification…":"Recherche en cours…"):o.st==="ok"?"Volt est à jour.":o.st==="new"?`Version ${o.v} disponible.`
-    :o.st==="done"?`Version ${o.v} installée : redémarrage…`:`Échec : ${o.msg}. Volt n'a pas été modifié.`;
+  t.textContent=busy?(o.install?T("Téléchargement et vérification…"):T("Recherche en cours…")):o.st==="ok"?T("Volt est à jour."):o.st==="new"?T("Version {v} disponible.",o)
+    :o.st==="done"?T("Version {v} installée : redémarrage…",o):T("Échec : {msg}. Volt n'a pas été modifié.",o);
   $("#upcheck").hidden=o.st==="new"||(busy&&o.install);$("#upgo").hidden=!(o.st==="new"||(busy&&o.install));$("#uplink").hidden=o.st!=="err";
   $("#upcheck").disabled=$("#upgo").disabled=busy||o.st==="done";
 }
@@ -1244,14 +1440,14 @@ $("#upgo").onclick=()=>send({cmd:"update_install"});
 $("#uplink").onclick=()=>{setPanel(false);send({cmd:"tab",url:"https://github.com/Manasy9999/volt-browser/releases"})};
 function setDef(d){
   $("#bdef").hidden=$("#hdefbtn").hidden=!!d;$("#hdefok").hidden=!d;
-  $("#hdefs").textContent=d?"Les liens ouverts depuis Windows, Discord ou vos mails arrivent dans Volt.":"Windows ouvre ses paramètres : choisissez Volt pour confirmer.";
+  $("#hdefs").textContent=d?T("Les liens ouverts depuis Windows, Discord ou vos mails arrivent dans Volt."):T("Windows ouvre ses paramètres : choisissez Volt pour confirmer.");
 }
 // appelé par Volt : [{id, name, on, store, icon, opts}] (extensions installées par Volt, icône en data:)
 function renderExts(list){
   EXTS=list;exBusy.clear();nExt=list.length;if(S.theme)renderHome();
   $("#extlist").replaceChildren(...list.map(e=>{
     const r=document.createElement("div");r.className="row ext";
-    r.innerHTML='<span class="n"></span>'+(e.opts?'<button class="btn g" data-a="opts">Options</button>':'')+'<button class="btn g" data-a="remove">Retirer</button><input type="checkbox" class="sw">';
+    r.innerHTML='<span class="n"></span>'+(e.opts?'<button class="btn g" data-a="opts">'+T("Options")+'</button>':'')+'<button class="btn g" data-a="remove">'+T("Retirer")+'</button><input type="checkbox" class="sw">';
     r.querySelector(".n").textContent=e.name;r.prepend(ico(e.icon,e.name));
     const sw=r.querySelector(".sw");sw.checked=e.on;
     r.onclick=ev=>{const a=ev.target.closest("[data-a]");if(a){if(a.dataset.a==="opts")setPanel(false);send({cmd:"extdo",action:a.dataset.a,id:e.id})}};
@@ -1262,9 +1458,9 @@ function renderExts(list){
 }
 // ===== extensions : icônes de la barre d'adresse (flèche), recommandées, bouton « Installer dans Volt » des fiches du Store =====
 let EXTS=null,exKey="",exShown=null,exStop=null;const exBusy=new Set(); // EXTS : null tant que Volt n'a pas envoyé la liste
-const REC=[["ddkjiahejlhfcafbddmgiahcphecmpfh","uBlock Origin Lite","Bloque les pubs et les traqueurs, pages plus légères. La version classique d'uBlock Origin n'est plus proposée sur le Chrome Web Store.",'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>'],
-  ["mnjggcdmjocbbbhaepdhchncahnbgone","SponsorBlock","Saute les passages sponsorisés des vidéos YouTube.",'<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>'],
-  ["aapbdbdomjkkjkaonfhkkikfgjllcleb","Google Traduction","Traduit le texte que vous sélectionnez dans une page.",'<path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>']];
+const REC=[["ddkjiahejlhfcafbddmgiahcphecmpfh","uBlock Origin Lite",T("Bloque les pubs et les traqueurs, pages plus légères. La version classique d'uBlock Origin n'est plus proposée sur le Chrome Web Store."),'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>'],
+  ["mnjggcdmjocbbbhaepdhchncahnbgone","SponsorBlock",T("Saute les passages sponsorisés des vidéos YouTube."),'<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>'],
+  ["aapbdbdomjkkjkaonfhkkikfgjllcleb",T("Google Traduction"),T("Traduit le texte que vous sélectionnez dans une page."),'<path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>']];
 // fiche d'extension du Store -> son ID (32 lettres a-p, comme ext::parse_id)
 const storeId=u=>/^https:\/\/(chromewebstore\.google\.com\/detail\/|chrome\.google\.com\/webstore\/detail\/)/.test(u)&&(u.match(/(?<![a-p])[a-p]{32}(?![a-p])/)||[])[0];
 const installed=id=>(EXTS||[]).find(e=>e.store===id);
@@ -1273,8 +1469,8 @@ function renderRec(){
     const e=installed(id),r=h("div","row imp rec"),tx=h("div"),g=h("span","ico");
     if(e&&e.icon)g.append(Object.assign(new Image(),{src:e.icon,alt:""}));else g.innerHTML=`<svg viewBox="0 0 24 24">${ic}</svg>`;
     tx.append(h("b",null,n),h("small",null,d));r.append(g,tx);
-    if(e){const k=h("span","done");k.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Installée';r.append(k)}
-    else{const b=h("button","btn",exBusy.has(id)?"Installation…":"Installer");b.disabled=exBusy.has(id);b.onclick=()=>{exBusy.add(id);renderRec();send({cmd:"ext_install",id})};r.append(b)}
+    if(e){const k=h("span","done");k.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'+T("Installée");r.append(k)}
+    else{const b=h("button","btn",exBusy.has(id)?T("Installation…"):T("Installer"));b.disabled=exBusy.has(id);b.onclick=()=>{exBusy.add(id);renderRec();send({cmd:"ext_install",id})};r.append(b)}
     return r;
   }));
 }
@@ -1283,10 +1479,10 @@ function extBar(){
   if(!EXTS||!S.theme)return;
   const k=JSON.stringify(EXTS);
   if(k!==exKey){exKey=k;$("#exts .in").replaceChildren(...EXTS.map(e=>{
-    const b=h("button","ib"+(e.on?"":" off"));b.title=e.name+(e.on?"":" (désactivée)");b.append(ico(e.icon,e.name));
+    const b=h("button","ib"+(e.on?"":" off"));b.title=e.on?e.name:T("{x} (désactivée)",{x:e.name});b.append(ico(e.icon,e.name));
     b.onclick=()=>send({cmd:"extmenu",id:e.id,on:e.on});return b}))}
   const o=S.exts_open&&EXTS.length>0,r=$("#exts"),bt=$("#extbtn");
-  bt.classList.toggle("open",o);bt.title=!EXTS.length?"Extensions : en ajouter":o?"Masquer les extensions":"Afficher les extensions";bt.setAttribute("aria-label",bt.title);
+  bt.classList.toggle("open",o);bt.title=!EXTS.length?T("Extensions : en ajouter"):o?T("Masquer les extensions"):T("Afficher les extensions");bt.setAttribute("aria-label",bt.title);
   if(o===exShown)return;
   const first=exShown===null,to=o?r.firstChild.offsetWidth:0,from=first?to:r.offsetWidth,max=Math.max(from,to)||1;exShown=o;
   exStop&&exStop();
@@ -1294,7 +1490,7 @@ function extBar(){
 }
 function storeBtn(u){
   const id=storeId(u),b=$("#storebtn");b.hidden=!id;if(!id)return;
-  b.disabled=!!installed(id)||exBusy.has(id);b.textContent=installed(id)?"Déjà installée dans Volt":exBusy.has(id)?"Installation…":"Installer dans Volt";
+  b.disabled=!!installed(id)||exBusy.has(id);b.textContent=installed(id)?T("Déjà installée dans Volt"):exBusy.has(id)?T("Installation…"):T("Installer dans Volt");
 }
 // icône : image data:, emoji/texte, sinon initiale du site
 function ico(x,name){
@@ -1325,7 +1521,7 @@ const dcol=d=>!d.color||/^#9b5cff$/i.test(d.color)?"var(--a)":d.color;
 function dirIco(d){if(d.icon)return ico(d.icon,d.name);const s=h("span","ico fd");s.style.setProperty("--c",dcol(d));s.innerHTML=FOLDER_SVG;return s}
 function fbIt(f){const b=h("button","it");b.append(fico(f),h("span",null,f.title||f.url));b.title=(f.title?f.title+"\n":"")+f.url;b.onclick=()=>send({cmd:"go",url:f.url});return b}
 // accès à tous les favoris : la page de favoris
-function fbAll(cls,txt){const b=h("button",cls);b.innerHTML=GRID+(txt?`<span>${txt}</span>`:"")+`<b>${S.favs.length}</b>`;b.title="Tous les favoris";b.onclick=()=>openSection("board");return b}
+function fbAll(cls,txt){const b=h("button",cls);b.innerHTML=GRID+(txt?`<span>${txt}</span>`:"")+`<b>${S.favs.length}</b>`;b.title=T("Tous les favoris");b.onclick=()=>openSection("board");return b}
 const fbStyle=()=>({ruban:1,icones:1})[S.favbar_style]?S.favbar_style:"etageres";
 const fbIn=d=>S.favs.filter(f=>f.folder===d.id);
 const fbLoose=()=>S.favs.filter(f=>!S.folders.some(d=>d.id===f.folder));
@@ -1365,7 +1561,7 @@ function fill(row,list,make){
   const starts=[0];
   const draw=()=>{
     const s=starts[starts.length-1];row.replaceChildren();
-    if(s>0){const bk=h("button","more b");bk.innerHTML=CHEV(0);bk.title="Revenir aux précédents";bk.onclick=()=>{starts.pop();draw()};row.append(bk)}
+    if(s>0){const bk=h("button","more b");bk.innerHTML=CHEV(0);bk.title=T("Revenir aux précédents");bk.onclick=()=>{starts.pop();draw()};row.append(bk)}
     const els=list.slice(s).map(make),end=e=>e.offsetLeft+e.offsetWidth,lim=row.clientWidth-2;row.append(...els);
     if(!els.length||end(els[els.length-1])<=lim)return;
     const more=h("button","more","+"+els.length);row.append(more);
@@ -1374,25 +1570,25 @@ function fill(row,list,make){
     cut||=1;
     const n=els.slice(cut).filter(e=>e.tagName==="BUTTON").length;
     els.slice(cut).forEach(e=>e.remove());
-    more.textContent="+"+n;more.title="Afficher les "+n+" suivants";more.onclick=()=>{starts.push(s+cut);draw()};
+    more.textContent="+"+n;more.title=T("Afficher les {n} suivants",{n});more.onclick=()=>{starts.push(s+cut);draw()};
   };
   row.onwheel=e=>{const m=row.querySelector(".more:not(.b)"),b=row.querySelector(".more.b");if(e.deltaY>0&&m)m.click();else if(e.deltaY<0&&b)b.click();e.preventDefault()};
   draw();
 }
 function etageres(fb){
-  const r1=h("div","fr"),area=h("div","fill");r1.append(area,fbAll("bt","Tout voir"));fb.replaceChildren(r1);
+  const r1=h("div","fr"),area=h("div","fill");r1.append(area,fbAll("bt",T("Tout voir")));fb.replaceChildren(r1);
   fill(area,[...S.folders,0,...fbLoose()],x=>{
     if(!x)return h("i","sep");
     if(x.url)return fbIt(x);
     const b=h("button","sh"+(x.id===openDir?" on":""));b.dataset.id=x.id;b.style.setProperty("--c",dcol(x));
-    b.append(x.icon?dirIco(x):h("i","dt"),h("span",null,x.name),h("small",null,fbIn(x).length));b.onclick=()=>favDir(x.id);return b;
+    b.append(x.icon?dirIco(x):h("i","dt"),h("span",null,x.name),h("small",null,fbIn(x).length));b.onclick=()=>favDir(x.id,b);return b;
   });
   const d=S.folders.find(d=>d.id===openDir);if(d)etRow(fb,d);
 }
 function etRow(fb,d,old){
   const r=h("div","fr2"),a=h("div","fill"),list=fbIn(d);r.style.setProperty("--c",dcol(d));r.append(a);
   old?old.replaceWith(r):fb.append(r);
-  if(list.length)fill(a,list,fbIt);else a.append(h("span","nil","Dossier vide"));
+  if(list.length)fill(a,list,fbIt);else a.append(h("span","nil",T("Dossier vide")));
   return r;
 }
 // Étagères : la rangée du dossier s'ouvre (le Rust fait la place, puis elle entre) ou se ferme (elle sort, puis le Rust remonte la page)
@@ -1408,15 +1604,15 @@ function etDir(fb,id){
 }
 function ruban(fb,anim){
   const left=h("button","arr"),rail=h("div","rail"+(anim?" in":"")),right=h("button","arr");
-  left.innerHTML=CHEV(0);right.innerHTML=CHEV(1);left.title="Défiler à gauche";right.title="Défiler à droite";
+  left.innerHTML=CHEV(0);right.innerHTML=CHEV(1);left.title=T("Défiler à gauche");right.title=T("Défiler à droite");
   fb.replaceChildren(left,rail,right,fbAll("all"));
   const d=S.folders.find(d=>d.id===openDir);
   if(d){
     fb.classList.add("open");fb.style.setProperty("--c",dcol(d));
-    const hd=h("button","head");hd.title="Revenir à la barre (Échap)";hd.innerHTML=CHEV(0).replace("<svg",'<svg class="b"');
-    hd.append(dirIco(d),h("span",null,d.name),h("small",null,fbIn(d).length));hd.onclick=()=>favDir(d.id);
+    const hd=h("button","head");hd.title=T("Revenir à la barre (Échap)");hd.innerHTML=CHEV(0).replace("<svg",'<svg class="b"');
+    hd.append(dirIco(d),h("span",null,d.name),h("small",null,fbIn(d).length));hd.onclick=()=>favDir(d.id,hd);
     rail.append(hd,h("i","sep"),...fbIn(d).map(fbIt));
-  }else rail.append(...S.folders.map(x=>{const b=h("button","it dir");b.append(dirIco(x),h("span",null,x.name));b.title=x.name+" : "+fbIn(x).length+" favoris";b.onclick=()=>favDir(x.id);return b}),h("i","sep"),...fbLoose().map(fbIt));
+  }else rail.append(...S.folders.map(x=>{const b=h("button","it dir");b.append(dirIco(x),h("span",null,x.name));b.title=T("{x} : {n} favoris",{x:x.name,n:fbIn(x).length});b.onclick=()=>favDir(x.id,b);return b}),h("i","sep"),...fbLoose().map(fbIt));
   // flèches et fondus seulement quand il reste quelque chose de caché de ce côté
   const upd=()=>{const s=rail.scrollLeft,m=rail.scrollWidth-rail.clientWidth;left.hidden=s<=1;right.hidden=s>=m-1;rail.classList.toggle("l",s>1);rail.classList.toggle("r",s<m-1)};
   rail.onscroll=upd;rail.onwheel=e=>{if(!e.deltaX){rail.scrollLeft+=e.deltaY;e.preventDefault()}};
@@ -1425,10 +1621,10 @@ function ruban(fb,anim){
 }
 function icones(fb,anim){
   const area=h("div","area"),lab=h("div","lab"),pg=h("div","pgn"),prev=h("button","bt"),next=h("button","bt"),num=h("em");
-  prev.innerHTML=CHEV(0);next.innerHTML=CHEV(1);prev.title="Page précédente";next.title="Page suivante";pg.append(prev,num,next);
+  prev.innerHTML=CHEV(0);next.innerHTML=CHEV(1);prev.title=T("Page précédente");next.title=T("Page suivante");pg.append(prev,num,next);
   fb.replaceChildren(area,lab,pg,fbAll("all"));
   const open=S.folders.find(d=>d.id===openDir),loose=fbLoose();
-  const idle=()=>open?[open.name,fbIn(open).length+" favoris dépliés · Échap pour replier"]:[S.folders.length+" dossiers · "+loose.length+" favoris",""];
+  const idle=()=>open?[open.name,T("{n} favoris dépliés · Échap pour replier",{n:fbIn(open).length})]:[T("{n} dossiers",{n:S.folders.length})+" · "+T("{n} favoris",{n:loose.length}),""];
   const say=(a,b,isIdle)=>{lab.className="lab"+(isIdle?" idle":"");lab.replaceChildren(h("b",null,a),h("span",null,b))};
   // liste à plat : dossiers (contenu déplié après le sien), séparateur, favoris ; icônes de 28 + 2 px
   const flat=[];
@@ -1442,7 +1638,7 @@ function icones(fb,anim){
       let b;
       if(e.sep)b=h("i","sp");
       else if(e.d){b=h("button","ic dir"+(e.d===open?" on":""));b.style.setProperty("--c",dcol(e.d));b.append(dirIco(e.d));
-        b.onmouseenter=()=>say(e.d.name,fbIn(e.d).length+" favoris · "+(e.d===open?"clic pour replier":"clic pour déplier"));b.onclick=()=>favDir(e.d.id)}
+        b.onmouseenter=()=>say(e.d.name,T("{n} favoris",{n:fbIn(e.d).length})+" · "+(e.d===open?T("clic pour replier"):T("clic pour déplier")));b.onclick=()=>favDir(e.d.id,b)}
       else{b=h("button","ic");b.append(fico(e.f));b.setAttribute("aria-label",e.f.title||e.f.url);
         b.onmouseenter=()=>say(e.f.title||e.f.url,e.f.url.replace(/^https?:\/\/(www\.)?/,""));b.onclick=()=>send({cmd:"go",url:e.f.url})}
       b.onmouseleave=()=>say(...idle(),1);
@@ -1457,7 +1653,10 @@ function icones(fb,anim){
 }
 const FBS={etageres,ruban,icones};
 function buildFavbar(anim){const fb=$("#favbar"),st=fbStyle();fb.className=st;fb.onwheel=null;FBS[st](fb,anim);favH()}
-function favDir(id){if(fbStyle()==="etageres")return etDir($("#favbar"),id);openDir=openDir===id?null:id;buildFavbar(1)}
+function favDir(id,el){
+  // « en menu » : Volt affiche la liste native sous le dossier (el), au lieu de le déplier dans la barre
+  if(S.fav_open==="menu"&&el){const r=el.getBoundingClientRect();return send({cmd:"favmenu",id,x:r.left,y:r.bottom})}
+  if(fbStyle()==="etageres")return etDir($("#favbar"),id);openDir=openDir===id?null:id;buildFavbar(1)}
 // appelé à chaque render : ne reconstruit que si favoris, dossiers, style, thème (largeurs) ou largeur ont changé
 function renderFavbar(){
   const fb=$("#favbar");
@@ -1468,8 +1667,8 @@ function renderFavbar(){
   }
   if(fbRm&&!fbH)fbStop(); // réaffichée pendant sa sortie
   document.body.classList.remove("nofav");
-  if(openDir&&!S.folders.some(d=>d.id===openDir))openDir=null;
-  const k=JSON.stringify([fbStyle(),S.theme,innerWidth,S.favs,S.folders]);
+  if(openDir&&(S.fav_open==="menu"||!S.folders.some(d=>d.id===openDir)))openDir=null; // passé « en menu » : le dossier déplié se replie
+  const k=JSON.stringify([fbStyle(),S.fav_open,S.theme,innerWidth,S.favs,S.folders]);
   if(k!==fbKey){fbKey=k;buildFavbar()}else favH();
 }
 // ===== reprise de session : Volt garde les adresses et n'envoie que leur nombre (st.offer, 0 = plus rien) ;
@@ -1484,8 +1683,8 @@ function rsBand(on){
 }
 function resumeOffer(n){
   if(n&&!rsMode){
-    rsMode="band";$("#resume small").textContent=n+" onglets";
-    const i=$("#rsico");i.title="Reprendre la dernière session · "+n+" onglets";i.setAttribute("aria-label",i.title);
+    rsMode="band";$("#resume small").textContent=T("{n} onglets",{n});
+    const i=$("#rsico");i.title=T("Reprendre la dernière session · {n} onglets",{n});i.setAttribute("aria-label",i.title);
     $("#resume").hidden=false;rsBand(1);
   }else if(!n&&(rsMode==="band"||rsMode==="icon")){
     if(rsMode==="band")rsBand(0);else $("#rsico").hidden=true;
@@ -1532,31 +1731,31 @@ function pickVignette(done){
   f.click();
 }
 function field(cls,val,ph,ch){const i=document.createElement("input");i.type="text";i.className=cls;i.value=val||"";i.placeholder=ph;i.onchange=()=>ch(i.value.trim());return i}
-function delBtn(fn){const b=document.createElement("button");b.className="x";b.title="Supprimer";b.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';b.onclick=fn;return b}
-function picBtn(fn){const b=document.createElement("button");b.className="pic";b.title="Image perso";b.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 7"/></svg>';b.onclick=()=>pickImage(fn);return b}
+function delBtn(fn){const b=document.createElement("button");b.className="x";b.title=T("Supprimer");b.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';b.onclick=fn;return b}
+function picBtn(fn){const b=document.createElement("button");b.className="pic";b.title=T("Image perso");b.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 17-5-5-8 7"/></svg>';b.onclick=()=>pickImage(fn);return b}
 let editDir=null; // dossier dont l'éditeur (icône/couleur) est déplié dans « Gérer les favoris »
 // éditeur d'un dossier : palette d'icônes + emoji libre + image + retour au dossier par défaut ; pastilles de couleur + accent + couleur perso
 function dirEditor(d,saveDirs){
   const ed=h("div","fmed"),pal=h("div","pal"),cp=h("div","cpal sw-c");
   DIRICONS.forEach(e=>{const b=h("button","pi"+(d.icon===e?" on":""),e);b.title=e;b.onclick=()=>{d.icon=e;saveDirs()};pal.append(b)});
-  const def=h("button","pi def"+(d.icon?"":" on"));def.title="Icône dossier par défaut";def.innerHTML=FOLDER_SVG;def.onclick=()=>{d.icon="";saveDirs()};
+  const def=h("button","pi def"+(d.icon?"":" on"));def.title=T("Icône dossier par défaut");def.innerHTML=FOLDER_SVG;def.onclick=()=>{d.icon="";saveDirs()};
   pal.append(def,picBtn(u=>{d.icon=u;saveDirs()}));
-  ed.append(h("div","edl","Icône"),pal,field("em",(d.icon||"").startsWith("data:")?"":d.icon,"emoji libre",v=>{d.icon=v;saveDirs()}));
-  const acc=h("button");acc.title="Couleur d'accent (par défaut)";acc.style.background="var(--a)";if(!d.color||/^#9b5cff$/i.test(d.color))acc.classList.add("on");
+  ed.append(h("div","edl",T("Icône")),pal,field("em",(d.icon||"").startsWith("data:")?"":d.icon,T("emoji libre"),v=>{d.icon=v;saveDirs()}));
+  const acc=h("button");acc.title=T("Couleur d'accent (par défaut)");acc.style.background="var(--a)";if(!d.color||/^#9b5cff$/i.test(d.color))acc.classList.add("on");
   acc.onclick=()=>{d.color="";saveDirs()};cp.append(acc);
   DIRCOLORS.forEach(c=>{const b=h("button");b.style.background=c;b.title=c;if((d.color||"").toLowerCase()===c)b.classList.add("on");b.onclick=()=>{d.color=c;saveDirs()};cp.append(b)});
-  const col=h("input");col.type="color";col.value=d.color||S.accent;col.title="Couleur personnalisée";col.onchange=()=>{d.color=col.value;saveDirs()};
-  cp.append(col);ed.append(h("div","edl","Couleur"),cp);
+  const col=h("input");col.type="color";col.value=d.color||S.accent;col.title=T("Couleur personnalisée");col.onchange=()=>{d.color=col.value;saveDirs()};
+  cp.append(col);ed.append(h("div","edl",T("Couleur")),cp);
   return ed;
 }
 function renderFavManager(){
   const saveDirs=()=>save({folders:S.folders}), saveFavs=()=>save({favs:S.favs});
   $("#dirlist").replaceChildren(...S.folders.map(d=>{
     const wrap=h("div","diritem"),r=h("div","row fm");
-    const edb=h("button","edit"+(d.id===editDir?" on":""));edb.title="Modifier le dossier";
+    const edb=h("button","edit"+(d.id===editDir?" on":""));edb.title=T("Modifier le dossier");
     edb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m13.5 6.5 3 3"/></svg>';
     edb.onclick=()=>{editDir=editDir===d.id?null:d.id;renderFavManager()};
-    r.append(dirIco(d),field("nm",d.name,"Nom du dossier",v=>{d.name=v||"Dossier";saveDirs()}),edb,
+    r.append(dirIco(d),field("nm",d.name,T("Nom du dossier"),v=>{d.name=v||T("Dossier");saveDirs()}),edb,
       delBtn(()=>{if(editDir===d.id)editDir=null;S.favs.forEach(f=>{if(f.folder===d.id)f.folder=""});S.folders=S.folders.filter(x=>x!==d);save({folders:S.folders,favs:S.favs})}));
     wrap.append(r);
     if(d.id===editDir)wrap.append(dirEditor(d,saveDirs));
@@ -1564,8 +1763,8 @@ function renderFavManager(){
   }));
   $("#favlist").replaceChildren(...S.favs.map(f=>{
     const r=document.createElement("div");r.className="row fm";
-    const sel=document.createElement("select");sel.title="Dossier";
-    sel.append(new Option("Sans dossier",""),...S.folders.map(d=>new Option(d.name,d.id)));sel.value=f.folder||"";
+    const sel=document.createElement("select");sel.title=T("Dossier");
+    sel.append(new Option(T("Sans dossier"),""),...S.folders.map(d=>new Option(d.name,d.id)));sel.value=f.folder||"";
     sel.onchange=()=>{f.folder=sel.value;saveFavs()};
     r.append(ico(f.icon,f.url),field("em",(f.icon||"").startsWith("data:")?"":f.icon,"😀",v=>{f.icon=v;saveFavs()}),picBtn(u=>{f.icon=u;saveFavs()}),
       field("nm",f.title,f.url,v=>{f.title=v;saveFavs()}),sel,delBtn(()=>{S.favs=S.favs.filter(x=>x!==f);saveFavs()}));
@@ -1574,7 +1773,7 @@ function renderFavManager(){
 }
 function pageRow(p,rm){
   const r=document.createElement("div");r.className="row ext pg";
-  r.innerHTML='<span class="n"><b></b><small></small></span><button class="x" title="Retirer"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  r.innerHTML='<span class="n"><b></b><small></small></span><button class="x" title="'+T("Retirer")+'"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
   if(!rm)r.querySelector(".x").remove();
   r.querySelector("b").textContent=p.title||p.url;r.querySelector("small").textContent=p.url;
   r.onclick=e=>{if(e.target.closest(".x"))rm();else{setPanel(false);send({cmd:"go",url:p.url})}};
@@ -1588,13 +1787,13 @@ function histFull(){const q=$("#hq").value.toLowerCase();
 let dOpen=false,dView="hist",dConfirm="",curUrl="",CK=null,ckDone="";
 const XSVG='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',OKSVG='<svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>';
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,"")}catch{return u}};
-const fmt=n=>String(n).replace(/\B(?=(\d{3})+$)/g," ");
-const hm=at=>new Date(at*1e3).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
-const DAYF=new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long"}),DAYY=new Intl.DateTimeFormat("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+const fmt=n=>(+n).toLocaleString(LOC);
+const hm=at=>new Date(at*1e3).toLocaleTimeString(LOC,{timeStyle:"short"});
+const DAYF=new Intl.DateTimeFormat(LOC,{weekday:"long",day:"numeric",month:"long"}),DAYY=new Intl.DateTimeFormat(LOC,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 function dayOf(at,today,yest){
-  if(!at)return "Plus ancien";
+  if(!at)return T("Plus ancien");
   const d=new Date(at*1e3),k=d.toDateString();
-  if(k===today)return "Aujourd'hui";if(k===yest)return "Hier";
+  if(k===today)return T("Aujourd'hui");if(k===yest)return T("Hier");
   const s=(d.getFullYear()===new Date().getFullYear()?DAYF:DAYY).format(d);return s[0].toUpperCase()+s.slice(1);
 }
 // Ctrl+H, l'icône, la croix, Échap ; le Rust renvoie l'historique (renderHist) et décale la page de la largeur
@@ -1621,24 +1820,24 @@ function drawHist(){
   for(const p of H)if(!q||norm(p.title+" "+p.url).includes(q)){const k=dayOf(p.at,today,yest);g.has(k)?g.get(k).push(p):g.set(k,[p])}
   const it=[],dl=$("#dl"),gen=++dGen;
   for(const [k,list] of g)it.push([k,list.length],...list);
-  if(!H.length)dl.replaceChildren(Object.assign(h("div","empty"),{innerHTML:"<b>Historique vide</b>Les pages que vous ouvrez s'afficheront ici."}));
-  else if(!g.size){const e=h("div","empty");e.append(h("b",null,"Aucune page trouvée"),`Rien ne correspond à « ${$("#dq").value.trim()} ».`);dl.replaceChildren(e)}
+  if(!H.length)dl.replaceChildren(Object.assign(h("div","empty"),{innerHTML:`<b>${T("Historique vide")}</b>${T("Les pages que vous ouvrez s'afficheront ici.")}`}));
+  else if(!g.size){const e=h("div","empty");e.append(h("b",null,T("Aucune page trouvée")),T("Rien ne correspond à « {q} ».",{q:$("#dq").value.trim()}));dl.replaceChildren(e)}
   // ce qui se voit tout de suite, la suite par paquets après l'animation d'ouverture (1000 lignes : ~55 ms d'un bloc)
   else{dl.replaceChildren(...it.slice(0,40).map(hItem));const more=i=>{if(gen===dGen&&i<it.length){dl.append(...it.slice(i,i+200).map(hItem));setTimeout(()=>more(i+200))}};setTimeout(()=>more(40),dStop?260:0)}
   drawFoot();
 }
 let dGen=0;
 function hItem(p){
-  if(Array.isArray(p)){const d=h("div","hday",p[0]);d.append(h("small",null,p[1]+" page"+(p[1]>1?"s":"")));return d}
+  if(Array.isArray(p)){const d=h("div","hday",p[0]);d.append(h("small",null,T("{n} page|{n} pages",{n:p[1]})));return d}
   const r=h("div","he"+(p.url===curUrl?" cur":"")),t=h("span","t"),x=h("button","x");
-  r.dataset.u=p.url;r.title=(p.title||p.url)+"\n"+p.url;x.title="Retirer de l'historique";x.setAttribute("aria-label",x.title);x.innerHTML=XSVG;
+  r.dataset.u=p.url;r.title=(p.title||p.url)+"\n"+p.url;x.title=T("Retirer de l'historique");x.setAttribute("aria-label",x.title);x.innerHTML=XSVG;
   t.append(h("b",null,p.title||p.url),h("small",null,host(p.url)));r.append(fico(p),t,h("time",null,p.at?hm(p.at):""),x);return r;
 }
 function drawFoot(){
   const f=$("#dfoot");
-  if(dConfirm==="hist"){f.className="cf";f.innerHTML=`<p>Effacer les ${fmt(H.length)} pages de l'historique ?<small>On ne peut pas revenir en arrière. Les cookies et les favoris ne sont pas touchés.</small></p><div class="bs"><button class="btn g" data-a="cancel">Annuler</button><button class="btn" data-a="hclear">Effacer</button></div>`;return}
-  f.className="pf";f.innerHTML=`<button class="lnk" data-a="full"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Tout l'historique</button>`
-    +(H.length?`<button class="lnk" data-a="hask"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Effacer l'historique</button>`:"");
+  if(dConfirm==="hist"){f.className="cf";f.innerHTML=`<p>${T("Effacer les {N} pages de l'historique ?",{n:H.length,N:fmt(H.length)})}<small>${T("On ne peut pas revenir en arrière. Les cookies et les favoris ne sont pas touchés.")}</small></p><div class="bs"><button class="btn g" data-a="cancel">${T("Annuler")}</button><button class="btn" data-a="hclear">${T("Effacer")}</button></div>`;return}
+  f.className="pf";f.innerHTML=`<button class="lnk" data-a="full"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>${T("Tout l'historique")}</button>`
+    +(H.length?`<button class="lnk" data-a="hask"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>${T("Effacer l'historique")}</button>`:"");
 }
 // titre arrivé après le chargement : seule la première entrée change
 function histTitle(u,t){if(H[0]&&H[0].url===u)H[0].title=t;const r=$("#dl .he");if(r&&r.dataset.u===u)r.querySelector("b").textContent=t}
@@ -1649,15 +1848,15 @@ function drawCk(){
   if(!$("#ckc"))$("#dck").innerHTML='<div class="ck"><div id="cmpc"></div><div id="ckc"></div></div>';
   drawCmp();
   const web=/^https?:/.test(curUrl),hs=host(curUrl),c=CK||{},el=$("#ckc"),k=c.site;
-  const site=web?`<div class="site"></div>`+(k?`<button class="btn g w" data-a="ckSite">Supprimer les cookies de ce site</button><small class="hint">Vous serez déconnecté de ce site.</small>`:ckDone===hs?`<div class="done">${OKSVG}Cookies de ce site supprimés.</div>`:"")
-    :`<small class="hint" style="margin:0">Aucun site affiché dans cet onglet.</small>`;
-  const all=dConfirm==="cookies"?`<p>Supprimer les ${fmt(c.all)} cookies ?<small class="hint" style="margin-top:2px">Vous serez déconnecté de tous les sites. L'historique n'est pas touché.</small></p><div class="bs"><button class="btn g" data-a="cancel">Annuler</button><button class="btn" data-a="ckAllOk">Tout supprimer</button></div>`
-    :`<div class="site"><div><b></b><small></small></div></div>`+(c.all?`<button class="btn g w" data-a="ckAll">Supprimer tous les cookies</button><small class="hint">Vous serez déconnecté de tous les sites.</small>`:"");
-  el.innerHTML=`<h3>Ce site</h3><div class="box">${site}</div><h3>Tous les sites</h3><div class="box">${all}</div>`;
+  const site=web?`<div class="site"></div>`+(k?`<button class="btn g w" data-a="ckSite">${T("Supprimer les cookies de ce site")}</button><small class="hint">${T("Vous serez déconnecté de ce site.")}</small>`:ckDone===hs?`<div class="done">${OKSVG}${T("Cookies de ce site supprimés.")}</div>`:"")
+    :`<small class="hint" style="margin:0">${T("Aucun site affiché dans cet onglet.")}</small>`;
+  const all=dConfirm==="cookies"?`<p>${T("Supprimer les {N} cookies ?",{n:c.all,N:fmt(c.all)})}<small class="hint" style="margin-top:2px">${T("Vous serez déconnecté de tous les sites. L'historique n'est pas touché.")}</small></p><div class="bs"><button class="btn g" data-a="cancel">${T("Annuler")}</button><button class="btn" data-a="ckAllOk">${T("Tout supprimer")}</button></div>`
+    :`<div class="site"><div><b></b><small></small></div></div>`+(c.all?`<button class="btn g w" data-a="ckAll">${T("Supprimer tous les cookies")}</button><small class="hint">${T("Vous serez déconnecté de tous les sites.")}</small>`:"");
+  el.innerHTML=`<h3>${T("Ce site")}</h3><div class="box">${site}</div><h3>${T("Tous les sites")}</h3><div class="box">${all}</div>`;
   const s=el.querySelector(".box .site");
-  if(web){const d=h("div");d.append(h("b",null,hs),h("small",null,k==null?"…":k?fmt(k)+" cookie"+(k>1?"s":""):"Aucun cookie"));s.append(fico({url:curUrl}),d)}
+  if(web){const d=h("div");d.append(h("b",null,hs),h("small",null,k==null?"…":k?T("{N} cookie|{N} cookies",{n:k,N:fmt(k)}):T("Aucun cookie")));s.append(fico({url:curUrl}),d)}
   const a=el.querySelectorAll(".box")[1].querySelector(".site b");
-  if(a){a.textContent=c.all==null?"…":c.all?fmt(c.all)+" cookie"+(c.all>1?"s":""):"Aucun cookie";a.nextSibling.textContent=c.all?"sur "+fmt(c.sites)+" site"+(c.sites>1?"s":""):c.all===0?"Tous les cookies ont été supprimés.":""}
+  if(a){a.textContent=c.all==null?"…":c.all?T("{N} cookie|{N} cookies",{n:c.all,N:fmt(c.all)}):T("Aucun cookie");a.nextSibling.textContent=c.all?T("sur {N} site|sur {N} sites",{n:c.sites,N:fmt(c.sites)}):c.all===0?T("Tous les cookies ont été supprimés."):""}
 }
 // ===== réponse automatique aux bandeaux de cookies (Rust : cmp.rs) ; refaite seulement quand réglages ou site affiché changent =====
 let cmpKey="";
@@ -1667,15 +1866,15 @@ function drawCmp(){
   const web=/^https?:/.test(curUrl),hs=host(curUrl),on=!!S.cmp_auto,acc=S.cmp_mode==="accepter",k=JSON.stringify([on,acc,S.cmp_skip,web&&hs]);
   if(k===cmpKey&&el.firstChild)return;cmpKey=k;
   const old=el.querySelector(".exa input"),val=old?old.value:"",foc=old&&document.activeElement===old;
-  el.innerHTML=`<h3>Bandeaux de cookies</h3><div class="box"><div class="sr"><div><b>Répondre automatiquement</b><small>Volt répond aux bandeaux de cookies à votre place.</small></div><input type="checkbox" class="sw" data-a="cmpOn" aria-label="Répondre automatiquement aux bandeaux de cookies"${on?" checked":""}></div>`
-    +(on?`<div class="choice"><div class="rad" role="radiogroup" aria-label="Réponse"><button role="radio" aria-checked="${!acc}" class="${acc?"":"on"}" data-a="cmpRef">Non, tout refuser</button><button role="radio" aria-checked="${acc}" class="${acc?"on":""}" data-a="cmpAcc">Oui, tout accepter</button></div>`
-      +`<small class="hint">${acc?"Volt accepte à votre place sur chaque bandeau.":"Volt refuse quand le bandeau le permet : les sites qui imposent d'accepter ou de s'abonner gardent leur bandeau."} Marche sur la plupart des sites, pas sur tous.</small></div>`
-      :`<small class="hint">Désactivé : chaque site vous demande votre choix.</small>`)
-    +`<div class="sr ex"><div><b>Sites exclus</b><small>Volt n'y répond pas à votre place.</small></div></div><div class="exl"></div>`
-    +`<div class="exa"><input type="text" spellcheck="false" placeholder="exemple.fr" aria-label="Site à exclure"><button class="btn g" data-a="cmpAdd">Ajouter</button></div>`
+  el.innerHTML=`<h3>${T("Bandeaux de cookies")}</h3><div class="box"><div class="sr"><div><b>${T("Répondre automatiquement")}</b><small>${T("Volt répond aux bandeaux de cookies à votre place.")}</small></div><input type="checkbox" class="sw" data-a="cmpOn" aria-label="${T("Répondre automatiquement aux bandeaux de cookies")}"${on?" checked":""}></div>`
+    +(on?`<div class="choice"><div class="rad" role="radiogroup" aria-label="${T("Réponse")}"><button role="radio" aria-checked="${!acc}" class="${acc?"":"on"}" data-a="cmpRef">${T("Non, tout refuser")}</button><button role="radio" aria-checked="${acc}" class="${acc?"on":""}" data-a="cmpAcc">${T("Oui, tout accepter")}</button></div>`
+      +`<small class="hint">${acc?T("Volt accepte à votre place sur chaque bandeau."):T("Volt refuse quand le bandeau le permet : les sites qui imposent d'accepter ou de s'abonner gardent leur bandeau.")} ${T("Marche sur la plupart des sites, pas sur tous.")}</small></div>`
+      :`<small class="hint">${T("Désactivé : chaque site vous demande votre choix.")}</small>`)
+    +`<div class="sr ex"><div><b>${T("Sites exclus")}</b><small>${T("Volt n'y répond pas à votre place.")}</small></div></div><div class="exl"></div>`
+    +`<div class="exa"><input type="text" spellcheck="false" placeholder="${T("exemple.fr")}" aria-label="${T("Site à exclure")}"><button class="btn g" data-a="cmpAdd">${T("Ajouter")}</button></div>`
     +(web?`<button class="btn g w" data-a="cmpHere"></button>`:"")+`</div>`;
-  el.querySelector(".exl").append(...(S.cmp_skip||[]).map(e=>{const r=h("span","exi"),x=h("button","x");r.dataset.h=e;x.dataset.a="cmpX";x.title="Ne plus exclure "+e;x.setAttribute("aria-label",x.title);x.innerHTML=XSVG;r.append(h("span",null,e),x);return r}));
-  const b=el.querySelector("[data-a=cmpHere]");if(b)b.textContent=cmpEx(hs)?"Ne plus exclure ce site":"Exclure ce site";
+  el.querySelector(".exl").append(...(S.cmp_skip||[]).map(e=>{const r=h("span","exi"),x=h("button","x");r.dataset.h=e;x.dataset.a="cmpX";x.title=T("Ne plus exclure {x}",{x:e});x.setAttribute("aria-label",x.title);x.innerHTML=XSVG;r.append(h("span",null,e),x);return r}));
+  const b=el.querySelector("[data-a=cmpHere]");if(b)b.textContent=cmpEx(hs)?T("Ne plus exclure ce site"):T("Exclure ce site");
   const i=el.querySelector(".exa input");i.value=val;if(foc)i.focus();
   i.onkeydown=e=>{if(e.key==="Enter")DACT.cmpAdd()};
 }
@@ -1732,7 +1931,7 @@ function tile(f,q,dir){
 function tiles(list,q,dir){const g=h("div","tiles");g.append(...list.map(f=>tile(f,q,dir)));return g}
 function drawer(d){
   const r=h("div","drawer"),hd=h("div","hd"),x=h("button","x");r.style.setProperty("--c",dcol(d));
-  x.title="Fermer le dossier";x.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';x.onclick=()=>boardDir(d.id);
+  x.title=T("Fermer le dossier");x.innerHTML='<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';x.onclick=()=>boardDir(d.id);
   hd.append(dirIco(d),h("b",null,d.name),h("span","n",fbIn(d).length),x);r.append(hd,tiles(fbIn(d)));return r;
 }
 // un dossier s'ouvre en tiroir sous les dossiers ; seul le tiroir change
@@ -1766,7 +1965,7 @@ function vigCard(v,j){
   c.dataset.j=j;c.dataset.u=v.url;c.title=(v.name?v.name+"\n":"")+v.url;
   c.dataset.uc=v.color?"1":""; // couleur fixée par l'utilisateur : la couleur du logo ne l'écrase pas
   c.style.setProperty("--c",v.color||hueColor(v.url)); // couleur de départ (utilisateur, sinon teinte du site)
-  const pen=h("button","pen");pen.innerHTML=PEN;pen.title="Modifier";pen.setAttribute("aria-label","Modifier la vignette");
+  const pen=h("button","pen");pen.innerHTML=PEN;pen.title=T("Modifier");pen.setAttribute("aria-label",T("Modifier la vignette"));
   const meta=h("div","meta");meta.append(h("b",null,v.name||host(v.url)));
   const initial=(host(v.url)[0]||"?").toUpperCase(),logo=s=>{const i=new Image();i.alt="";i.decoding="async";i.src=s;return i};
   if(userImg){
@@ -1806,9 +2005,9 @@ function drawVigs(){
   // la clé compte aussi les copies : une fenêtre élargie reconstruit les rangées
   const V=S.vignettes||[],mid=Math.ceil(V.length/2),k=JSON.stringify(V)+"|"+vigCopies(mid)+"|"+vigCopies(V.length-mid);if(k===vigKey)return;vigKey=k;
   const top=V.slice(0,mid).map((v,j)=>({v,j})),bot=V.slice(mid).map((v,j)=>({v,j:mid+j}));
-  const head=h("div","vhead"),add=h("button","vadd");add.setAttribute("aria-label","Ajouter une vignette");add.title="Ajouter une vignette";
-  add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';head.append(h("h3","cap","Préférés"),add); // « + » dans l'en-tête, hors du ruban
-  const head2=h("div","vhead");head2.append(h("h3","cap","Souvent visités")); // titre de la 2e rangée (cartes choisies par l'utilisateur, pas l'historique)
+  const head=h("div","vhead"),add=h("button","vadd");add.setAttribute("aria-label",T("Ajouter une vignette"));add.title=T("Ajouter une vignette");
+  add.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';head.append(h("h3","cap",T("Préférés")),add); // « + » dans l'en-tête, hors du ruban
+  const head2=h("div","vhead");head2.append(h("h3","cap",T("Souvent visités"))); // titre de la 2e rangée (cartes choisies par l'utilisateur, pas l'historique)
   $("#bvigs").replaceChildren(head,vigRow(top,"top"),head2,vigRow(bot,"bot"));
   sizeVigs();
   // logo haute résolution (manifeste du site) résolu côté Rust ; l'affichage ne l'attend pas (initiale/apple-touch d'abord)
@@ -1839,13 +2038,13 @@ document.addEventListener("visibilitychange",updateVigsScroll);
 RM.addEventListener("change",updateVigsScroll);
 // éditeur de vignette : j = index, -1 = nouvelle carte ; image et couleur choisies attendent l'enregistrement
 let vigJ=-1,vigImg="",vigColor="";
-function vigPrev(){const p=$("#vedImg");if(vigImg){p.style.background=`center/cover no-repeat url('${vigImg}')`;p.replaceChildren()}else{p.style.background="var(--bg3)";p.replaceChildren(h("small",null,"aucune image : couleurs du site"))}}
+function vigPrev(){const p=$("#vedImg");if(vigImg){p.style.background=`center/cover no-repeat url('${vigImg}')`;p.replaceChildren()}else{p.style.background="var(--bg3)";p.replaceChildren(h("small",null,T("aucune image : couleurs du site")))}}
 // couleur vide = « Auto (d'après le logo) » : bouton surligné, sinon le sélecteur montre la couleur choisie
 function vigColUI(){$("#vedAuto").classList.toggle("on",!vigColor);if(vigColor)$("#vedC").value=vigColor}
 function openVigEd(j){
   vigJ=j;const v=j<0?{name:"",url:"",image:"",color:""}:(S.vignettes[j]||{name:"",url:"",image:"",color:""});
   vigImg=v.image||"";vigColor=v.color||"";$("#vedN").value=v.name||"";$("#vedU").value=v.url||"";$("#vedC").value=v.color||"#5b6b9a";
-  $("#vedh").textContent=j<0?"Ajouter une vignette":"Modifier la vignette";
+  $("#vedh").textContent=j<0?T("Ajouter une vignette"):T("Modifier la vignette");
   $("#vedDel").hidden=j<0;vigPrev();vigColUI();$("#ved").hidden=false;$("#vedN").focus();
 }
 function closeVigEd(){$("#ved").hidden=true}
@@ -1862,7 +2061,7 @@ $("#vedOk").onclick=()=>{
   if(u&&!u.includes("://"))u="https://"+u; // domaine seul : complété en https
   // lien valide : http(s), un vrai hôte (un point, ou localhost), pas d'espace ; sinon rien n'est enregistré
   let ok="";try{const p=new URL(u);if(/^https?:$/.test(p.protocol)&&!/\s/.test(u)&&(p.hostname.includes(".")||p.hostname==="localhost"))ok=p.hostname}catch{}
-  if(!ok)return toast("Entrez un lien valide, par exemple https://exemple.fr");
+  if(!ok)return toast(T("Entrez un lien valide, par exemple https://exemple.fr"));
   const v={name:$("#vedN").value.trim()||host(u),url:u,image:vigImg,color:vigColor};
   (S.vignettes||=[]);if(vigJ<0)S.vignettes.push(v);else S.vignettes[vigJ]=v;
   saveVigs();
@@ -1873,15 +2072,15 @@ function boardBody(){
   const q=$("#bq").value.trim(),out=[],loose=fbLoose();
   $("#s-board .flt").hidden=!S.favs.length;
   if(!S.favs.length){
-    $("#bcap").textContent="Favoris";
-    out.push(h("div","none","Aucun favori pour l'instant. Importez ceux d'un autre navigateur :"),h("div","implist"));
+    $("#bcap").textContent=T("Favoris");
+    out.push(h("div","none",T("Aucun favori pour l'instant. Importez ceux d'un autre navigateur :")),h("div","implist"));
   }else if(q){
     const r=S.favs.filter(f=>norm(f.title+" "+f.url).includes(norm(q)));
-    $("#bcap").textContent=`${r.length} favori${r.length>1?"s":""} pour « ${q} »`;
+    $("#bcap").textContent=T("{n} favori pour « {q} »|{n} favoris pour « {q} »",{n:r.length,q});
     if(r.length){out.push(tiles(r,q,1));out[0].firstChild.classList.add("k")}
-    else out.push(h("div","none",`Aucun favori ne correspond. Entrée cherche « ${q} » sur ${ENGINES[S.search]||"le web"}.`));
+    else out.push(h("div","none",T("Aucun favori ne correspond. Entrée cherche « {q} » sur {e}.",{q,e:ENGINES[S.search]||T("le web")})));
   }else{
-    $("#bcap").textContent=S.folders.length?"Dossiers":"Favoris";
+    $("#bcap").textContent=S.folders.length?T("Dossiers"):T("Favoris");
     if(openDirGone())bOpen="";
     if(S.folders.length){
       const g=h("div","dirs");
@@ -1890,13 +2089,13 @@ function boardBody(){
         // fond : vrais favicons estompés (fico) ; par-dessus un voile teinté ; icône du dossier centrée avec halo devant
         if(mem.length){const m=h("span","mosaic");m.append(...mem.slice(0,6).map(fico));box.append(m,h("span","veil"))}
         box.append(dirIco(d));
-        b.append(box,h("b",null,d.name),h("small",null,mem.length+" site"+(mem.length>1?"s":"")));b.onclick=()=>boardDir(d.id);return b;
+        b.append(box,h("b",null,d.name),h("small",null,T("{n} site|{n} sites",{n:mem.length})));b.onclick=()=>boardDir(d.id);return b;
       }));
       out.push(g);const d=S.folders.find(d=>d.id===bOpen);if(d)out.push(drawer(d));
     }
     if(loose.length){
-      const sec=h("div","sec"),bt=h("button","lnk","Ranger automatiquement");bt.title="Volt propose des dossiers pour vos favoris";
-      bt.onclick=()=>{sortMode="theme";sortAll=false;reqSort()};sec.append(h("h3","cap","Sans dossier"),bt);out.push(sec,tiles(loose));
+      const sec=h("div","sec"),bt=h("button","lnk",T("Ranger automatiquement"));bt.title=T("Volt propose des dossiers pour vos favoris");
+      bt.onclick=()=>{sortMode="theme";sortAll=false;reqSort()};sec.append(h("h3","cap",T("Sans dossier")),bt);out.push(sec,tiles(loose));
     }
   }
   $("#bbody").replaceChildren(...out);
@@ -1907,9 +2106,9 @@ function boardSort(on){$("#bmain").hidden=on;$("#bsort").hidden=!on}
 // mode de rangement et périmètre choisis dans l'écran ; Volt renvoie la proposition par renderSort
 let sortMode="theme",sortAll=false;
 const SDESC={
-  theme:"Volt classe vos favoris par catégorie (Jeux, Vidéos, Dev…). Décochez ce que vous ne voulez pas ranger ; les favoris non reconnus restent sans dossier.",
-  site:"Un dossier par site : tous les favoris d'un même domaine sont regroupés (tous les youtube.com ensemble, etc.).",
-  entity:"Regroupe par chaîne, créateur ou communauté quand l'adresse le porte (chaîne YouTube, chaîne Twitch, subreddit, compte GitHub…) ; sinon par site."};
+  theme:T("Volt classe vos favoris par catégorie (Jeux, Vidéos, Dev…). Décochez ce que vous ne voulez pas ranger ; les favoris non reconnus restent sans dossier."),
+  site:T("Un dossier par site : tous les favoris d'un même domaine sont regroupés (tous les youtube.com ensemble, etc.)."),
+  entity:T("Regroupe par chaîne, créateur ou communauté quand l'adresse le porte (chaîne YouTube, chaîne Twitch, subreddit, compte GitHub…) ; sinon par site.")};
 function reqSort(){
   $("#sdesc").textContent=SDESC[sortMode];
   $$("#smode button").forEach(b=>{const on=b.dataset.m===sortMode;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)});
@@ -1918,18 +2117,18 @@ function reqSort(){
 }
 // proposition de rangement (Rust : sort::suggest) : une carte par dossier, tout coché
 function renderSort(list){
-  const sok=$("#sok"),snok=$("#snok");snok.textContent="Annuler";snok.onclick=()=>boardSort(false);
+  const sok=$("#sok"),snok=$("#snok");snok.textContent=T("Annuler");snok.onclick=()=>boardSort(false);
   boardSort(true);$("#panel main").scrollTop=0;
   if(!list.length){
-    $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:"<b>Rien à ranger dans ce mode</b>Essayez un autre mode, ou cochez « Réorganiser aussi mes dossiers actuels »."}));
-    $("#bsort .sbar span").textContent="";sok.textContent="Ranger";sok.disabled=true;sok.onclick=null;return;
+    $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:`<b>${T("Rien à ranger dans ce mode")}</b>${T("Essayez un autre mode, ou cochez « Réorganiser aussi mes dossiers actuels ».")}`}));
+    $("#bsort .sbar span").textContent="";sok.textContent=T("Ranger");sok.disabled=true;sok.onclick=null;return;
   }
   const byUrl=new Map(S.favs.map(f=>[f.url,f]));
   const cards=list.map(p=>{
     const d=p.new?null:S.folders.find(x=>x.name===p.folder),c=h("div","card"),hd=h("div","hd"),all=h("input"),n=h("span","n");
-    c.style.setProperty("--c",d?dcol(d):(p.color||"var(--a)"));all.type="checkbox";all.checked=true;all.title="Tout cocher ou décocher";
-    const name=p.new?Object.assign(h("input"),{type:"text",value:p.folder,title:"Nom du nouveau dossier"}):h("b",null,p.folder);
-    hd.append(all,dirIco(d||{icon:p.icon,color:p.color}),name);if(p.new)hd.append(h("span","tag","nouveau"));hd.append(n);c.append(hd); // dossier sans icône : glyphe de dossier coloré, pas d'initiale
+    c.style.setProperty("--c",d?dcol(d):(p.color||"var(--a)"));all.type="checkbox";all.checked=true;all.title=T("Tout cocher ou décocher");
+    const name=p.new?Object.assign(h("input"),{type:"text",value:p.folder,title:T("Nom du nouveau dossier")}):h("b",null,p.folder);
+    hd.append(all,dirIco(d||{icon:p.icon,color:p.color}),name);if(p.new)hd.append(h("span","tag",T("nouveau")));hd.append(n);c.append(hd); // dossier sans icône : glyphe de dossier coloré, pas d'initiale
     p.urls.forEach(u=>{const f=byUrl.get(u)||{url:u,title:u},l=h("label"),x=h("input");x.type="checkbox";x.checked=true;x.value=u;
       l.title=u;l.append(x,fico(f),h("span","nm",f.title||u));
       const cf=f.folder&&S.folders.find(x=>x.id===f.folder);if(cf&&cf.name!==p.folder)l.append(h("small","from","⟵ "+cf.name)); // déplacé d'un autre dossier
@@ -1939,8 +2138,8 @@ function renderSort(list){
     upd();c.v={p,d,name};return c;
   });
   const checked=c=>[...c.querySelectorAll("label input:checked")].map(x=>x.value);
-  const total=()=>{const k=cards.reduce((a,c)=>a+checked(c).length,0);$("#bsort .sbar span").textContent=`${list.length} dossier${list.length>1?"s":""} proposé${list.length>1?"s":""}`;
-    sok.textContent=`Ranger ${k} favori${k>1?"s":""}`;sok.disabled=!k};
+  const total=()=>{const k=cards.reduce((a,c)=>a+checked(c).length,0);$("#bsort .sbar span").textContent=T("{n} dossier proposé|{n} dossiers proposés",{n:list.length});
+    sok.textContent=T("Ranger {n} favori|Ranger {n} favoris",{n:k});sok.disabled=!k};
   sok.onclick=()=>{
     const had=new Set(S.favs.map(f=>f.folder).filter(Boolean)); // dossiers non vides avant le rangement
     const t=Date.now().toString(36);let i=0,n=0;
@@ -1954,60 +2153,61 @@ function renderSort(list){
     const empties=sortAll?S.folders.filter(d=>had.has(d.id)&&!S.favs.some(f=>f.folder===d.id)):[];
     save({folders:S.folders,favs:S.favs});
     if(empties.length)askEmpty(empties.map(d=>d.id),empties.map(d=>d.name),n);
-    else{boardSort(false);toast(`${n} favori${n>1?"s":""} rangé${n>1?"s":""}`)}
+    else{boardSort(false);toast(T("{n} favori rangé|{n} favoris rangés",{n}))}
   };
   $("#bsort .cards").replaceChildren(...cards);total();
 }
 // dossiers vidés par un rangement « tout » : suppression sur validation uniquement (par id : S est reconstruit après save)
 function askEmpty(ids,names,n){
   const sok=$("#sok"),snok=$("#snok");
-  const finish=()=>{snok.textContent="Annuler";snok.onclick=()=>boardSort(false);boardSort(false);toast(`${n} favori${n>1?"s":""} rangé${n>1?"s":""}`)};
-  $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:`<b>${ids.length} dossier${ids.length>1?"s":""} vidé${ids.length>1?"s":""} par ce rangement</b>${names.join(" · ")}`}));
-  $("#sdesc").textContent="Supprimer les dossiers devenus vides ?";$("#bsort .sbar span").textContent="";
-  sok.disabled=false;sok.textContent=`Supprimer ${ids.length} dossier${ids.length>1?"s":""} vide${ids.length>1?"s":""}`;
-  snok.textContent="Garder";
+  const finish=()=>{snok.textContent=T("Annuler");snok.onclick=()=>boardSort(false);boardSort(false);toast(T("{n} favori rangé|{n} favoris rangés",{n}))};
+  $("#bsort .cards").replaceChildren(Object.assign(h("div","empty"),{innerHTML:`<b>${T("{n} dossier vidé par ce rangement|{n} dossiers vidés par ce rangement",{n:ids.length})}</b>${names.join(" · ")}`}));
+  $("#sdesc").textContent=T("Supprimer les dossiers devenus vides ?");$("#bsort .sbar span").textContent="";
+  sok.disabled=false;sok.textContent=T("Supprimer {n} dossier vide|Supprimer {n} dossiers vides",{n:ids.length});
+  snok.textContent=T("Garder");
   sok.onclick=()=>{S.folders=S.folders.filter(d=>!ids.includes(d.id));save({folders:S.folders});finish()};
   snok.onclick=finish;
 }
 // ===== import (page de favoris vide, bienvenue) =====
 let BR=[];const IMP={};
-const nb=(n,w)=>`${n} favori${n>1?"s":""} ${w}${n>1?"s":""}`;
 function renderBrowsers(list){
   BR=list;
   $$(".implist").forEach(el=>el.replaceChildren(...(BR.length?BR.map(b=>{
     const r=h("div","row imp"),tx=h("div"),k=IMP[b.id],many=BR.filter(x=>x.browser===b.browser).length>1;
-    tx.append(h("b",null,b.browser+(many?" · "+b.profile:"")),h("small",null,k!=null?nb(k,"importé"):nb(b.count,"trouvé")));
+    tx.append(h("b",null,b.browser+(many?" · "+b.profile:"")),h("small",null,k!=null?T("{n} favori importé|{n} favoris importés",{n:k}):T("{n} favori trouvé|{n} favoris trouvés",{n:b.count})));
     r.append(ico("",b.browser),tx);
-    if(k!=null){const d=h("span","done");d.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Importé';r.append(d)}
-    else{const bt=h("button","btn g","Importer");bt.onclick=()=>{bt.disabled=true;bt.textContent="Importation…";send({cmd:"import",id:b.id})};r.append(bt)}
+    if(k!=null){const d=h("span","done");d.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'+T("Importé");r.append(d)}
+    else{const bt=h("button","btn g",T("Importer"));bt.onclick=()=>{bt.disabled=true;bt.textContent=T("Importation…");send({cmd:"import",id:b.id})};r.append(bt)}
     return r;
-  }):[h("div","row","Aucun autre navigateur avec des favoris n'a été trouvé.")])));
+  }):[h("div","row",T("Aucun autre navigateur avec des favoris n'a été trouvé."))])));
 }
 // réponse de Volt à un import : nombre ajouté, null en cas d'échec (le bouton revient)
 function imported(id,n){if(n!=null){IMP[id]=n;$("#hvolty").classList.add("wink")}renderBrowsers(BR)}
 // volt://… affiché dans la barre quand le panneau est ouvert
-const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",pass:"settings/passwords",keys:"settings/keys"};
+const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",dl:"downloads",tasks:"tasks",cards:"settings/payments",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",pass:"settings/passwords",keys:"settings/keys"};
 // tableau de bord : [section, nom, description, icône]
-const CATS=[["gamer","Jeu et performances","Laisser la RAM et le processeur à vos jeux",'<rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/>'],
-  ["start","Général","Démarrage, recherche, traduction, mises à jour",'<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>'],
-  ["look","Apparence","Thème, couleur, mode sombre, Volty",'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>'],
-  ["priv","Confidentialité","Pubs, traqueurs, données",'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>'],
-  ["exts","Extensions","Chrome Web Store, Volt Store",'<path d="M9 3h6v4h4v6h-4v4H9v-4H5V7h4z"/>'],
-  ["keys","Raccourcis clavier","Tout faire sans la souris",'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>']];
-const QUICK=[["game_mode","Mode Jeu","La RAM va d'abord à vos jeux",CATS[0][3]],["adblock","Bloqueur de pubs","Pages plus légères et plus rapides",CATS[3][3]],
-  ["night","Mode nuit","Assombrit les sites clairs (au redémarrage)",'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>'],["favbar","Barre de favoris","Sous la barre d'adresse",'<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>']];
-const KEYS=[["Ctrl T","Nouvel onglet"],["Ctrl W","Fermer l'onglet"],["Ctrl Maj T","Rouvrir l'onglet fermé"],["Ctrl Tab","Onglet suivant"],["Ctrl Maj Tab","Onglet précédent"],["Ctrl L","Aller à la barre d'adresse"],["Ctrl D","Ajouter aux favoris"],["Ctrl H","Historique et cookies"],["F5","Actualiser"],["/","Rechercher un réglage"],["Échap","Revenir / fermer les réglages"]];
+const CATS=[["gamer",T("Jeu et performances"),T("Laisser la RAM et le processeur à vos jeux"),'<rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/>'],
+  ["start",T("Général"),T("Langue, démarrage, recherche, traduction, mises à jour"),'<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>'],
+  ["favs",T("Favoris"),T("Barre, dossiers, ouverture des dossiers"),'<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>'],
+  ["look",T("Apparence"),T("Thème, couleur, mode sombre, Volty"),'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>'],
+  ["priv",T("Confidentialité"),T("Pubs, traqueurs, données"),'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>'],
+  ["exts",T("Extensions"),"Chrome Web Store, Volt Store",'<path d="M9 3h6v4h4v6h-4v4H9v-4H5V7h4z"/>'],
+  ["keys",T("Raccourcis clavier"),T("Tout faire sans la souris"),'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>']];
+const QUICK=[["game_mode",T("Mode Jeu"),T("La RAM va d'abord à vos jeux"),CATS[0][3]],["adblock",T("Bloqueur de pubs"),T("Pages plus légères et plus rapides"),CATS[3][3]],
+  ["night",T("Mode nuit"),T("Assombrit les sites clairs (au redémarrage)"),'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>'],["favbar",T("Barre de favoris"),T("Sous la barre d'adresse"),'<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>']];
+const KEYS=[["Ctrl T",T("Nouvel onglet")],["Ctrl W",T("Fermer l'onglet")],["Ctrl F",T("Rechercher dans la page")],["Ctrl J",T("Téléchargements")],[T("Ctrl Maj A"),T("Rechercher dans les onglets")],[T("Maj Échap"),T("Gestionnaire de tâches")],["F11",T("Plein écran")],[T("Ctrl 1 à 9"),T("Aller à l'onglet de ce rang (9 : le dernier)")],[T("Ctrl + / −"),T("Zoom (Ctrl 0 : 100 %)")],["Ctrl P",T("Imprimer")],["Ctrl N",T("Nouvelle fenêtre")],[T("Ctrl Maj N"),T("Nouvelle fenêtre de navigation privée")],[T("Ctrl Maj T"),T("Rouvrir l'onglet fermé")],["Ctrl Tab",T("Onglet suivant")],[T("Ctrl Maj Tab"),T("Onglet précédent")],["Ctrl L",T("Aller à la barre d'adresse")],["Ctrl D",T("Ajouter aux favoris")],["Ctrl H",T("Historique et cookies")],["F5",T("Actualiser")],["/",T("Rechercher un réglage")],[T("Échap"),T("Revenir / fermer les réglages")]];
 const ENGINES={google:"Google",duckduckgo:"DuckDuckGo",bing:"Bing",brave:"Brave Search"};
 let nExt=0,cur="home";
 const norm=t=>(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 function renderHome(){
-  const sleep=S.sleep_min?`veille ${S.sleep_min>=60?"1 h":S.sleep_min+" min"}`:"pas de veille";
-  const sum={gamer:(S.game_mode?"Mode Jeu activé":"Mode Jeu désactivé")+" · "+sleep,start:(ENGINES[S.search]||S.search)+({proposer:" · reprise proposée",auto:" · session restaurée"}[S.startup]||""),
-    look:(THEMES[S.theme]||THEMES.volt)[0]+(S.night?" · mode nuit":""),priv:S.adblock?"Bloqueur actif":"Bloqueur désactivé",exts:nExt+" extension"+(nExt>1?"s":""),keys:KEYS.length+" raccourcis"};
+  const sleep=S.sleep_min?T("veille {d}",{d:S.sleep_min>=60?"1 h":S.sleep_min+" min"}):T("pas de veille");
+  const sum={gamer:(S.game_mode?T("Mode Jeu activé"):T("Mode Jeu désactivé"))+" · "+sleep,start:(ENGINES[S.search]||S.search)+({proposer:" · "+T("reprise proposée"),auto:" · "+T("session restaurée")}[S.startup]||""),
+    favs:T("{n} favori|{n} favoris",{n:S.favs.length})+" · "+(S.fav_open==="menu"?T("dossiers en menu"):T("dossiers en barre")),
+    look:(THEMES[S.theme]||THEMES.volt)[0]+(S.night?" · "+T("mode nuit"):""),priv:S.adblock?T("Bloqueur actif"):T("Bloqueur désactivé"),exts:T("{n} extension|{n} extensions",{n:nExt}),keys:T("{n} raccourcis",{n:KEYS.length})};
   $("#quick").replaceChildren(...QUICK.map(([k,n,d,ic])=>{
     const b=document.createElement("button");b.className="q"+(S[k]?" on":"");b.setAttribute("aria-pressed",!!S[k]);
-    b.innerHTML=`<span class="t"><svg viewBox="0 0 24 24">${ic}</svg><span>${S[k]?"Activé":"Désactivé"}</span></span><b>${n}</b><small>${d}</small>`;
-    b.onclick=()=>{save({[k]:!S[k]});if(k==="night"){$("#restart").hidden=false;toast("Mode nuit : redémarrez Volt pour l'appliquer (Apparence)")}if(k==="game_mode")toast(S.game_mode?"Mode Jeu activé : RAM limitée en arrière-plan":"Mode Jeu désactivé")};
+    b.innerHTML=`<span class="t"><svg viewBox="0 0 24 24">${ic}</svg><span>${S[k]?T("Activé"):T("Désactivé")}</span></span><b>${n}</b><small>${d}</small>`;
+    b.onclick=()=>{save({[k]:!S[k]});if(k==="night"){$("#restart").hidden=false;toast(T("Mode nuit : redémarrez Volt pour l'appliquer (Apparence)"))}if(k==="game_mode")toast(S.game_mode?T("Mode Jeu activé : RAM limitée en arrière-plan"):T("Mode Jeu désactivé"))};
     return b;
   }));
   $("#cats").replaceChildren(...CATS.map(([id,n,d,ic])=>{
@@ -2024,7 +2224,7 @@ function searchSettings(q){
     let hit=0;sec.querySelectorAll(".row").forEach(r=>{const m=!on||norm(r.textContent+" "+sec.querySelector("h2").textContent).includes(n);r.hidden=!m;hit+=m});
     sec.classList.toggle("hit",on&&hit>0);any||=hit>0;
   });
-  const nr=$("#nores");nr.hidden=!on||any;nr.textContent=`Aucun réglage pour « ${q.trim()} »`;
+  const nr=$("#nores");nr.hidden=!on||any;nr.textContent=T("Aucun réglage pour « {q} »",{q:q.trim()});
 }
 function openSection(id){
   if(id==="search")id="start";if(id==="plugins")id="exts";if(!$("#s-"+id))id="home";
@@ -2037,7 +2237,30 @@ function openSection(id){
   if(id==="pass"){pwHelp("");pwForm();send({cmd:"pw_list"})}
   if(id==="board"){boardSort(false);drawBoard();if(!S.favs.length)send({cmd:"browsers"})}
   if(id==="hello")send({cmd:"browsers"});
+  if(id==="dl"){drawDls();send({cmd:"dls"})}
+  if(id==="priv")send({cmd:"perms"});
+  if(id==="cards")send({cmd:"cc_list"});
+  clearInterval(tkT);tkT=0;
+  if(id==="tasks"){$("#tklist").replaceChildren();send({cmd:"tasks"});tkT=setInterval(()=>panel&&cur==="tasks"?send({cmd:"tasks"}):(clearInterval(tkT),tkT=0),2000)}
   updateVigsScroll(); // démarre le défilement sur la page de favoris, l'arrête ailleurs
+}
+// ===== gestionnaire de tâches (Maj+Échap) : relevé demandé toutes les 2 s tant que la page est affichée =====
+let tkT=0;
+const TKIND={"-1":T("Fenêtre de Volt"),0:T("Navigateur"),2:T("Service du moteur"),3:T("Service du moteur"),4:T("Carte graphique")};
+function tasks(l){
+  if(cur!=="tasks"||!panel||hold(tasks,l))return;
+  l.sort((a,b)=>b.ram-a.ram);
+  $("#tksum").textContent=T("{n} processus",{n:l.length})+" · "+T("{x} Mo",{x:fmt(l.reduce((s,p)=>s+p.ram,0))});
+  $("#tklist").replaceChildren(...l.map(p=>{
+    const r=h("div","row tk"),tx=h("div"),free=p.tabs.filter(t=>!t.shown).map(t=>t.id);
+    const name=p.tabs.length?p.tabs.map(t=>t.title).join(" · "):p.ui?T("Interface de Volt"):TKIND[p.kind]||T("Extension ou page en réserve");
+    tx.append(h("b",null,name),h("small",null,(p.tabs.length>1?T("{n} onglets dans le même processus",{n:p.tabs.length})+" · ":"")+T("processus {x}",{x:p.pid})));
+    tx.title=name;
+    r.append(tx,h("span","n",T("{x} Mo",{x:fmt(p.ram)})),h("span","n",p.cpu==null?"…":T("{x} %",{x:p.cpu.toLocaleString(LOC,{maximumFractionDigits:1})})));
+    const b=h("button","btn g",T("Décharger"));b.onclick=()=>send({cmd:"task_free",ids:free});
+    b.disabled=!free.length;b.style.visibility=p.tabs.length?"":"hidden";
+    b.title=free.length?T("Libérer la mémoire de cet onglet : il se rechargera au clic"):T("C'est l'onglet affiché");
+    r.append(b);return r}));
 }
 let tt;
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
@@ -2056,23 +2279,59 @@ $("#wmax").onclick=()=>send({cmd:"win_max"});
 $("#wclose").onclick=()=>send({cmd:"win_close"});
 $("#list").onwheel=e=>{$("#list").scrollLeft+=e.deltaY+e.deltaX;e.preventDefault()};
 $$("[data-c]").forEach(b=>b.onclick=()=>send({cmd:b.dataset.c}));
-$("#url").onkeydown=e=>{if(e.key==="Enter"&&e.target.value.trim()){send({cmd:"nav",url:e.target.value});if(panel)setPanel(false)}};
+// ===== suggestions de la barre d'adresse : favoris et pages déjà vues, cherchés par Volt sur la machine (« sugg ») =====
+// TB : onglets du dernier rendu ; sgTab : la barre d'adresse cherche dans les onglets ouverts (Ctrl+Maj+A, bouton ˅)
+let SG=[],sgK=-1,sgQ="",TB=[],sgTab=false;
+const URL_PH=$("#url").placeholder;
+function sgHide(){SG=[];sgK=-1;if(!$("#sugg").hidden){$("#sugg").hidden=true;send({cmd:"over",h:0})}}
+function sgMark(){$$("#sugg .sg").forEach((d,i)=>{d.classList.toggle("k",i===sgK);if(i===sgK)d.scrollIntoView({block:"nearest"})});if(!sgTab)$("#url").value=sgK<0?sgQ:SG[sgK][0]}
+// ligne choisie : un onglet ouvert (son id en 4e position) devient l'onglet affiché, sinon l'adresse est ouverte
+function sgGo(i){const [u,,,id]=SG[i];sgHide();if(id!=null){$("#url").blur();pick(id)}else{$("#url").value=u;send({cmd:"nav",url:u})}if(panel)setPanel(false)}
+// appelé par Volt : (saisie, [[adresse, titre, favori]…]) ; une réponse arrivée après une autre frappe est ignorée
+function sugg(q,l){if(document.activeElement===$("#url")&&sgQ===q&&!sgTab)sgDraw(l)}
+function sgDraw(l){
+  const u=$("#url"),box=$("#sugg");
+  if(!l.length)return sgHide();
+  SG=l;sgK=-1;const r=u.getBoundingClientRect();
+  box.replaceChildren(...l.map(([url,title,fav,id],i)=>{
+    const d=h("div","sg");d.style.marginLeft=r.left+"px";d.style.width=r.width+"px";
+    d.append(fico({url}),h("b",null,title||url),h("small",null,url.replace(/^https?:\/\/(www\.)?/,"")));
+    if(fav)d.append(h("i","st","★"));
+    if(id===lastAct)d.append(h("i","st",T("affiché")));
+    d.onmousedown=e=>{e.preventDefault();sgGo(i)}; // avant la perte du focus, qui referme la liste
+    return d}));
+  box.hidden=false;send({cmd:"over",h:Math.ceil(box.getBoundingClientRect().bottom)});
+}
+// recherche dans les onglets : tous ceux de la fenêtre, puis ceux dont le titre ou l'adresse porte chaque mot tapé
+// shortcut: les onglets des autres fenêtres de Volt n'y sont pas, à ajouter si on travaille souvent à plusieurs fenêtres.
+function tabSearch(){const u=$("#url");sgTab=true;u.value="";sgQ="";u.placeholder=T("Rechercher dans les onglets ouverts");u.focus();tabList()}
+function tabList(){const w=norm(sgQ).split(/\s+/).filter(Boolean);sgDraw(TB.filter(t=>w.every(x=>norm(t.title+" "+t.url).includes(x))).map(t=>[t.url,t.title,false,t.id]))}
+$("#tsbtn").onmousedown=e=>{e.preventDefault();sgTab?$("#url").blur():tabSearch()};
+$("#sugg").onmousedown=e=>e.preventDefault(); // faire défiler la liste à la souris ne la referme pas
+$("#url").oninput=e=>{sgQ=e.target.value.trim();if(sgTab)return tabList();sgQ?send({cmd:"sugg",q:sgQ}):sgHide()};
+$("#url").onblur=()=>{sgHide();if(sgTab){sgTab=false;const u=$("#url"),a=TB.find(t=>t.id===lastAct);u.placeholder=URL_PH;u.value=panel?"volt://"+VOLT[cur]:a&&!a.url.startsWith("data:")?a.url:""}};
+$("#url").onkeydown=e=>{
+  if(SG.length&&(e.key==="ArrowDown"||e.key==="ArrowUp")){e.preventDefault();const n=SG.length+1;sgK=(sgK+1+(e.key==="ArrowDown"?1:n-1))%n-1;return sgMark()}
+  if(e.key==="Escape"&&sgTab){e.stopPropagation();return $("#url").blur()}
+  if(e.key==="Escape"&&SG.length){e.stopPropagation();$("#url").value=sgQ;return sgHide()}
+  if(e.key==="Enter"&&sgTab){if(SG.length)sgGo(Math.max(0,sgK));return}
+  if(e.key==="Enter"&&e.target.value.trim()){sgHide();send({cmd:"nav",url:e.target.value});if(panel)setPanel(false)}};
 $("#url").onfocus=e=>e.target.select();
 $("#gear").onclick=()=>panel?setPanel(false):openSection("home");
 $("#sq").oninput=e=>searchSettings(e.target.value);
 $$("[data-go]").forEach(b=>b.onclick=()=>openSection(b.dataset.go));
 $("#keylist").replaceChildren(...KEYS.map(([k,l])=>{const r=document.createElement("div");r.className="row kb";r.innerHTML=`<b></b><span>${k.split(" ").map(x=>`<kbd>${x}</kbd>`).join("")}</span>`;r.querySelector("b").textContent=l;return r}));
-$$("section:not(#s-home,#s-board,#s-hello)").forEach(sec=>{const b=document.createElement("button");b.className="crumb";b.innerHTML='<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>Réglages';b.onclick=()=>openSection("home");sec.prepend(b)});
+$$("section:not(#s-home,#s-board,#s-hello)").forEach(sec=>{const b=document.createElement("button");b.className="crumb";b.innerHTML='<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>'+T("Réglages");b.onclick=()=>openSection("home");sec.prepend(b)});
 $("#star").onclick=()=>window.ipc.postMessage("cd");
 $("#favtoggle").onclick=()=>save({favbar:!S.favbar});
 $("#favbar").oncontextmenu=e=>{e.preventDefault();openSection("favs")};
 addEventListener("resize",()=>{if(S.favs)renderFavbar();if(panel&&cur==="board"){drawVigs();sizeVigs()}}); // largeur changée : « +N », pages, et durée/longueur du défilement
-$("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:"Dossier",color:"",icon:"📁"});save({folders:S.folders})};
+$("#newdir").onclick=()=>{S.folders.push({id:Date.now().toString(36),name:T("Dossier"),color:"",icon:"📁"});save({folders:S.folders})};
 $("#hq").oninput=()=>histFull();
 $("#hclear").onclick=()=>send({cmd:"hist_clear"});
-$("#game").onclick=()=>{save({game_mode:!S.game_mode});toast(S.game_mode?"Mode Jeu activé : RAM limitée en arrière-plan":"Mode Jeu désactivé")};
-$$("[data-k]").forEach(el=>el.onchange=()=>{save({[el.dataset.k]:el.type==="checkbox"?el.checked:"num" in el.dataset?+el.value:el.value});if(el.dataset.k==="night")$("#restart").hidden=false;if(el.dataset.k==="volty_anim")$("#logo").classList.toggle("still",!el.checked)});
-$("#restart").onclick=()=>send({cmd:"restart"});
+$("#game").onclick=()=>{save({game_mode:!S.game_mode});toast(S.game_mode?T("Mode Jeu activé : RAM limitée en arrière-plan"):T("Mode Jeu désactivé"))};
+$$("[data-k]").forEach(el=>el.onchange=()=>{save({[el.dataset.k]:el.type==="checkbox"?el.checked:"num" in el.dataset?+el.value:el.value});if(el.dataset.k==="night")$("#restart").hidden=false;if(el.dataset.k==="safe_browsing")toast(T("Pris en compte au prochain démarrage de Volt"));if(el.dataset.k==="volty_anim")$("#logo").classList.toggle("still",!el.checked)});
+$("#restart").onclick=$("#lrestart").onclick=()=>send({cmd:"restart"});
 $("#extbtn").onclick=()=>{if(!EXTS||!EXTS.length)return openSection("exts");save({exts_open:!S.exts_open});extBar()};
 $("#storeopen").onclick=()=>{setPanel(false);send({cmd:"tab",url:"https://chromewebstore.google.com/"})};
 $("#storebtn").onclick=()=>{exBusy.add(storeId(curUrl));storeBtn(curUrl);send({cmd:"ext_install",page:true})};
@@ -2080,9 +2339,9 @@ $("#extadd").onclick=()=>{const v=$("#extid").value.trim();if(v){send({cmd:"ext_
 $("#clear").onclick=()=>send({cmd:"clear"});
 // mots de passe : confirmation sur place, puis le Rust efface les seuls identifiants enregistrés
 function pwAsk(on){
-  const r=$("#pwrow");r.querySelector("small").textContent=on?"Supprimer tous les mots de passe enregistrés ? On ne peut pas revenir en arrière.":"Volt ne les remplira plus. Les cookies, l'historique et les autres données ne sont pas touchés.";
+  const r=$("#pwrow");r.querySelector("small").textContent=on?T("Supprimer tous les mots de passe enregistrés ? On ne peut pas revenir en arrière."):T("Volt ne les remplira plus. Les cookies, l'historique et les autres données ne sont pas touchés.");
   r.querySelector(".bs")?.remove();$("#pwclear").hidden=on;
-  if(on){const d=h("div","bs"),n=h("button","btn g","Annuler"),y=h("button","btn","Supprimer");d.style.cssText="display:flex;gap:6px;flex:none";
+  if(on){const d=h("div","bs"),n=h("button","btn g",T("Annuler")),y=h("button","btn",T("Supprimer"));d.style.cssText="display:flex;gap:6px;flex:none";
     n.onclick=()=>pwAsk(0);y.onclick=()=>{pwAsk(0);send({cmd:"pw_clear"})};d.append(n,y);r.append(d);y.focus()}
 }
 $("#pwclear").onclick=()=>pwAsk(1);
@@ -2094,6 +2353,89 @@ const TRASH='<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 
 const iconBtn=(svg,title)=>{const b=h("button","ib");b.innerHTML=svg;b.title=title;return b};
 $("#pwico").onclick=()=>send({cmd:"pw_fill"});
 function pwIcon(a){$("#pwico").hidden=panel||!(a&&a.pwfill)}
+// cadenas : https = connexion chiffrée ; http = « Non sécurisé ». shortcut: une page https affichée malgré une erreur de
+// certificat (l'utilisateur a passé l'avertissement du moteur) garde le cadenas ; à signaler si le moteur le rapporte.
+function secIcon(a){
+  const s=$("#sec"),u=a?a.url:"",k=panel?"":u.startsWith("https://")?"ok":u.startsWith("http://")?"no":"";
+  s.hidden=!k;s.className=k;s.lastChild.textContent=k==="no"?T("Non sécurisé"):"";
+  s.title=k==="no"?T("Connexion non chiffrée : ce que vous envoyez à ce site peut être lu en chemin"):T("Connexion chiffrée (HTTPS)");
+}
+// fenêtres surgissantes bloquées sur la page (clic : les ouvrir ou autoriser le site) ; zoom différent de 100 % (clic : retour à 100 %)
+function pageIcons(a){
+  const p=$("#popico"),z=$("#zoomico"),n=a?a.blocked||0:0,zo=a?a.zoom||100:100;
+  p.hidden=panel||!n;p.lastChild.textContent=n>1?n:"";p.title=T("{n} fenêtre surgissante bloquée|{n} fenêtres surgissantes bloquées",{n});
+  z.hidden=panel||zo===100;z.textContent=T("{x} %",{x:zo});
+  // PDF affiché (adresse en .pdf) : bouton « Remplir et signer » ; pas sur la page de signature elle-même
+  $("#signico").hidden=panel||!a||!/\.pdf($|[?#])/i.test(a.url);
+  $("#ccico").hidden=panel||!(a&&a.ccfill); // un champ de numéro de carte sur la page, et au moins une carte enregistrée
+}
+// ===== cartes de paiement (Rust : cards.rs). L'interface ne reçoit jamais un numéro : son réseau et ses 4 derniers chiffres. =====
+let CC=[];
+function ccManager(l){CC=l;if(cur==="cards")ccDraw()}
+function ccDraw(){
+  $("#ccempty").hidden=CC.length>0;
+  $("#cclist").replaceChildren(...CC.map(c=>{
+    const r=h("div","row"),tx=h("div"),rm=iconBtn(TRASH,T("Supprimer (Windows Hello)"));
+    tx.append(h("b",null,c.label),h("small",null,(c.name?c.name+" · ":"")+T("expire fin {x}",{x:c.exp})));
+    rm.onclick=()=>send({cmd:"cc_del",i:c.i});r.append(tx,rm);return r}));
+}
+const CCIN=["#ccname","#ccnum","#ccexp"];
+function ccAdded(){CCIN.forEach(q=>$(q).value="");toast(T("Carte enregistrée"))}
+$("#ccadd").onclick=()=>{const [name,number,exp]=CCIN.map(q=>$(q).value);send({cmd:"cc_add",name,number,exp})};
+$("#ccico").onclick=()=>send({cmd:"cc_fill"});
+$("#signico").onclick=()=>send({cmd:"sign"});
+$("#popico").onclick=()=>send({cmd:"popup_menu"});
+// autorisations des sites, gardées par le moteur : (numéro de l'autorisation -> nom), une ligne par choix fait
+const PERM={1:T("Micro"),2:T("Caméra"),3:T("Position"),4:T("Notifications"),5:T("Capteurs"),6:T("Lecture du presse-papiers"),7:T("Téléchargements multiples"),8:T("Fichiers"),9:T("Lecture automatique"),10:T("Polices"),11:T("MIDI"),12:T("Gestion des fenêtres")};
+function perms(l){
+  $("#permlist").replaceChildren(...(l.length?l:[null]).map(x=>{
+    const r=h("div","row");
+    if(!x){r.append(h("span",null,T("Aucun site n'a de réglage particulier pour l'instant")));return r}
+    r.append(h("span",null,x.site.replace(/^https?:\/\//,"").replace(/\/$/,"")+" · "+(PERM[x.kind]||T("Autre autorisation"))+" · "+(x.allow?T("accepté"):T("refusé"))),delBtn(()=>send({cmd:"perm_forget",kind:x.kind,site:x.site})));
+    r.lastChild.title=T("Oublier ce choix");return r}));
+}
+$("#favimp").onclick=()=>send({cmd:"fav_import_html"});
+$("#favexp").onclick=()=>send({cmd:"fav_export_html"});
+$("#dlbtn").onclick=()=>panel&&cur==="dl"?setPanel(false):openSection("dl");
+$("#dlfolder").onclick=()=>send({cmd:"dl_act",a:"folder"});
+$("#dlclear").onclick=()=>send({cmd:"dl_act",a:"clear"});
+// ===== téléchargements : liste tenue par Volt (dl.rs), envoyée à chaque changement d'état ; tant qu'un fichier arrive,
+// elle est redemandée chaque seconde pour l'avancement =====
+let DLS=[],dlT=0;
+const octets=v=>v>=1073741824?T("{x} Go",{x:(v/1073741824).toLocaleString(LOC,{maximumFractionDigits:1})}):v>=1048576?T("{x} Mo",{x:(v/1048576).toLocaleString(LOC,{maximumFractionDigits:1})}):T("{x} Ko",{x:fmt(Math.max(1,Math.round(v/1024)))});
+function dls(l){
+  DLS=l;const act=l.filter(d=>d.state===0).length;
+  $("#dlbtn").classList.toggle("on",!!act);
+  clearInterval(dlT);dlT=act?setInterval(()=>send({cmd:"dls"}),1000):0;
+  if(cur==="dl")drawDls();
+}
+function drawDls(){
+  const act=DLS.filter(d=>d.state===0).length;
+  $("#dlsum").textContent=DLS.length?T("{n} fichier|{n} fichiers",{n:DLS.length})+(act?" · "+T("{n} en cours",{n:act}):""):T("Aucun téléchargement pour l'instant");
+  $("#dlwhere").textContent=T("Enregistrés dans : {x}",{x:S.download_dir||T("Le dossier Téléchargements de Windows")});
+  $("#dlclear").hidden=!DLS.some(d=>d.state!==0);
+  $("#dllist").replaceChildren(...DLS.map(d=>{
+    const r=h("div","row dl"),tx=h("div"),bs=h("span","bs"),pct=d.total>0?Math.min(100,Math.round(d.got*100/d.total)):-1;
+    const st=d.state===2?T("Terminé")+" · "+octets(d.got):d.state===0?(pct<0?octets(d.got):T("{a} sur {b}",{a:octets(d.got),b:octets(d.total)})+" · "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
+    tx.append(h("b",null,d.name||"…"),h("small",null,st+(d.site?" · "+d.site:"")));
+    if(d.state===0&&pct>=0){const p=h("i","bar");p.style.setProperty("--p",pct+"%");tx.append(p)}
+    const btn=(t,a,cls)=>{const b=h("button","btn "+(cls||"g"),t);b.onclick=()=>send({cmd:"dl_act",id:d.id,a});bs.append(b)};
+    if(d.state===2){btn(T("Ouvrir"),"open","");btn(T("Afficher dans le dossier"),"show")}
+    if(d.state===0){btn(T("Pause"),"pause");btn(T("Annuler"),"cancel")}
+    if(d.state===1&&d.resume)btn(T("Reprendre"),"resume","");
+    const x=delBtn(()=>send({cmd:"dl_act",id:d.id,a:"forget"}));x.title=T("Retirer de la liste");
+    r.append(tx,bs,x);return r;
+  }));
+}
+$("#dlpick").onclick=()=>send({cmd:"dl_pick"});
+$("#dlreset").onclick=()=>send({cmd:"dl_reset"});
+$("#zoomico").onclick=()=>send({cmd:"zoom_reset"});
+// sites autorisés à ouvrir des fenêtres (Confidentialité), ajoutés depuis l'icône de la barre d'adresse
+let paKey="";
+function renderPa(){
+  const l=S.popup_allow||[],k=JSON.stringify(l);if(k===paKey)return;paKey=k;
+  $("#palist").replaceChildren(...l.map(x=>{const r=h("div","row");r.append(h("span",null,x),delBtn(()=>save({popup_allow:S.popup_allow.filter(y=>y!==x)})));r.lastChild.title=T("Retirer {x}",{x});return r}));
+}
 $("#pwq").oninput=()=>pwDraw();
 function pwManager(list){PW=list;if(cur==="pass")pwDraw()}
 function pwDraw(){
@@ -2102,11 +2444,11 @@ function pwDraw(){
   $("#pwempty").hidden=PW.length>0;
   $("#pwlist").replaceChildren(...rows.map(e=>{
     const d=h("div","pw-e"),s=h("div","site");
-    s.innerHTML="<b></b><small></small>";s.querySelector("b").textContent=e.host;s.querySelector("small").textContent=e.user||"(sans identifiant)";
+    s.innerHTML="<b></b><small></small>";s.querySelector("b").textContent=e.host;s.querySelector("small").textContent=e.user||T("(sans identifiant)");
     const pw=h("span","pw","••••••••");pw.dataset.i=e.i;
-    const eye=iconBtn(EYE,"Afficher (Windows Hello)");eye.onclick=()=>{if(pw.dataset.shown){pw.textContent="••••••••";delete pw.dataset.shown}else send({cmd:"pw_reveal",i:e.i})};
-    const ed=iconBtn(PENCIL,"Modifier (Windows Hello)");ed.onclick=()=>pwForm(e);
-    const rm=iconBtn(TRASH,"Supprimer (Windows Hello)");rm.onclick=()=>send({cmd:"pw_del",i:e.i});
+    const eye=iconBtn(EYE,T("Afficher (Windows Hello)"));eye.onclick=()=>{if(pw.dataset.shown){pw.textContent="••••••••";delete pw.dataset.shown}else send({cmd:"pw_reveal",i:e.i})};
+    const ed=iconBtn(PENCIL,T("Modifier (Windows Hello)"));ed.onclick=()=>pwForm(e);
+    const rm=iconBtn(TRASH,T("Supprimer (Windows Hello)"));rm.onclick=()=>send({cmd:"pw_del",i:e.i});
     d.append(s,pw,eye,ed,rm);return d;
   }));
 }
@@ -2117,11 +2459,11 @@ function pwForm(e){
   const f=$("#pwform");if(e===undefined){f.hidden=true;f.replaceChildren();return}
   f.hidden=false;
   const mk=(ph,val)=>{const i=h("input");i.type="text";i.placeholder=ph;i.value=val||"";return i};
-  const o=mk("https://site.fr",e&&e.origin),u=mk("Identifiant",e&&e.user),p=mk(e?"Nouveau mot de passe (vide = inchangé)":"Mot de passe"),n=mk("Note (optionnel)",e&&e.note);
-  const ok=h("button","btn",e?"Enregistrer":"Ajouter"),no=h("button","btn g","Annuler");
+  const o=mk(T("https://site.fr"),e&&e.origin),u=mk(T("Identifiant"),e&&e.user),p=mk(e?T("Nouveau mot de passe (vide = inchangé)"):T("Mot de passe")),n=mk(T("Note (optionnel)"),e&&e.note);
+  const ok=h("button","btn",e?T("Enregistrer"):T("Ajouter")),no=h("button","btn g",T("Annuler"));
   no.onclick=()=>pwForm();
   ok.onclick=()=>{
-    if(!o.value.trim())return toast("Entrez l'adresse du site (exemple : https://site.fr)");
+    if(!o.value.trim())return toast(T("Entrez l'adresse du site (exemple : https://site.fr)"));
     send(e?{cmd:"pw_edit",i:e.i,origin:o.value,user:u.value,pass:p.value,note:n.value}:{cmd:"pw_add",origin:o.value,user:u.value,pass:p.value,note:n.value});
     pwForm();
   };
@@ -2132,29 +2474,29 @@ $("#pwimport").onclick=()=>send({cmd:"pw_import"});
 $("#pwexport").onclick=()=>send({cmd:"pw_export"});
 $("#qmimp").onclick=()=>pwHelp("imp");
 $("#qmexp").onclick=()=>pwHelp("exp");
-function copyText(t){try{const a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.append(a);a.select();document.execCommand("copy");a.remove();toast("Lien copié")}catch(e){toast("Copie impossible")}}
+function copyText(t){try{const a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.append(a);a.select();document.execCommand("copy");a.remove();toast(T("Lien copié"))}catch(e){toast(T("Copie impossible"))}}
 function pwHelp(which){
   const e=$("#pwhelp");if(!which||e.dataset.w===which){e.hidden=true;e.dataset.w="";e.replaceChildren();return}
   e.dataset.w=which;e.hidden=false;e.replaceChildren();
-  if(which==="exp"){e.append(h("p",null,"Crée un fichier CSV avec vos identifiants enregistrés dans Volt, pour les emporter ailleurs ou en sauvegarde. Ce fichier n'est pas chiffré : rangez-le en lieu sûr et supprimez-le après usage."));return}
-  e.append(h("p",null,"Exportez d'abord le fichier depuis votre ancien navigateur, puis choisissez-le ici. Collez ce lien dans la barre d'adresse de l'autre navigateur, puis « Exporter » :"));
-  [["Chrome","chrome://password-manager/passwords"," → Paramètres → Exporter les mots de passe"],
-   ["Edge","edge://wallet/passwords"," → ⋯ → Exporter les mots de passe"],
-   ["Opera / Opera GX","opera://settings/passwords"," → ⋮ → Exporter"],
-   ["Brave","brave://settings/passwords"," → ⋮ → Exporter"],
-   ["Firefox","about:logins"," → ⋯ → Exporter les identifiants"]].forEach(([nav,link,steps])=>{
+  if(which==="exp"){e.append(h("p",null,T("Crée un fichier CSV avec vos identifiants enregistrés dans Volt, pour les emporter ailleurs ou en sauvegarde. Ce fichier n'est pas chiffré : rangez-le en lieu sûr et supprimez-le après usage.")));return}
+  e.append(h("p",null,T("Exportez d'abord le fichier depuis votre ancien navigateur, puis choisissez-le ici. Collez ce lien dans la barre d'adresse de l'autre navigateur, puis « Exporter » :")));
+  [["Chrome","chrome://password-manager/passwords",T("→ Paramètres → Exporter les mots de passe")],
+   ["Edge","edge://wallet/passwords",T("→ ⋯ → Exporter les mots de passe")],
+   ["Opera / Opera GX","opera://settings/passwords",T("→ ⋮ → Exporter")],
+   ["Brave","brave://settings/passwords",T("→ ⋮ → Exporter")],
+   ["Firefox","about:logins",T("→ ⋯ → Exporter les identifiants")]].forEach(([nav,link,steps])=>{
     const r=h("div","lk"),sp=h("span");
-    sp.append("• ");const b=h("b",null,nav+" : ");const c=h("code",null,link);sp.append(b,c,steps);
-    const cp=h("button","cp","copier");cp.onclick=()=>copyText(link);
+    sp.append("• ");const b=h("b",null,T("{x} :",{x:nav})+" ");const c=h("code",null,link);sp.append(b,c," "+steps);
+    const cp=h("button","cp",T("copier"));cp.onclick=()=>copyText(link);
     r.append(sp,cp);e.append(r);
   });
-  e.append(h("p",null,"Le fichier contient vos mots de passe en clair : supprimez-le après l'import."));
+  e.append(h("p",null,T("Le fichier contient vos mots de passe en clair : supprimez-le après l'import.")));
 }
 // proposition d'enregistrer, après l'envoi d'un formulaire (Rust : PwSave). Rien n'est enregistré sans le clic.
 function pwOffer(user){
   const b=$("#pwbar");b.hidden=false;b.replaceChildren();
-  const t=h("b",null,user?`Enregistrer le mot de passe pour « ${user} » ?`:"Enregistrer ce mot de passe ?");
-  const y=h("button","btn","Enregistrer"),n=h("button","btn g","Pas maintenant");
+  const t=h("b",null,user?T("Enregistrer le mot de passe pour « {u} » ?",{u:user}):T("Enregistrer ce mot de passe ?"));
+  const y=h("button","btn",T("Enregistrer")),n=h("button","btn g",T("Pas maintenant"));
   y.onclick=()=>{send({cmd:"pw_save"});b.hidden=true;clearTimeout(pwbarT)};
   n.onclick=()=>{send({cmd:"pw_dismiss"});b.hidden=true;clearTimeout(pwbarT)};
   b.append(t,y,n);
@@ -2163,7 +2505,7 @@ function pwOffer(user){
 // plusieurs comptes pour l'origine : menu de choix sous l'icône
 function pwPick(users){
   const m=$("#pwpick");m.hidden=false;
-  m.replaceChildren(...users.map(u=>{const b=h("button",null,u||"(sans identifiant)");b.onclick=()=>{send({cmd:"pw_fill",user:u});m.hidden=true};return b}));
+  m.replaceChildren(...users.map(u=>{const b=h("button",null,u||T("(sans identifiant)"));b.onclick=()=>{send({cmd:"pw_fill",user:u});m.hidden=true};return b}));
   const r=$("#pwico").getBoundingClientRect();m.style.left=Math.max(8,r.right-170)+"px";m.style.top=(r.bottom+6)+"px";
 }
 document.addEventListener("click",e=>{const m=$("#pwpick");if(!m.hidden&&!m.contains(e.target)&&e.target!==$("#pwico"))m.hidden=true},true);
@@ -2180,10 +2522,12 @@ $$(".defbtn").forEach(b=>b.onclick=()=>send({cmd:"default_browser"}));
 // « navigateur par défaut » est relu (setDef), pas un rendu complet à chaque clic venu de la page
 addEventListener("focus",()=>send({cmd:"def"}));
 $("#hvolty").innerHTML=voltySvg(seasonFor(new Date()),false);
-$("#hgo").onclick=()=>{save({welcomed:true});openSection("board")}; // plus de bienvenue au prochain lancement
+$("#mklnk").onclick=()=>send({cmd:"shortcuts"});
+$("#hgo").onclick=()=>{if($("#hlnk").checked)send({cmd:"shortcuts"});save({welcomed:true});openSection("board")}; // plus de bienvenue au prochain lancement
 addEventListener("keydown",e=>{
   const k=(e.ctrlKey?"c":"")+(e.shiftKey?"s":"")+e.key.toLowerCase();
-  if(["ct","cw","cl","ctab","cstab","cst"].includes(k)){e.preventDefault();k==="cl"?focusUrl():window.ipc.postMessage(k)}
+  if(k==="sescape"){e.preventDefault();openSection("tasks");return}
+  if(["ct","cw","cl","ctab","cstab","cst","cn","csn","cf","cj","csa","f11","c1","c2","c3","c4","c5","c6","c7","c8","c9"].includes(k)){e.preventDefault();k==="cl"?focusUrl():k==="csa"?tabSearch():window.ipc.postMessage(k)}
   if(k==="cd"){e.preventDefault();window.ipc.postMessage("cd")}
   if(k==="ch"){e.preventDefault();toggleDrawer()}
   if(e.key==="Escape"&&!$("#ved").hidden){closeVigEd();return}

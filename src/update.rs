@@ -8,6 +8,8 @@ use std::{
 };
 
 use serde_json::Value;
+
+use crate::lang::{t, te};
 use windows::{
     Win32::{Security::Cryptography::{BCRYPT_SHA256_ALG_HANDLE, BCryptHash}, System::Com::Urlmon::URLDownloadToFileW},
     core::HSTRING,
@@ -61,21 +63,21 @@ pub struct Asset {
 
 /// Étiquette de la dernière version, telle que publiée (vérifiée par `parse_ver` avant tout usage).
 pub fn tag(json: &Value) -> Result<&str, String> {
-    json["tag_name"].as_str().ok_or_else(|| "réponse de GitHub sans numéro de version".into())
+    json["tag_name"].as_str().ok_or_else(|| t("réponse de GitHub sans numéro de version"))
 }
 
 /// Fichier joint `volt.exe` : adresse sous le préfixe, taille et empreinte SHA-256 publiées (champ `digest`).
 pub fn asset(json: &Value, prefix: &str) -> Result<Asset, String> {
-    let a = json["assets"].as_array().and_then(|l| l.iter().find(|a| a["name"] == ASSET)).ok_or("aucun fichier volt.exe dans la dernière version")?;
+    let a = json["assets"].as_array().and_then(|l| l.iter().find(|a| a["name"] == ASSET)).ok_or_else(|| t("aucun fichier volt.exe dans la dernière version"))?;
     let url = a["browser_download_url"].as_str().unwrap_or_default();
     if !valid_url(url, prefix) {
-        return Err("adresse de téléchargement hors de la page du projet, mise à jour refusée".into());
+        return Err(t("adresse de téléchargement hors de la page du projet, mise à jour refusée"));
     }
-    let size = a["size"].as_u64().filter(|&n| n > 0 && n <= MAX).ok_or("taille du fichier absente ou invalide")?;
-    let hex = a["digest"].as_str().and_then(|d| d.strip_prefix("sha256:")).filter(|h| h.len() == 64).ok_or("empreinte SHA-256 absente, mise à jour refusée")?;
+    let size = a["size"].as_u64().filter(|&n| n > 0 && n <= MAX).ok_or_else(|| t("taille du fichier absente ou invalide"))?;
+    let hex = a["digest"].as_str().and_then(|d| d.strip_prefix("sha256:")).filter(|h| h.len() == 64).ok_or_else(|| t("empreinte SHA-256 absente, mise à jour refusée"))?;
     let mut sha = [0u8; 32];
     for (i, b) in sha.iter_mut().enumerate() {
-        *b = u8::from_str_radix(hex.get(2 * i..2 * i + 2).ok_or("empreinte SHA-256 illisible")?, 16).map_err(|_| "empreinte SHA-256 illisible")?;
+        *b = u8::from_str_radix(hex.get(2 * i..2 * i + 2).ok_or_else(|| t("empreinte SHA-256 illisible"))?, 16).map_err(|_| t("empreinte SHA-256 illisible"))?;
     }
     Ok(Asset { url: url.into(), size, sha })
 }
@@ -96,18 +98,18 @@ pub fn sha256(b: &[u8]) -> Result<[u8; 32], String> {
 /// Vérifie le fichier téléchargé : taille annoncée, en-tête d'exe, empreinte publiée.
 pub fn verify(b: &[u8], a: &Asset) -> Result<(), String> {
     if b.len() as u64 != a.size {
-        return Err("taille du fichier différente de celle annoncée, fichier supprimé".into());
+        return Err(t("taille du fichier différente de celle annoncée, fichier supprimé"));
     }
     if !is_exe(b) {
-        return Err("le fichier téléchargé n'est pas un exécutable Windows, fichier supprimé".into());
+        return Err(t("le fichier téléchargé n'est pas un exécutable Windows, fichier supprimé"));
     }
     if sha256(b)? != a.sha {
-        return Err("empreinte SHA-256 différente de celle publiée, fichier supprimé".into());
+        return Err(t("empreinte SHA-256 différente de celle publiée, fichier supprimé"));
     }
     Ok(())
 }
 
-fn download(url: &str, to: &Path) -> Result<(), String> {
+pub fn download(url: &str, to: &Path) -> Result<(), String> {
     unsafe { URLDownloadToFileW(None, &HSTRING::from(url), &HSTRING::from(to), 0, None) }.map_err(|e| {
         let m = e.message();
         let m = m.trim().trim_end_matches('.');
@@ -118,13 +120,13 @@ fn download(url: &str, to: &Path) -> Result<(), String> {
 /// Dernière version publiée : (réponse, version normalisée) si elle est strictement plus récente, None si Volt est à jour.
 fn latest() -> Result<Option<(Value, String)>, String> {
     let f = std::env::temp_dir().join("volt-update.json");
-    let r = download(&urls().0, &f).map_err(|e| format!("GitHub injoignable, vérifiez la connexion Internet ({e})"));
+    let r = download(&urls().0, &f).map_err(|e| te("GitHub injoignable, vérifiez la connexion Internet ({e})", e));
     let b = fs::read(&f);
     let _ = fs::remove_file(&f);
     r?;
-    let json: Value = b.ok().and_then(|b| serde_json::from_slice(&b).ok()).ok_or("réponse de GitHub illisible")?;
+    let json: Value = b.ok().and_then(|b| serde_json::from_slice(&b).ok()).ok_or_else(|| t("réponse de GitHub illisible"))?;
     let t = tag(&json)?;
-    let v = parse_ver(t).ok_or("numéro de version publié illisible")?;
+    let v = parse_ver(t).ok_or_else(|| crate::lang::t("numéro de version publié illisible"))?;
     Ok(newer(t, CURRENT).unwrap_or(false).then(|| (json, format!("{}.{}.{}", v[0], v[1], v[2]))))
 }
 
@@ -145,22 +147,22 @@ pub fn check() -> Result<Option<String>, String> {
 /// Bloquant. Télécharge, vérifie et met le nouvel exe à la place de l'actuel ; renvoie la version installée.
 /// Tout échec laisse l'ancien exe en place et supprime le fichier téléchargé.
 pub fn install() -> Result<String, String> {
-    let (json, v) = latest()?.ok_or("Volt est déjà à jour")?;
+    let (json, v) = latest()?.ok_or_else(|| t("Volt est déjà à jour"))?;
     let a = asset(&json, &urls().1)?;
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let dir = exe.parent().ok_or("dossier de Volt introuvable")?;
+    let dir = exe.parent().ok_or_else(|| t("dossier de Volt introuvable"))?;
     let (new, old) = (dir.join(NEW), dir.join(OLD));
     if old.exists() && fs::remove_file(&old).is_err() {
-        return Err(format!("{OLD} encore utilisé : redémarrez Volt puis réessayez"));
+        return Err(te("{e} encore utilisé : redémarrez Volt puis réessayez", OLD));
     }
     let _ = fs::remove_file(&new);
     let r = (|| {
-        download(&a.url, &new).map_err(|e| format!("téléchargement impossible ({e})"))?;
-        verify(&fs::read(&new).map_err(|e| format!("fichier téléchargé illisible ({e})"))?, &a)?;
-        fs::rename(&exe, &old).map_err(|e| format!("remplacement impossible, dossier protégé ou fichier verrouillé ({e})"))?;
+        download(&a.url, &new).map_err(|e| te("téléchargement impossible ({e})", e))?;
+        verify(&fs::read(&new).map_err(|e| te("fichier téléchargé illisible ({e})", e))?, &a)?;
+        fs::rename(&exe, &old).map_err(|e| te("remplacement impossible, dossier protégé ou fichier verrouillé ({e})", e))?;
         if let Err(e) = fs::rename(&new, &exe) {
             let _ = fs::rename(&old, &exe); // jamais sans exe : l'ancien revient
-            return Err(format!("remplacement impossible ({e})"));
+            return Err(te("remplacement impossible ({e})", e));
         }
         Ok(())
     })();

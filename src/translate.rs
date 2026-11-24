@@ -2,9 +2,11 @@
 // depuis <hôte encodé>.translate.goog ; détection de la langue à la fin du chargement.
 use crate::{cmp, defaults};
 
-/// Adresse du relais qui sert `url` traduite en français.
+/// Adresse du relais qui sert `url` traduite dans la langue de l'interface ; `hl` : la bande de Google en haut de la page
+/// dans cette langue aussi (sans lui, Google la choisit d'après le pays de la connexion).
 pub fn relay(url: &str) -> String {
-    format!("https://translate.google.com/translate?sl=auto&tl=fr&u={}", super::enc(url))
+    let l = crate::lang::code();
+    format!("https://translate.google.com/translate?sl=auto&tl={l}&hl={l}&u={}", super::enc(url))
 }
 
 pub fn is_relay(url: &str) -> bool {
@@ -77,9 +79,16 @@ pub fn original(url: &str) -> Option<String> {
     defaults::web_url(&format!("{sch}://{h}{port}{path}{q}{frag}"))
 }
 
-// [1 français, 0 autre langue, -1 inconnu ; champ de mot de passe]. Attribut `lang` d'abord, sinon part des petits mots
-// français dans le texte (pages françaises 26 à 35 %, autres 0 à 1 % : seuil à 8 %).
-pub const LANG_JS: &str = r#"(()=>{const l=(document.documentElement.lang||'').trim().toLowerCase();let f=l?+/^fr\b/.test(l):-1;if(f<0){const w=((document.body&&document.body.innerText)||'').slice(0,30000).toLowerCase().match(/[a-zàâäçéèêëîïôöûùüÿœ]+/g)||[];if(w.length>=40){const F=new Set(['le','les','des','et','du','une','est','dans','pour','qui','pas','sur','au','aux','avec','ce','cette','il','elle','nous','vous','sont','mais','ou','par','plus','son','ses','leur','été']);f=+(w.filter(x=>F.has(x)).length/w.length>=.08)}}return[f,!!document.querySelector('input[type=password]')]})()"#;
+// (langue de l'interface, ses petits mots courants) -> [1 cette langue, 0 une autre, -1 inconnu ; champ de mot de passe].
+// Attribut `lang` d'abord, sinon part des petits mots dans le texte (français : pages françaises 26 à 35 %, autres 0 à 1 %,
+// d'où le seuil à 8 %).
+const LANG_JS: &str = r#"((c,w)=>{const l=(document.documentElement.lang||'').trim().toLowerCase();let f=l?+(l===c||l.startsWith(c+'-')):-1;if(f<0&&w.length){const x=((document.body&&document.body.innerText)||'').slice(0,30000).toLowerCase().match(/\p{L}+/gu)||[];if(x.length>=40){const F=new Set(w);f=+(x.filter(y=>F.has(y)).length/x.length>=.08)}}return[f,!!document.querySelector('input[type=password]')]})"#;
+
+/// Script qui dit si la page est écrite dans la langue de l'interface.
+pub fn lang_js() -> String {
+    let words = crate::lang::words();
+    format!("{LANG_JS}({},{})", serde_json::json!(crate::lang::code().to_ascii_lowercase()), serde_json::json!(words.split_whitespace().collect::<Vec<_>>()))
+}
 
 #[cfg(test)]
 mod tests {
@@ -87,7 +96,7 @@ mod tests {
 
     #[test]
     fn relay_and_back() {
-        assert_eq!(relay("https://en.wikipedia.org/wiki/A?b=1&c=é#d"), "https://translate.google.com/translate?sl=auto&tl=fr&u=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FA%3Fb%3D1%26c%3D%C3%A9%23d");
+        assert_eq!(relay("https://en.wikipedia.org/wiki/A?b=1&c=é#d"), "https://translate.google.com/translate?sl=auto&tl=fr&hl=fr&u=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FA%3Fb%3D1%26c%3D%C3%A9%23d");
         // adresses servies par le relais (relevées le 22/11/2026) -> adresse d'origine exacte
         for (r, o) in [
             ("https://en-wikipedia-org.translate.goog/wiki/Rust_(programming_language)?a=1&_x_tr_sl=auto&_x_tr_tl=fr&_x_tr_hl=fr#History", "https://en.wikipedia.org/wiki/Rust_(programming_language)?a=1#History"),

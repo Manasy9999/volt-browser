@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- Rien ne sort de la machine : aucune connexion permise, scripts locaux seulement. Pas d'eval non plus : pdf.js 3.x
+     doit en être privé (CVE-2024-4367, un PDF piégé y faisait exécuter du code). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remplir et signer</title>
+<style>
+/* couleurs recopiées de src/ui.html (thème Volt) ; Volt peut passer celles du thème en cours : ?a=%23ff8a00&bg=… */
+:root{--a:#9b5cff;--bg:#0b0c10;--bg2:#13151c;--bg3:#1b1e28;--tx:#e8e9f0;--mu:#7d8296;--r:10px;--warn:#f5c542;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--tx);font:13px "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+button:disabled,input:disabled{opacity:.35;cursor:default}
+:focus-visible{outline:2px solid var(--a);outline-offset:1px}
+svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* --- barre d'outils --- */
+#bar{flex:none;display:flex;align-items:center;gap:4px;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--bg3)}
+.b{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 10px;border-radius:8px;white-space:nowrap}
+.b:not(:disabled):hover{background:var(--bg3)}
+.b[aria-pressed=true]{background:color-mix(in srgb,var(--a) 24%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a) 65%,transparent)}
+.b.ic{width:32px;padding:0;justify-content:center}
+.btn{height:34px;padding:0 16px;border-radius:8px;background:var(--a);color:#fff;font-weight:600;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn:not(:disabled):hover{filter:brightness(1.15)}
+.btn.g{background:var(--bg3);color:var(--tx)}
+.sep{flex:none;width:1px;height:20px;background:var(--bg3);margin:0 6px}
+.gap{flex:1}
+.f{display:inline-flex;align-items:center;gap:6px;color:var(--mu);white-space:nowrap}
+.f input{width:52px;height:30px;padding:0 6px;border-radius:8px;border:1px solid var(--bg3);background:var(--bg);color:var(--tx);text-align:center}
+.sw{flex:none;width:20px;height:20px;margin:0 3px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px #fff4}
+.sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--a)}
+#zVal{min-width:58px;justify-content:center}
+@media (max-width:1180px){#bar .b>span[data-t]{display:none}}
+
+/* --- pages --- */
+#view{flex:1;overflow:auto;position:relative;outline:0}
+#pages{--z:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px;min-width:100%;width:max-content}
+#pages:empty{display:none}
+/* boîte au pixel entier : le canevas s'y affiche point pour point, net, où que soit la page dans le défilement */
+.pg{position:relative;flex:none;width:round(calc(var(--w)*var(--z)*1px),1px);height:round(calc(var(--h)*var(--z)*1px),1px);background:#fff;box-shadow:0 2px 14px #000a}
+.pg canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* calque des éléments posés : en points PDF (page à 100 % = 1 px par point), mis à l'échelle d'un bloc par le zoom */
+.layer{position:absolute;left:0;top:0;width:calc(var(--w)*1px);height:calc(var(--h)*1px);transform-origin:0 0;transform:scale(var(--z))}
+[data-tool=text] .layer{cursor:text}
+[data-tool=ink] .layer,[data-tool=ink] .el{cursor:crosshair}
+[data-tool=place] .layer,[data-tool=place] .el{cursor:copy}
+.layer>svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.el{position:absolute;cursor:move;touch-action:none}
+.el:hover{outline:calc(1px/var(--z)) dashed #8a90a6;outline-offset:calc(2px/var(--z))}
+.el.sel{outline:calc(1.5px/var(--z)) solid var(--a);outline-offset:calc(2px/var(--z))}
+.el.edit{cursor:text;outline:calc(1px/var(--z)) dashed var(--a);outline-offset:calc(2px/var(--z))}
+.el img{display:block;width:100%;height:100%;pointer-events:none}
+.el svg{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+/* texte : Arial a les chasses de la Helvetica du PDF ; ni crénage ni ligatures, le PDF n'en pose pas */
+.el textarea{display:block;field-sizing:content;min-width:4px;border:0;padding:0;margin:0;background:none;resize:none;overflow:hidden;white-space:pre;font-family:Arial,Helvetica,sans-serif;line-height:1.2;font-kerning:none;font-variant-ligatures:none;text-rendering:geometricPrecision;letter-spacing:0;outline:0;pointer-events:none;user-select:text}
+.el textarea::placeholder{color:#9aa0b5}
+.el.edit textarea{pointer-events:auto;cursor:text}
+.h{display:none;position:absolute;width:calc(10px/var(--z));height:calc(10px/var(--z));border-radius:50%;background:#fff;border:calc(1.5px/var(--z)) solid var(--a)}
+.sel .h{display:block}
+.h.nw{left:calc(-7px/var(--z));top:calc(-7px/var(--z));cursor:nwse-resize}
+.h.ne{right:calc(-7px/var(--z));top:calc(-7px/var(--z));cursor:nesw-resize}
+.h.sw{left:calc(-7px/var(--z));bottom:calc(-7px/var(--z));cursor:nesw-resize}
+.h.se{right:calc(-7px/var(--z));bottom:calc(-7px/var(--z));cursor:nwse-resize}
+
+/* --- page à vide --- */
+#empty{position:absolute;inset:0;display:grid;place-items:center;padding:24px}
+#empty>div{max-width:440px;text-align:center;display:grid;gap:14px;justify-items:center;padding:36px 32px;border-radius:14px;background:var(--bg2);border:1px dashed var(--bg3)}
+#empty svg{width:34px;height:34px;color:var(--a)}
+#empty h1{font-size:19px;font-weight:600}
+#empty p{color:var(--mu);line-height:1.5}
+body.over #empty>div,body.over #view{border-color:var(--a);box-shadow:inset 0 0 0 2px var(--a)}
+
+/* --- pied --- */
+#foot{flex:none;display:flex;gap:16px;justify-content:space-between;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--bg3);color:var(--mu);font-size:12px}
+#foot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#toast{position:fixed;right:16px;bottom:44px;max-width:460px;padding:12px 18px;border-radius:var(--r);background:var(--bg3);border-left:3px solid var(--a);opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;line-height:1.45}
+#toast.on{opacity:1;transform:none}
+#toast.bad{border-left-color:var(--warn)}
+
+/* --- fenêtre « Signature » --- */
+dialog{margin:auto;width:min(640px,calc(100vw - 32px));border:1px solid var(--bg3);border-radius:14px;background:var(--bg2);color:var(--tx);padding:20px;box-shadow:0 20px 60px #000b}
+dialog::backdrop{background:#000a}
+dialog h2{font-size:16px;font-weight:600;margin-bottom:14px}
+dialog h3{font-size:12px;font-weight:600;color:var(--mu);margin-bottom:8px}
+#saved{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.sig{position:relative}
+.sig>button:first-child{display:block;width:150px;height:64px;padding:6px;border-radius:8px;background:#fff}
+.sig>button:first-child:hover{box-shadow:0 0 0 2px var(--a)}
+.sig img{width:100%;height:100%;object-fit:contain;display:block}
+.sig .x{position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--mu);line-height:1;font-size:14px}
+.sig .x:hover{background:#c0344d;border-color:#c0344d;color:#fff}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tabs button{height:30px;padding:0 12px;border-radius:8px;color:var(--mu)}
+.tabs button:hover{background:var(--bg3)}
+.tabs button[aria-selected=true]{background:var(--bg3);color:var(--tx)}
+.paper{display:block;width:100%;height:200px;border-radius:var(--r);background:#fff}
+#pad{cursor:crosshair;touch-action:none;background:linear-gradient(#cfd2dc,#cfd2dc) 24px 150px/calc(100% - 48px) 1px no-repeat #fff}
+#typed{border:0;padding:0 24px;text-align:center;font-size:46px;user-select:text;outline-offset:-2px}
+#typed::placeholder{color:#b9bccb}
+#shot{display:grid;place-items:center;padding:10px;background:repeating-conic-gradient(#e6e8ef 0 25%,#fff 0 50%) 0 0/20px 20px}
+#shot img{max-width:100%;max-height:180px;display:block}
+.note{color:var(--mu);font-size:12px;line-height:1.45;margin-top:10px}
+#sigErr{color:var(--warn);font-size:12px;margin-top:8px;min-height:1em}
+.row{display:flex;align-items:center;gap:8px;margin-top:14px}
+.row .note{margin:0 0 0 6px}
+</style>
+</head>
+<body>
+
+<header id="bar" role="toolbar">
+  <button class="b" id="bOpen" data-tt="openTip"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span data-t="open"></span></button>
+  <i class="sep"></i>
+  <button class="b need" data-pick="select" data-tt="selectTip"><svg class="i" viewBox="0 0 24 24"><path d="M5 3l14 7-6 2-2 6z"/></svg><span data-t="select"></span></button>
+  <button class="b need" id="bSig" data-pick="place" data-tt="signTip"><svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-6 5-11 7-11s0 9 2 9 3-5 5-5 1 4 4 4"/><path d="M3 21h18"/></svg><span data-t="sign"></span></button>
+  <button class="b need" data-pick="text" data-tt="textTip"><svg class="i" viewBox="0 0 24 24"><path d="M5 7V4h14v3M12 4v16M9 20h6"/></svg><span data-t="text"></span></button>
+  <button class="b need" data-pick="ink" data-tt="drawTip"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg><span data-t="draw"></span></button>
+  <i class="sep"></i>
+  <label class="f" data-tt="sizeTip"><span data-t="size"></span><input class="need" id="size" type="number" min="4" max="200" step="1" value="12"></label>
+  <button class="sw need" data-c="#000000" style="--c:#000000;margin-left:8px" data-tt="black"></button>
+  <button class="sw need" data-c="#0b3fc5" style="--c:#0b3fc5" data-tt="blue"></button>
+  <i class="sep"></i>
+  <button class="b ic" id="bUndo" data-tt="undo"><svg class="i" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+  <button class="b ic" id="bRedo" data-tt="redo"><svg class="i" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+  <button class="b ic" id="bDel" data-tt="del"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+  <span class="gap"></span>
+  <button class="b ic need" id="zOut" data-tt="zoomOut"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+  <button class="b need" id="zVal" data-tt="zoomFit"><span>100 %</span></button>
+  <button class="b ic need" id="zIn" data-tt="zoomIn"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <i class="sep"></i>
+  <label class="f"><span data-t="page"></span><input class="need" id="pno" type="number" min="1" value="1"><span id="pcount">/ 0</span></label>
+  <i class="sep"></i>
+  <button class="btn" id="bSave" data-tt="saveTip"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span data-t="save"></span></button>
+</header>
+
+<main id="view" tabindex="0">
+  <div id="empty"><div>
+    <svg class="i" viewBox="0 0 24 24"><path d="M3 17c3-6 5-11 7-11s0 9 2 9 3-5 5-5 1 4 4 4"/><path d="M3 21h18"/></svg>
+    <h1 data-t="emptyTitle"></h1>
+    <p id="emptyText" data-t="emptyText"></p>
+    <button class="btn" id="bOpen2" data-t="open"></button>
+    <p data-t="drop"></p>
+  </div></div>
+  <div id="pages" data-tool="select"></div>
+</main>
+
+<footer id="foot"><span id="hint"></span><span data-t="legal"></span></footer>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="dSig" aria-labelledby="sigT">
+  <h2 id="sigT" data-t="sigTitle"></h2>
+  <div id="savedWrap"><h3 data-t="sigSaved"></h3><div id="saved"></div></div>
+  <h3 data-t="sigNew"></h3>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-m="draw" data-t="tabDraw"></button>
+    <button role="tab" data-m="type" data-t="tabType"></button>
+    <button role="tab" data-m="img" data-t="tabImg"></button>
+  </div>
+  <canvas class="paper" id="pad" width="1200" height="400" data-pane="draw"></canvas>
+  <input class="paper" id="typed" maxlength="60" spellcheck="false" autocomplete="off" data-pane="type" data-ph="typedPh">
+  <div data-pane="img">
+    <div class="paper" id="shot"><img id="prev" alt="" hidden></div>
+    <div class="row"><button class="btn g" id="pick" data-t="pick"></button><p class="note" data-t="imgHint"></p></div>
+  </div>
+  <p id="sigErr" role="alert"></p>
+  <div class="row">
+    <button class="sw" data-c="#000000" style="--c:#000000" data-tt="black"></button>
+    <button class="sw" data-c="#0b3fc5" style="--c:#0b3fc5" data-tt="blue"></button>
+    <button class="b" id="sClear" data-t="clear"></button>
+    <span class="gap"></span>
+    <button class="btn g" id="sCancel" data-t="cancel"></button>
+    <button class="btn" id="sUse" data-t="use"></button>
+  </div>
+  <p class="note"><span data-t="kept"></span> <span data-t="legal"></span></p>
+</dialog>
+
+<input type="file" id="fPdf" accept=".pdf,application/pdf" hidden>
+<input type="file" id="fImg" accept="image/png,image/jpeg,image/*" hidden>
+
+<!-- Téléchargées une fois par Volt dans ce dossier (voir libs.json). Le « worker » chargé par balise : pdf.js travaille
+     alors dans la page, sans Worker (refusé en file://). -->
+<script src="pdf.min.js"></script>
+<script src="pdf.worker.min.js"></script>
+<script src="pdf-lib.min.js"></script>
+<script>
+"use strict";
+// ===== textes =====
+const L = {
+fr: {
+  title: "Remplir et signer", open: "Ouvrir un PDF", openTip: "Ouvrir un PDF (Ctrl+O)",
+  select: "Sélection", selectTip: "Sélectionner, déplacer, redimensionner",
+  sign: "Signature", signTip: "Créer ou poser une signature",
+  text: "Texte", textTip: "Écrire sur la page",
+  draw: "Dessin", drawTip: "Dessiner à main levée sur la page",
+  size: "Taille", sizeTip: "Taille du texte", black: "Noir", blue: "Bleu",
+  undo: "Annuler (Ctrl+Z)", redo: "Rétablir (Ctrl+Y)", del: "Supprimer l'élément (Suppr)",
+  zoomOut: "Zoom arrière", zoomIn: "Zoom avant", zoomFit: "Ajuster à la largeur", page: "Page",
+  save: "Enregistrer", saveTip: "Enregistrer une copie signée (Ctrl+S)",
+  emptyTitle: "Remplir et signer un PDF",
+  emptyText: "Écrivez sur le document, cochez des cases et posez votre signature. Tout se passe sur cet ordinateur : rien n'est envoyé sur Internet.",
+  drop: "ou glissez un PDF ici",
+  legal: "Signature visuelle posée sur le document : ce n'est pas une signature électronique certifiée.",
+  hint_select: "Cliquez sur un élément pour le déplacer ou le redimensionner par ses poignées (Maj : librement). Double-clic sur un texte pour le modifier.",
+  hint_text: "Cliquez sur la page à l'endroit où écrire. Échap pour terminer.",
+  hint_ink: "Dessinez sur la page en maintenant le bouton de la souris.",
+  hint_place: "Cliquez sur la page à l'endroit où poser la signature.",
+  typeHere: "Texte",
+  sigTitle: "Signature", sigSaved: "Vos signatures", sigNew: "Nouvelle signature",
+  sigUse: "Poser cette signature", sigDel: "Supprimer cette signature",
+  tabDraw: "Dessiner", tabType: "Taper", tabImg: "Importer une image",
+  typedPh: "Votre nom", pick: "Choisir une image…",
+  imgHint: "Un PNG à fond transparent donne le meilleur résultat (JPG accepté). La transparence est conservée dans le PDF.",
+  clear: "Effacer", cancel: "Annuler", use: "Utiliser",
+  kept: "Vos signatures sont gardées sur cet ordinateur uniquement.",
+  opening: "Ouverture…", saving: "Enregistrement…", saved: "Copie enregistrée : %s",
+  locked: "Ce PDF est protégé par un mot de passe : impossible d'y ajouter une signature. Ouvrez-le dans le lecteur habituel puis imprimez-le en PDF pour obtenir une copie à signer.",
+  bad: "Ce fichier n'est pas un PDF lisible : il est peut-être endommagé, ou d'un autre format.",
+  noEdit: "Ce PDF s'affiche, mais sa structure empêche d'en enregistrer une copie modifiée.",
+  saveFail: "L'enregistrement a échoué. Le document d'origine n'a pas été touché.",
+  badImg: "Cette image n'a pas pu être lue.",
+  sigFull: "Plus de place pour garder cette signature : elle reste utilisable jusqu'à la fermeture de la page.",
+  noLibs: "Les composants PDF ne sont pas encore installés. Fermez cet onglet puis rouvrez « Remplir et signer ».",
+  replace: "Les éléments posés sur ce document ne sont pas enregistrés. Ouvrir un autre PDF quand même ?",
+  asImage: "Des caractères absents de la police du PDF : le texte concerné a été incrusté en image.",
+  suffix: "-signé",
+},
+en: {
+  title: "Fill & Sign", open: "Open a PDF", openTip: "Open a PDF (Ctrl+O)",
+  select: "Select", selectTip: "Select, move, resize",
+  sign: "Signature", signTip: "Create or place a signature",
+  text: "Text", textTip: "Write on the page",
+  draw: "Draw", drawTip: "Draw freehand on the page",
+  size: "Size", sizeTip: "Text size", black: "Black", blue: "Blue",
+  undo: "Undo (Ctrl+Z)", redo: "Redo (Ctrl+Y)", del: "Delete the item (Del)",
+  zoomOut: "Zoom out", zoomIn: "Zoom in", zoomFit: "Fit to width", page: "Page",
+  save: "Save", saveTip: "Save a signed copy (Ctrl+S)",
+  emptyTitle: "Fill and sign a PDF",
+  emptyText: "Write on the document, tick boxes and place your signature. Everything happens on this computer: nothing is sent over the Internet.",
+  drop: "or drop a PDF here",
+  legal: "Visual signature placed on the document: this is not a certified electronic signature.",
+  hint_select: "Click an item to move it, or resize it by its handles (Shift: freely). Double-click a text to edit it.",
+  hint_text: "Click on the page where you want to write. Esc to finish.",
+  hint_ink: "Draw on the page while holding the mouse button.",
+  hint_place: "Click on the page where the signature should go.",
+  typeHere: "Text",
+  sigTitle: "Signature", sigSaved: "Your signatures", sigNew: "New signature",
+  sigUse: "Place this signature", sigDel: "Delete this signature",
+  tabDraw: "Draw", tabType: "Type", tabImg: "Import an image",
+  typedPh: "Your name", pick: "Choose an image…",
+  imgHint: "A PNG with a transparent background gives the best result (JPG accepted). Transparency is kept in the PDF.",
+  clear: "Clear", cancel: "Cancel", use: "Use",
+  kept: "Your signatures are kept on this computer only.",
+  opening: "Opening…", saving: "Saving…", saved: "Copy saved: %s",
+  locked: "This PDF is password-protected: a signature cannot be added to it. Open it in the usual viewer, then print it to PDF to get a copy you can sign.",
+  bad: "This file is not a readable PDF: it may be damaged, or in another format.",
+  noEdit: "This PDF can be displayed, but its structure prevents saving a modified copy.",
+  saveFail: "Saving failed. The original document was not touched.",
+  badImg: "This image could not be read.",
+  sigFull: "No room left to keep this signature: it stays usable until the page is closed.",
+  noLibs: "The PDF components are not installed yet. Close this tab, then open “Fill & Sign” again.",
+  replace: "The items placed on this document are not saved. Open another PDF anyway?",
+  asImage: "Some characters are missing from the PDF font: that text was embedded as an image.",
+  suffix: "-signed",
+},
+};
+const Q = new URLSearchParams(location.search), LANG = L[Q.get("lang")] ? Q.get("lang") : "fr", T = L[LANG];
+const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
+document.documentElement.lang = LANG; document.title = T.title;
+for (const n of $$("[data-t]")) n.textContent = T[n.dataset.t];
+for (const n of $$("[data-tt]")) n.title = n.ariaLabel = T[n.dataset.tt];
+for (const n of $$("[data-ph]")) n.placeholder = T[n.dataset.ph];
+for (const k of ["a", "bg", "bg2", "bg3", "tx", "mu"]) if (/^#[0-9a-f]{6}$/i.test(Q.get(k) || "")) document.documentElement.style.setProperty("--" + k, Q.get(k));
+
+// ===== état =====
+const PT = 96 / 72;                    // px par point PDF à « 100 % »
+const LH = 1.2, FONT = "Arial, Helvetica, sans-serif";
+const view = $("#view"), pagesEl = $("#pages"), dlg = $("#dSig"), pno = $("#pno");
+const LIBS = !!(window.pdfjsLib && window.pdfjsWorker && window.PDFLib);
+let pdf = null, bytes = null, fname = "", pgs = [], z = PT, busy = false;
+let els = [], imgs = new Map(), uid = 1;   // éléments posés (coordonnées en points, origine en haut à gauche de la page affichée)
+let sel = null, edit = null, tool = "select", pend = null, drag = null;
+let hist = ["[]"], hi = 0, dirty = false;
+let color = "#000000", size = 12;
+
+// Ligne de base de la première ligne d'un texte de ce corps (en points sous le haut du bloc). Mesurée dans le moteur et
+// non calculée : il arrondit hauteur de capitale et interligne au pixel, d'une façon qui dépend du corps.
+function baseOf(size) {
+  const d = document.createElement("div");
+  d.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${size}px/${LH} ${FONT}`;
+  d.innerHTML = 'x<span style="display:inline-block"></span>';
+  document.body.append(d); const b = d.lastChild.getBoundingClientRect().top - d.getBoundingClientRect().top; d.remove(); return b;
+}
+
+let toastT;
+function msg(s, bad) {
+  if (dlg.open) { $("#sigErr").textContent = s; return; }   // le toast passerait sous la fenêtre modale
+  const t = $("#toast"); t.textContent = s; t.className = bad ? "on bad" : "on";
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = "", bad ? 12000 : 3500);
+}
+const paint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r)));
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+
+// ===== signatures gardées : deux fonctions à rebrancher =====
+// Volt fournit window.voltSigs (tableau) avant l'ouverture et reçoit chaque changement par ipc ; sinon localStorage.
+const KEY = "volt.sign.sigs";
+const okSig = s => s && /^data:image\/(png|jpeg);base64,/.test(s.src) && s.w > 0 && s.h > 0;
+function loadSigs() {
+  let l = window.voltSigs;
+  if (!Array.isArray(l)) try { l = JSON.parse(localStorage.getItem(KEY)); } catch {}
+  return Array.isArray(l) ? l.filter(okSig) : [];
+}
+function saveSigs(list) {
+  const s = JSON.stringify(list);
+  if (Array.isArray(window.voltSigs)) window.voltSigs = list;
+  else try { localStorage.setItem(KEY, s); } catch { msg(T.sigFull, true); }
+  window.ipc?.postMessage("sign:sigs:" + s);
+}
+
+// ===== ouverture =====
+async function openPdf(u8, name) {
+  if (!LIBS) { msg(T.noLibs, true); return false; }
+  if (busy || (dirty && !confirm(T.replace))) return false;
+  busy = true; msg(T.opening); await paint();
+  try {
+    let d;
+    try { d = await pdfjsLib.getDocument({ data: u8.slice(), isEvalSupported: false, enableXfa: false }).promise; }
+    catch (e) { msg(e?.name === "PasswordException" ? T.locked : T.bad, true); return false; }
+    // ce qu'on ne saurait pas enregistrer est refusé tout de suite, pas après la saisie
+    try { await PDFLib.PDFDocument.load(u8, { updateMetadata: false }); }
+    catch (e) { d.destroy(); msg(/encrypted/i.test(e?.message) ? T.locked : T.noEdit, true); return false; }
+    closePdf();
+    pdf = d; bytes = u8; fname = name || "document.pdf";
+    for (let i = 1; i <= d.numPages; i++) {
+      const page = await d.getPage(i), vp = page.getViewport({ scale: 1 });   // tient compte de /Rotate et du cadre de la page
+      pgs.push({ i: i - 1, page, vp, w: vp.width, h: vp.height, s: 0 });
+    }
+    const frag = document.createDocumentFragment();
+    for (const pg of pgs) {
+      pg.el = document.createElement("div"); pg.el.className = "pg"; pg.el.dataset.i = pg.i;
+      pg.el.style.setProperty("--w", pg.w); pg.el.style.setProperty("--h", pg.h);
+      pg.cv = document.createElement("canvas"); pg.layer = document.createElement("div"); pg.layer.className = "layer";
+      pg.el.append(pg.cv, pg.layer); frag.append(pg.el);
+    }
+    pagesEl.append(frag);
+    $("#empty").hidden = true; document.title = fname + " — " + T.title;
+    $("#pcount").textContent = "/ " + pgs.length; pno.max = pgs.length; pno.value = 1;
+    setZoom(fitZoom()); view.scrollTop = 0;
+    for (const pg of pgs) io.observe(pg.el);
+    setTool("select"); clearTimeout(toastT); $("#toast").className = "";
+    return true;
+  } finally { busy = false; }
+}
+function closePdf() {
+  io.disconnect(); for (const pg of pgs) pg.task?.cancel();
+  pdf?.destroy(); pdf = bytes = null; pgs = []; pagesEl.textContent = "";
+  els = []; imgs.clear(); sel = edit = drag = null; hist = ["[]"]; hi = 0; dirty = false;
+}
+window.voltOpen = d => {
+  let u;
+  try { const s = atob(d.data); u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); }
+  catch { msg(T.bad, true); return Promise.resolve(false); }
+  return openPdf(u, d.name);
+};
+const openFile = async f => f && openPdf(new Uint8Array(await f.arrayBuffer()), f.name);
+
+// ===== affichage : une page n'est rendue que près de l'écran, et rendue à la mémoire quand elle s'en éloigne =====
+const MAXPX = 16e6;   // au-delà (affiche, zoom fort) le rendu est moins fin puis étiré
+const io = new IntersectionObserver(list => {
+  for (const e of list) { const pg = pgs[e.target.dataset.i]; if (!pg) continue; pg.on = e.isIntersecting; pg.on ? render(pg) : release(pg); }
+}, { root: view, rootMargin: "100% 0px" });
+async function render(pg) {
+  const s = Math.min(z * devicePixelRatio, Math.sqrt(MAXPX / (pg.w * pg.h)));
+  if (pg.s === s) return;
+  pg.s = s; pg.task?.cancel();
+  const vp = pg.page.getViewport({ scale: s }), cv = document.createElement("canvas");
+  cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);   // pixels entiers ; le contenu est ajusté pour remplir exactement, calque et fond restent superposés
+  const task = pg.task = pg.page.render({ canvasContext: cv.getContext("2d", { alpha: false }), viewport: vp, transform: [cv.width / vp.width, 0, 0, cv.height / vp.height, 0, 0] });
+  try { await task.promise; } catch (e) { if (e?.name !== "RenderingCancelledException") console.error(e); return; }
+  if (pg.task !== task) return;
+  pg.cv.replaceWith(cv); pg.cv = cv;
+}
+function release(pg) { pg.task?.cancel(); pg.task = null; pg.s = 0; pg.cv.width = pg.cv.height = 0; pg.page.cleanup(); }
+
+let zoomT;
+function setZoom(n) {
+  const k = (view.scrollTop + view.clientHeight / 2) / view.scrollHeight;
+  z = clamp(n, PT / 4, PT * 4); pagesEl.style.setProperty("--z", z);
+  view.scrollTop = k * view.scrollHeight - view.clientHeight / 2;   // garde le même endroit du document au milieu
+  $("#zVal").firstChild.textContent = Math.round(z / PT * 100) + " %";
+  clearTimeout(zoomT); zoomT = setTimeout(() => { for (const pg of pgs) if (pg.on) render(pg); }, 120);
+}
+const fitZoom = () => Math.min(PT * 1.25, (view.clientWidth - 64) / pgs.reduce((m, p) => Math.max(m, p.w), 1));
+
+// ===== éléments posés =====
+const NS = "http://www.w3.org/2000/svg";
+const elOf = id => els.find(e => e.id === id);
+const nodeOf = id => id == null ? null : pagesEl.querySelector(`.el[data-id="${id}"]`);
+const pt = (pg, e) => { const r = pg.el.getBoundingClientRect(); return { x: (e.clientX - r.left) / z, y: (e.clientY - r.top) / z }; };
+const r2 = v => Math.round(v * 100) / 100;
+
+// trait lissé : des courbes qui passent par les milieux des points relevés (même tracé à l'écran et dans le PDF)
+function pathD(p, kx = 1, ky = 1) {
+  const f = q => r2(q[0] * kx) + " " + r2(q[1] * ky);
+  if (p.length < 2) return `M ${f(p[0])} L ${f([p[0][0] + .01 / kx, p[0][1]])}`;   // un simple clic : un point
+  let d = "M " + f(p[0]);
+  for (let i = 1; i < p.length - 1; i++) d += ` Q ${f(p[i])} ${f([(p[i][0] + p[i + 1][0]) / 2, (p[i][1] + p[i + 1][1]) / 2])}`;
+  return d + " L " + f(p.at(-1));
+}
+function inkSvg(c, lw) {
+  const s = document.createElementNS(NS, "svg"), p = document.createElementNS(NS, "path");
+  for (const [k, v] of [["fill", "none"], ["stroke", c], ["stroke-width", lw], ["stroke-linecap", "round"], ["stroke-linejoin", "round"]]) p.setAttribute(k, v);
+  s.append(p); return s;
+}
+function geom(n, el) {
+  const s = n.style, c = n.firstChild; s.left = el.x + "px"; s.top = el.y + "px";
+  if (el.t === "text") { c.style.fontSize = el.size + "px"; c.style.color = el.c; return; }
+  s.width = el.w + "px"; s.height = el.h + "px";
+  if (el.t === "ink") { c.firstChild.setAttribute("stroke", el.c); c.firstChild.setAttribute("d", pathD(el.pts, el.w / el.w0, el.h / el.h0)); }
+}
+function draw(el) {
+  const old = nodeOf(el.id), n = document.createElement("div");
+  n.className = `el ${el.t}${sel === el.id ? " sel" : ""}`; n.dataset.id = el.id;
+  if (el.t === "img") {
+    const im = old?.firstChild ?? new Image();   // la même balise : pas de clignotement
+    if (!old) { im.src = imgs.get(el.k).src; im.alt = ""; im.draggable = false; }
+    n.append(im);
+  } else if (el.t === "ink") n.append(inkSvg(el.c, el.lw));
+  else {
+    const ta = document.createElement("textarea");
+    ta.value = el.text; ta.wrap = "off"; ta.rows = 1; ta.spellcheck = false; ta.tabIndex = -1; ta.placeholder = T.typeHere;
+    n.append(ta);
+  }
+  for (const h of ["nw", "ne", "sw", "se"]) { const i = document.createElement("i"); i.className = "h " + h; i.dataset.h = h; n.append(i); }
+  geom(n, el);
+  old ? old.replaceWith(n) : pgs[el.p].layer.append(n);
+  return n;
+}
+function drawLayers(list) { for (const i of list) { pgs[i].layer.textContent = ""; for (const e of els) if (e.p === i) draw(e); } }
+// garde l'élément dans sa page (s'il est plus grand qu'elle, calé en haut à gauche)
+function fit(el, w, h) { const pg = pgs[el.p]; el.x = clamp(el.x, 0, Math.max(0, pg.w - w)); el.y = clamp(el.y, 0, Math.max(0, pg.h - h)); }
+
+function select(id) {
+  nodeOf(sel)?.classList.remove("sel"); sel = id; nodeOf(sel)?.classList.add("sel"); sync();
+}
+function sync() {
+  const el = sel != null && elOf(sel);
+  if (el?.t === "text") size = el.size;
+  if (el?.c) color = el.c;
+  $("#size").value = Math.round(size * 10) / 10;
+  for (const b of $$(".sw")) b.ariaPressed = b.dataset.c === color;
+  for (const b of $$(".need")) b.disabled = !pdf;
+  $("#bUndo").disabled = hi <= 0; $("#bRedo").disabled = hi >= hist.length - 1;
+  $("#bDel").disabled = !el; $("#bSave").disabled = !els.length;
+}
+function setTool(t, sig) {
+  endEdit(); tool = t; pend = sig || null; if (t !== "select") select(null);
+  pagesEl.dataset.tool = t; $("#hint").textContent = pdf ? T["hint_" + t] : "";
+  for (const b of $$("[data-pick]")) b.ariaPressed = b.dataset.pick === t;
+  sync();
+}
+
+// --- historique : une photo de la liste à chaque geste terminé ---
+function commit() {
+  hist.length = hi + 1; hist.push(JSON.stringify(els)); if (hist.length > 200) hist.shift();
+  hi = hist.length - 1; dirty = true; sync();
+}
+function go(d) {
+  endEdit(); if (!hist[hi + d]) return;
+  const touched = new Set(els.map(e => e.p)); hi += d; els = JSON.parse(hist[hi]);
+  for (const e of els) touched.add(e.p);
+  sel = null; drawLayers(touched); dirty = true; sync();
+}
+function del() {
+  const el = sel != null && elOf(sel); if (!el) return;
+  nodeOf(sel).remove(); els = els.filter(e => e !== el); sel = null; commit();
+}
+
+// --- texte ---
+function startEdit(id) {
+  endEdit(); select(null); edit = id;
+  const n = nodeOf(id), ta = n.firstChild; n.classList.add("edit"); ta.onblur = endEdit; ta.focus();
+}
+function endEdit() {
+  if (edit == null) return;
+  const el = elOf(edit), n = nodeOf(edit), ta = n.firstChild; edit = null; ta.onblur = null;
+  // tabulation et espace fine insécable n'existent pas dans la police du PDF
+  const v = ta.value.replace(/\t/g, "    ").replace(/\u202f/g, "\u00a0").replace(/\s+$/, "");
+  if (!v.trim()) { n.remove(); els = els.filter(e => e !== el); if (el.text) commit(); return; }
+  const changed = v !== el.text; el.text = v; draw(el); if (changed) commit();
+  select(el.id);
+}
+function newText(pg, p) {
+  const el = { id: uid++, t: "text", p: pg.i, x: p.x, y: p.y - size * LH / 2, text: "", size, c: color };
+  els.push(el); draw(el); startEdit(el.id);
+}
+
+// --- pose d'une signature : la même image sert à toutes ses poses ---
+function place(pg, p) {
+  const s = pend; let k = [...imgs].find(([, v]) => v.src === s.src)?.[0];
+  if (k == null) imgs.set(k = uid++, s);
+  let w = Math.min(180, pg.w * .4), h = w * s.h / s.w;
+  if (h > pg.h * .3) { h = pg.h * .3; w = h * s.w / s.h; }
+  const el = { id: uid++, t: "img", p: pg.i, k, x: p.x - w / 2, y: p.y - h / 2, w, h };
+  fit(el, w, h); els.push(el); draw(el); setTool("select"); select(el.id); commit();
+}
+function addInk(pg, pts) {
+  const lw = 1.6, m = lw / 2 + 1;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  x0 -= m; y0 -= m; const w = x1 + m - x0, h = y1 + m - y0;
+  const el = { id: uid++, t: "ink", p: pg.i, x: r2(x0), y: r2(y0), w, h, w0: w, h0: h, pts: pts.map(([x, y]) => [r2(x - x0), r2(y - y0)]), c: color, lw };
+  els.push(el); draw(el); commit();
+}
+
+// --- souris sur les pages ---
+pagesEl.addEventListener("pointerdown", e => {
+  if (e.button || drag) return;
+  const node = e.target.closest(".el"), pe = e.target.closest(".pg"), h = e.target.dataset.h;
+  if (node && edit != null && +node.dataset.id === edit) return;   // dans le texte en cours de saisie : au champ de répondre
+  e.preventDefault(); document.activeElement?.blur(); endEdit();
+  if (!pe) return select(null);
+  const pg = pgs[pe.dataset.i], p = pt(pg, e);
+  if (tool === "place") return place(pg, p);
+  if (tool === "ink") {
+    const svg = inkSvg(color, 1.6); svg.setAttribute("width", pg.w); svg.setAttribute("height", pg.h); pg.layer.append(svg);
+    drag = { k: "ink", pg, pts: [[p.x, p.y]], svg }; svg.firstChild.setAttribute("d", pathD(drag.pts));
+  } else if (node) {
+    const el = elOf(+node.dataset.id);
+    if (tool === "text" && el.t === "text" && !h) return startEdit(el.id);
+    select(el.id);
+    const bw = node.offsetWidth, bh = node.offsetHeight;
+    drag = { k: h ? "size" : "move", h, pg, el, p, o: { ...el }, bw, bh };
+    if (h) { drag.sx = h[1] === "e" ? 1 : -1; drag.sy = h[0] === "s" ? 1 : -1; drag.dx = p.x - (el.x + (drag.sx > 0 ? bw : 0)); drag.dy = p.y - (el.y + (drag.sy > 0 ? bh : 0)); }
+  } else if (tool === "text") return newText(pg, p);
+  else return select(null);
+  pagesEl.setPointerCapture(e.pointerId);
+});
+pagesEl.addEventListener("pointermove", e => {
+  const d = drag; if (!d) return;
+  if (d.k === "ink") {
+    for (const c of e.getCoalescedEvents?.() ?? [e]) { const q = pt(d.pg, c); d.pts.push([q.x, q.y]); }
+    return d.svg.firstChild.setAttribute("d", pathD(d.pts));
+  }
+  const p = pt(d.pg, e), { el, o, bw, bh } = d;
+  if (!d.moved && Math.hypot(p.x - d.p.x, p.y - d.p.y) * z < 3) return;   // un clic n'est pas un déplacement
+  d.moved = true;
+  let w = bw, h = bh;
+  if (d.k === "move") { el.x = o.x + p.x - d.p.x; el.y = o.y + p.y - d.p.y; }
+  else {
+    const ax = d.sx > 0 ? o.x : o.x + bw, ay = d.sy > 0 ? o.y : o.y + bh;   // coin opposé : il ne bouge pas
+    w = Math.max((p.x - d.dx - ax) * d.sx, 6); h = Math.max((p.y - d.dy - ay) * d.sy, 6);
+    if (el.t === "text" || !e.shiftKey) { const k = Math.max(w / bw, h / bh); w = bw * k; h = bh * k; }   // proportions gardées
+    if (el.t === "text") { el.size = clamp(o.size * w / bw, 4, 200); w = bw * el.size / o.size; h = bh * el.size / o.size; }
+    else { el.w = w; el.h = h; }
+    el.x = d.sx > 0 ? ax : ax - w; el.y = d.sy > 0 ? ay : ay - h;
+  }
+  fit(el, w, h); geom(nodeOf(el.id), el);
+});
+function endDrag() {
+  const d = drag; if (!d) return; drag = null;
+  if (d.k === "ink") { d.svg.remove(); addInk(d.pg, d.pts); }
+  else if (d.moved) commit();
+}
+for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) pagesEl.addEventListener(t, endDrag);
+pagesEl.addEventListener("dblclick", e => {   // la souris est capturée : on cherche l'élément sous le pointeur
+  const n = document.elementFromPoint(e.clientX, e.clientY)?.closest(".el.text");
+  if (n && edit == null && tool !== "ink" && tool !== "place") startEdit(+n.dataset.id);
+});
+
+// ===== fenêtre « Signature » =====
+const pad = $("#pad"), pctx = pad.getContext("2d"), typed = $("#typed");
+let mode = "draw", strokes = [], impSig = null;
+// écriture manuscrite du système si l'une d'elles est installée, sinon italique
+const HAND = (() => {
+  const c = document.createElement("canvas").getContext("2d"), w = f => (c.font = "40px " + f, c.measureText("Signature Volt 123").width), base = w("monospace");
+  const f = ["Segoe Script", "Ink Free", "Lucida Handwriting", "Bradley Hand ITC", "Segoe Print", "Mistral", "Brush Script MT"].find(f => w(`"${f}", monospace`) !== base);
+  return f ? { style: "", family: `"${f}"` } : { style: "italic", family: 'Georgia, "Times New Roman", serif' };
+})();
+typed.style.fontFamily = HAND.family; typed.style.fontStyle = HAND.style || "normal";
+
+// rogne le canevas à l'encre : la boîte posée suit la signature, pas la feuille
+function trim(cv) {
+  const { width: w, height: h } = cv, d = cv.getContext("2d").getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0, i = 3; y < h; y++) for (let x = 0; x < w; x++, i += 4) if (d[i] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const o = document.createElement("canvas"); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+  o.getContext("2d").drawImage(cv, -x0, -y0); return o;
+}
+const sigOf = (cv, type = "image/png") => cv && { src: cv.toDataURL(type, .92), w: cv.width, h: cv.height };
+function typedCanvas() {
+  const s = typed.value.trim(); if (!s) return null;
+  const c = document.createElement("canvas"), x = c.getContext("2d"), f = `${HAND.style} 120px ${HAND.family}`;
+  x.font = f; c.width = Math.ceil(x.measureText(s).width) + 240; c.height = 360;   // marge : les lettres liées débordent de leur chasse
+  x.font = f; x.fillStyle = color; x.textBaseline = "middle"; x.fillText(s, 120, 180);
+  return trim(c);
+}
+async function importImg(file) {
+  $("#sigErr").textContent = "";
+  const im = new Image(), url = URL.createObjectURL(file);
+  try {
+    im.src = url; await im.decode();
+    const w = im.naturalWidth || 600, h = im.naturalHeight || 300, k = Math.min(1, 1600 / Math.max(w, h));   // assez fin pour l'impression, léger à garder
+    const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    const jpg = file.type === "image/jpeg";   // un JPG n'a pas de transparence : gardé en JPG, sans rognage
+    impSig = jpg ? sigOf(c, "image/jpeg") : sigOf(trim(c));
+    if (!impSig) throw 0;
+    $("#prev").src = impSig.src; $("#prev").hidden = false;
+  } catch { impSig = null; $("#prev").hidden = true; msg(T.badImg, true); }
+  URL.revokeObjectURL(url); syncSig();
+}
+function drawPad() {
+  pctx.clearRect(0, 0, pad.width, pad.height);
+  pctx.strokeStyle = color; pctx.lineWidth = 6; pctx.lineCap = pctx.lineJoin = "round";
+  for (const s of strokes) pctx.stroke(new Path2D(pathD(s)));
+}
+function syncSig() {
+  for (const b of $$(".tabs button")) b.ariaSelected = b.dataset.m === mode;
+  for (const n of $$("[data-pane]")) n.hidden = n.dataset.pane !== mode;
+  for (const n of $$("#dSig .sw, #sClear")) n.hidden = mode === "img";
+  typed.style.color = color;
+  $("#sUse").disabled = !(mode === "draw" ? strokes.length : mode === "type" ? typed.value.trim() : impSig);
+}
+function listSigs() {
+  const box = $("#saved"), list = loadSigs(); box.textContent = ""; $("#savedWrap").hidden = !list.length;
+  list.forEach((s, i) => {
+    const w = document.createElement("div"), b = document.createElement("button"), im = new Image(), x = document.createElement("button");
+    w.className = "sig"; im.src = s.src; im.alt = ""; b.title = b.ariaLabel = T.sigUse; b.append(im);
+    b.onclick = () => { dlg.close(); setTool("place", s); };
+    x.className = "x"; x.textContent = "×"; x.title = x.ariaLabel = T.sigDel;
+    x.onclick = () => { saveSigs(loadSigs().filter((_, j) => j !== i)); listSigs(); };
+    w.append(b, x); box.append(w);
+  });
+}
+function openSig() {
+  endEdit(); strokes = []; impSig = null; typed.value = ""; $("#prev").hidden = true; $("#sigErr").textContent = "";
+  listSigs(); drawPad(); syncSig(); dlg.showModal();
+}
+const padPt = e => { const r = pad.getBoundingClientRect(); return [r2((e.clientX - r.left) * pad.width / r.width), r2((e.clientY - r.top) * pad.height / r.height)]; };
+pad.addEventListener("pointerdown", e => { if (e.button) return; pad.setPointerCapture(e.pointerId); strokes.push([padPt(e)]); drawPad(); syncSig(); });
+pad.addEventListener("pointermove", e => {
+  if (!pad.hasPointerCapture(e.pointerId)) return;
+  for (const c of e.getCoalescedEvents?.() ?? [e]) strokes.at(-1).push(padPt(c));
+  drawPad();
+});
+typed.addEventListener("input", syncSig);
+for (const b of $$(".tabs button")) b.onclick = () => { mode = b.dataset.m; syncSig(); if (mode === "type") typed.focus(); };
+$("#pick").onclick = () => $("#fImg").click();
+$("#fImg").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) importImg(f); };
+$("#sClear").onclick = () => { strokes = []; typed.value = ""; drawPad(); syncSig(); };
+$("#sCancel").onclick = () => dlg.close();
+$("#sUse").onclick = () => {
+  const s = mode === "img" ? impSig : sigOf(mode === "draw" ? trim(pad) : typedCanvas());
+  if (!s) return;
+  dlg.close(); const list = loadSigs(); if (!list.some(x => x.src === s.src)) saveSigs([s, ...list]);
+  setTool("place", s);
+};
+
+// ===== enregistrement : un nouveau PDF, l'original n'est jamais réécrit =====
+async function buildPdf() {
+  const { PDFDocument, StandardFonts, rgb, pushGraphicsState, popGraphicsState, concatTransformationMatrix, setLineJoin, LineCapStyle, LineJoinStyle } = PDFLib;
+  const doc = await PDFDocument.load(bytes), pages = doc.getPages(), cache = new Map();
+  const font = els.some(e => e.t === "text") && await doc.embedFont(StandardFonts.Helvetica);
+  const rgbOf = c => rgb(...[1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255));
+  const image = async src => { if (!cache.has(src)) cache.set(src, await (src.startsWith("data:image/jpeg") ? doc.embedJpg(src) : doc.embedPng(src))); return cache.get(src); };
+  const encodable = s => { try { font.encodeText(s); return true; } catch { return false; } };
+  let asImage = false;
+  for (const pg of pgs) {
+    const list = els.filter(e => e.p === pg.i); if (!list.length) continue;
+    const page = pages[pg.i], H = pg.h;
+    // Repère « page affichée » (points, y vers le haut) -> repère du PDF : pdf.js connaît la rotation et le cadre de la
+    // page, on lui demande où tombent l'origine et les deux axes.
+    const P = (x, y) => pg.vp.convertToPdfPoint(x, H - y), [e, f] = P(0, 0), [ax, ay] = P(1, 0), [cx, cy] = P(0, 1);
+    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(ax - e, ay - f, cx - e, cy - f, e, f), setLineJoin(LineJoinStyle.Round));
+    for (const el of list) {
+      if (el.t === "img") page.drawImage(await image(imgs.get(el.k).src), { x: el.x, y: H - el.y - el.h, width: el.w, height: el.h });
+      else if (el.t === "ink") page.drawSvgPath(pathD(el.pts, el.w / el.w0, el.h / el.h0), { x: el.x, y: H - el.y, borderColor: rgbOf(el.c), borderWidth: el.lw, borderLineCap: LineCapStyle.Round });
+      else if (encodable(el.text.replace(/\n/g, ""))) page.drawText(el.text, { x: el.x, y: H - el.y - baseOf(el.size), size: el.size, lineHeight: el.size * LH, font, color: rgbOf(el.c) });
+      else {   // caractère hors de la police standard (émoji, ✓, alphabet non latin) : ce bloc part en image plutôt que d'être perdu
+        const k = 4, n = nodeOf(el.id), c = document.createElement("canvas"), x = c.getContext("2d");
+        c.width = Math.ceil(n.offsetWidth * k); c.height = Math.ceil(n.offsetHeight * k);
+        x.font = `${el.size * k}px ${FONT}`; x.fontKerning = "none"; x.fillStyle = el.c;
+        el.text.split("\n").forEach((l, i) => x.fillText(l, 0, (baseOf(el.size) + i * LH * el.size) * k));
+        page.drawImage(await image(c.toDataURL()), { x: el.x, y: H - el.y - c.height / k, width: c.width / k, height: c.height / k });
+        asImage = true;
+      }
+    }
+    page.pushOperators(popGraphicsState());
+  }
+  return { out: await doc.save(), asImage };
+}
+async function save() {
+  endEdit(); if (!pdf || !els.length || busy) return;
+  busy = true; msg(T.saving); await paint();
+  try {
+    const { out, asImage } = await buildPdf(), a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([out], { type: "application/pdf" }));
+    a.download = fname.replace(/\.pdf$/i, "") + T.suffix + ".pdf"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    dirty = false; msg(asImage ? T.asImage : T.saved.replace("%s", a.download), asImage);
+  } catch (e) { console.error(e); msg(T.saveFail, true); }
+  busy = false;
+}
+
+// ===== commandes =====
+$("#bOpen").onclick = $("#bOpen2").onclick = () => $("#fPdf").click();
+$("#fPdf").onchange = e => { const f = e.target.files[0]; e.target.value = ""; openFile(f); };
+for (const b of $$("[data-pick]")) b.onclick = () => b.dataset.pick === "place" ? openSig() : setTool(b.dataset.pick);
+for (const b of $$(".sw")) b.onclick = () => {
+  color = b.dataset.c; const el = sel != null && elOf(sel);
+  if (el && el.t !== "img" && el.c !== color) { el.c = color; geom(nodeOf(el.id), el); commit(); }
+  sync(); drawPad(); syncSig();
+};
+$("#size").onchange = e => {
+  size = clamp(+e.target.value || 12, 4, 200); const el = sel != null && elOf(sel);
+  if (el?.t === "text" && el.size !== size) { el.size = size; geom(nodeOf(el.id), el); commit(); }
+  sync();
+};
+$("#bUndo").onclick = () => go(-1); $("#bRedo").onclick = () => go(1); $("#bDel").onclick = del; $("#bSave").onclick = save;
+$("#zOut").onclick = () => setZoom(z / 1.25); $("#zIn").onclick = () => setZoom(z * 1.25); $("#zVal").onclick = () => setZoom(fitZoom());
+view.addEventListener("wheel", e => { if (e.ctrlKey && pdf) { e.preventDefault(); setZoom(z * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
+pno.onchange = () => { pgs[clamp(pno.value - 1, 0, pgs.length - 1)]?.el.scrollIntoView(); pno.blur(); };   // le champ rend la main : il suit de nouveau le défilement
+let scrollT = 0;
+view.addEventListener("scroll", () => {
+  scrollT ||= requestAnimationFrame(() => {
+    scrollT = 0; const r = view.getBoundingClientRect(), n = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest(".pg");
+    if (n && document.activeElement !== pno) pno.value = +n.dataset.i + 1;
+  });
+}, { passive: true });
+
+addEventListener("keydown", e => {
+  if (dlg.open) return;
+  const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), el = sel != null && elOf(sel);
+  if (k === "escape") return edit != null ? endEdit() : tool !== "select" ? setTool("select") : select(null);
+  if (c && k === "s") { e.preventDefault(); return save(); }
+  if (c && k === "o") { e.preventDefault(); return $("#fPdf").click(); }
+  if (e.target.matches("input, textarea")) return;   // dans un champ : ses propres raccourcis
+  if (c && k === "z") { e.preventDefault(); go(e.shiftKey ? 1 : -1); }
+  else if (c && k === "y") { e.preventDefault(); go(1); }
+  else if (el && (k === "delete" || k === "backspace")) { e.preventDefault(); del(); }
+  else if (el && k.startsWith("arrow")) {   // réglage fin au clavier (Maj : 10 points)
+    e.preventDefault(); const n = nodeOf(sel), s = e.shiftKey ? 10 : 1;
+    el.x += k === "arrowleft" ? -s : k === "arrowright" ? s : 0; el.y += k === "arrowup" ? -s : k === "arrowdown" ? s : 0;
+    fit(el, n.offsetWidth, n.offsetHeight); geom(n, el); commit();
+  }
+});
+addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("over"); });
+addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("over"); });
+addEventListener("drop", e => { e.preventDefault(); document.body.classList.remove("over"); if (!dlg.open) openFile(e.dataTransfer.files[0]); });
+addEventListener("beforeunload", e => { if (dirty) e.preventDefault(); });
+
+if (LIBS) window.ipc?.postMessage("sign:ready");   // Volt peut alors appeler voltOpen
+else { $("#emptyText").textContent = T.noLibs; $("#bOpen").disabled = $("#bOpen2").disabled = true; }
+setTool("select");
+</script>
+</body>
+</html>

@@ -140,13 +140,13 @@ fn take_blob(out: CRYPT_INTEGER_BLOB) -> Vec<u8> {
     v
 }
 
-fn protect(plain: &[u8]) -> Option<Vec<u8>> {
+pub fn protect(plain: &[u8]) -> Option<Vec<u8>> {
     let (inb, mut out) = (blob(plain), CRYPT_INTEGER_BLOB::default());
     unsafe { CryptProtectData(&inb, PCWSTR::null(), None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out) }.ok()?;
     Some(take_blob(out))
 }
 
-fn unprotect(enc: &[u8]) -> Option<Vec<u8>> {
+pub fn unprotect(enc: &[u8]) -> Option<Vec<u8>> {
     let (inb, mut out) = (blob(enc), CRYPT_INTEGER_BLOB::default());
     unsafe { CryptUnprotectData(&inb, None, None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out) }.ok()?;
     Some(take_blob(out))
@@ -211,17 +211,27 @@ pub fn hello_verify(message: &str) -> bool {
 }
 
 // ----- Sélecteur de fichier natif (import/export CSV) : l'utilisateur choisit où lire/écrire, jamais de dossier temporaire. -----
-fn pick(hwnd: isize, save: bool) -> Option<std::path::PathBuf> {
+/// `kind` : nom du type de fichier affiché ; `ext` : son extension, sans point.
+/// `name` : nom proposé au départ ("" : aucun), ou chemin complet : la fenêtre s'ouvre alors dans son dossier (donné à
+/// part : laissé dans le nom, Windows l'ignore et rouvre le dernier dossier utilisé par le programme) ; `ext` vide : pas
+/// d'extension ajoutée d'office.
+pub fn pick_file(hwnd: isize, save: bool, kind: &str, ext: &str, name: &str) -> Option<std::path::PathBuf> {
     let mut buf = [0u16; 1024];
-    let filter: Vec<u16> = "Fichiers CSV\0*.csv\0Tous les fichiers\0*.*\0\0".encode_utf16().collect();
-    let csv: Vec<u16> = "csv\0".encode_utf16().collect();
+    let (folder, file) = name.rsplit_once(['\\', '/']).unwrap_or(("", name));
+    for (i, c) in file.encode_utf16().take(buf.len() - 1).enumerate() {
+        buf[i] = c;
+    }
+    let folder: Vec<u16> = format!("{folder}\0").encode_utf16().collect();
+    let filter: Vec<u16> = format!("{kind}\0*.{}\0{}\0*.*\0\0", if ext.is_empty() { "*" } else { ext }, crate::lang::t("Tous les fichiers")).encode_utf16().collect();
+    let csv: Vec<u16> = format!("{ext}\0").encode_utf16().collect();
     let mut ofn = OPENFILENAMEW {
         lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
         hwndOwner: HWND(hwnd as _),
         lpstrFilter: PCWSTR(filter.as_ptr()),
         lpstrFile: PWSTR(buf.as_mut_ptr()),
         nMaxFile: buf.len() as u32,
-        lpstrDefExt: PCWSTR(csv.as_ptr()),
+        lpstrInitialDir: if folder.len() > 1 { PCWSTR(folder.as_ptr()) } else { PCWSTR::null() },
+        lpstrDefExt: if ext.is_empty() { PCWSTR::null() } else { PCWSTR(csv.as_ptr()) },
         Flags: if save { OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST } else { OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST },
         ..Default::default()
     };
@@ -235,10 +245,10 @@ fn pick(hwnd: isize, save: bool) -> Option<std::path::PathBuf> {
 }
 
 pub fn pick_open(hwnd: isize) -> Option<std::path::PathBuf> {
-    pick(hwnd, false)
+    pick_file(hwnd, false, &crate::lang::t("Fichiers CSV"), "csv", "")
 }
 pub fn pick_save(hwnd: isize) -> Option<std::path::PathBuf> {
-    pick(hwnd, true)
+    pick_file(hwnd, true, &crate::lang::t("Fichiers CSV"), "csv", "")
 }
 
 #[cfg(test)]
