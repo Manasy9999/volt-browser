@@ -5,7 +5,8 @@ use serde_json::{Value, json};
 use webview2_com::{
     ClearBrowsingDataCompletedHandler, GetCookiesCompletedHandler,
     Microsoft::Web::WebView2::Win32::{
-        COREWEBVIEW2_BROWSING_DATA_KINDS_PASSWORD_AUTOSAVE, ICoreWebView2_2, ICoreWebView2_13, ICoreWebView2Cookie, ICoreWebView2CookieManager, ICoreWebView2Profile2,
+        COREWEBVIEW2_BROWSING_DATA_KINDS_PASSWORD_AUTOSAVE, COREWEBVIEW2_COOKIE_SAME_SITE_KIND, ICoreWebView2_2, ICoreWebView2_13, ICoreWebView2Cookie,
+        ICoreWebView2CookieManager, ICoreWebView2Profile2,
     },
     take_pwstr,
 };
@@ -87,6 +88,30 @@ pub fn delete_all(wv: &WebView, done: impl FnOnce()) {
         let _ = unsafe { m.DeleteAllCookies() };
         done()
     }
+}
+
+/// Importe des cookies venus d'un autre navigateur (voir `chromium`). Rend le nombre réellement ajouté.
+pub fn import(wv: &WebView, list: &[crate::chromium::Cookie]) -> usize {
+    let Some(m) = manager(wv) else { return 0 };
+    let mut n = 0;
+    for c in list {
+        let add = || -> windows::core::Result<()> {
+            unsafe {
+                let cookie = m.CreateCookie(&HSTRING::from(&c.name), &HSTRING::from(&c.value), &HSTRING::from(&c.host), &HSTRING::from(&c.path))?;
+                let _ = cookie.SetIsSecure(c.secure);
+                let _ = cookie.SetIsHttpOnly(c.http_only);
+                let _ = cookie.SetSameSite(COREWEBVIEW2_COOKIE_SAME_SITE_KIND(c.same_site));
+                if c.expires > 0.0 {
+                    let _ = cookie.SetExpires(c.expires); // sinon cookie de session
+                }
+                m.AddOrUpdateCookie(&cookie)
+            }
+        };
+        if add().is_ok() {
+            n += 1;
+        }
+    }
+    n
 }
 
 #[cfg(test)]

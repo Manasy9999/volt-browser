@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use crate::{Folder, Page, defaults::web_url};
 
 // (identifiant, nom affiché, variable d'environnement, dossier des données)
-const BROWSERS: [(&str, &str, &str, &str); 7] = [
+pub(crate) const BROWSERS: [(&str, &str, &str, &str); 7] = [
     ("chrome", "Google Chrome", "LOCALAPPDATA", r"Google\Chrome\User Data"),
     ("edge", "Microsoft Edge", "LOCALAPPDATA", r"Microsoft\Edge\User Data"),
     ("brave", "Brave", "LOCALAPPDATA", r"BraveSoftware\Brave-Browser\User Data"),

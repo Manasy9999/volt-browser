@@ -712,6 +712,16 @@ html:not([data-theme=angulaire]) body:not(.nofav) #bar{border-bottom-color:trans
 .imp .ico,.pw .gi{width:24px;height:24px;border-radius:6px;font-size:13px;display:grid;place-items:center;flex:none;color:var(--mu)}
 .imp .ico{color:var(--tx)}
 .done{display:inline-flex;align-items:center;gap:6px;color:var(--a);font-weight:600;white-space:nowrap}
+/* page Migration : une carte par profil, cases des données à reprendre, bouton et état */
+.migp{border:1px solid var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.migp .imp{padding:0}
+.migopts{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 0 12px 34px}
+.migchk{display:flex;align-items:center;gap:6px;font-size:13.5px;cursor:pointer}
+.migchk input{width:16px;height:16px;accent-color:var(--a);cursor:pointer}
+.migact{display:flex;align-items:center;gap:12px;margin-left:34px}
+.migst{color:var(--mu)}
+.migst.ok{color:var(--a)}
+.migst.err{color:#ff8a6a}
 /* --- tiroir Historique et cookies (maquette designs/panneau, design 1) : le Rust décale la page web de 340 px et met l'interface en pleine fenêtre, sous la page --- */
 #bar .vsep{width:1px;height:18px;background:var(--mu);opacity:.3;margin:0 4px;flex:none}
 #drawer{display:none;position:fixed;left:0;top:var(--top,84px);bottom:0;width:340px;flex-direction:column;background:var(--bg);border-right:1px solid var(--bg3)}
@@ -1118,6 +1128,11 @@ body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} 
       </div>
       <div id="cclist"></div>
       <div id="ccempty" class="pwempty" hidden>Aucune carte enregistrée.</div>
+    </section>
+    <section id="s-migrate" data-cat>
+      <h2>Migration depuis un autre navigateur</h2>
+      <div class="row"><div><b>Reprenez vos données</b><small>Cookies (pour rester connecté à vos sites), favoris, mots de passe et historique, depuis un navigateur installé sur ce PC. <b>Fermez-le d'abord</b>, sinon ses fichiers sont verrouillés. Tout reste sur votre PC.</small></div></div>
+      <div id="migratelist"></div>
     </section>
     <section id="s-exts" data-cat>
       <h2>Extensions</h2>
@@ -2217,8 +2232,49 @@ function renderBrowsers(list){
 }
 // réponse de Volt à un import : nombre ajouté, null en cas d'échec (le bouton revient)
 function imported(id,n){if(n!=null){IMP[id]=n;$("#hvolty").classList.add("wink")}renderBrowsers(BR)}
+// ===== page Migration : reprendre les données d'un autre navigateur Chromium =====
+const MIGTYPES=[["cookies",T("Rester connecté (cookies)")],["favorites",T("Favoris")],["passwords",T("Mots de passe")],["history",T("Historique")]];
+let MIGPEND=null;
+function migrateList(list){
+  const box=$("#migratelist");
+  if(!list.length)return box.textContent=T("Aucun autre navigateur n'a été trouvé sur ce PC.");
+  box.replaceChildren(...list.map(b=>{
+    const r=h("div","migp"),head=h("div","row imp"),tx=h("div"),many=list.filter(x=>x.browser===b.browser).length>1;
+    tx.append(h("b",null,b.browser+(many?" · "+b.profile:"")));
+    head.append(ico("",b.browser),tx);
+    const opts=h("div","migopts"),boxes={};
+    for(const [k,label] of MIGTYPES){
+      if(!b[k])continue;
+      const lab=h("label","migchk"),cb=h("input");cb.type="checkbox";cb.checked=true;boxes[k]=cb;
+      lab.append(cb,document.createTextNode(" "+label));opts.append(lab);
+    }
+    const bt=h("button","btn",T("Importer")),st=h("small","migst","");
+    bt.onclick=()=>{
+      const what=Object.keys(boxes).filter(k=>boxes[k].checked);
+      if(!what.length)return st.textContent=T("Cochez au moins une donnée à reprendre.");
+      bt.disabled=true;bt.textContent=T("Importation…");st.textContent="";st.className="migst";
+      MIGPEND={bt,st};send({cmd:"migrate",id:b.id,what});
+    };
+    const act=h("div","migact");act.append(bt,st);
+    r.append(head,opts,act);return r;
+  }));
+}
+// réponse de Volt : {counts:{cookies,favorites,passwords,history}, locked, appbound}
+function migrateDone(o){
+  if(!MIGPEND)return;
+  const {bt,st}=MIGPEND;MIGPEND=null;bt.disabled=false;bt.textContent=T("Importer");
+  if(o.locked){st.textContent=T("Le navigateur est encore ouvert : fermez-le puis réessayez.");st.className="migst err";return}
+  const c=o.counts||{},parts=[];
+  if("cookies"in c)parts.push(T("{n} cookie|{n} cookies",{n:c.cookies}));
+  if("favorites"in c)parts.push(T("{n} favori|{n} favoris",{n:c.favorites}));
+  if("passwords"in c)parts.push(T("{n} mot de passe|{n} mots de passe",{n:c.passwords}));
+  if("history"in c)parts.push(T("{n} page|{n} pages",{n:c.history}));
+  st.textContent=T("Repris : {x}",{x:parts.join(", ")})+(o.appbound?" · "+T("certains cookies récents de Chrome sont protégés et n'ont pas pu être repris"):"");
+  st.className="migst ok";
+  if($("#hvolty"))$("#hvolty").classList.add("wink");
+}
 // volt://… affiché dans la barre quand le panneau est ouvert
-const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",dl:"downloads",tasks:"tasks",cards:"settings/payments",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",pass:"settings/passwords",keys:"settings/keys"};
+const VOLT={board:"newtab",hello:"welcome",home:"settings",favs:"favorites",hist:"history",dl:"downloads",tasks:"tasks",cards:"settings/payments",start:"settings/general",look:"settings/appearance",gamer:"settings/game",exts:"extensions",priv:"settings/privacy",pass:"settings/passwords",keys:"settings/keys",migrate:"settings/migration"};
 // tableau de bord : [section, nom, description, icône]
 const CATS=[["gamer",T("Jeu et performances"),T("Laisser la RAM et le processeur à vos jeux"),'<rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/>'],
   ["start",T("Général"),T("Langue, démarrage, recherche, traduction, mises à jour"),'<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>'],
@@ -2226,6 +2282,7 @@ const CATS=[["gamer",T("Jeu et performances"),T("Laisser la RAM et le processeur
   ["look",T("Apparence"),T("Thème, couleur, mode sombre, Volty"),'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>'],
   ["priv",T("Confidentialité"),T("Pubs, traqueurs, données"),'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>'],
   ["exts",T("Extensions"),"Chrome Web Store, Volt Store",'<path d="M9 3h6v4h4v6h-4v4H9v-4H5V7h4z"/>'],
+  ["migrate",T("Migration"),T("Reprendre cookies, favoris, mots de passe et historique"),'<path d="M4 12h12M12 6l6 6-6 6M20 4v16"/>'],
   ["keys",T("Raccourcis clavier"),T("Tout faire sans la souris"),'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>']];
 const QUICK=[["game_mode",T("Mode Jeu"),T("La RAM va d'abord à vos jeux"),CATS[0][3]],["adblock",T("Bloqueur de pubs"),T("Pages plus légères et plus rapides"),CATS[3][3]],
   ["night",T("Mode nuit"),T("Assombrit les sites clairs (au redémarrage)"),'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>'],["favbar",T("Barre de favoris"),T("Sous la barre d'adresse"),'<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>']];
@@ -2237,7 +2294,7 @@ function renderHome(){
   const sleep=S.sleep_min?T("veille {d}",{d:S.sleep_min>=60?"1 h":S.sleep_min+" min"}):T("pas de veille");
   const sum={gamer:(S.game_mode?T("Mode Jeu activé"):T("Mode Jeu désactivé"))+" · "+sleep,start:(ENGINES[S.search]||S.search)+({proposer:" · "+T("reprise proposée"),auto:" · "+T("session restaurée")}[S.startup]||""),
     favs:T("{n} favori|{n} favoris",{n:S.favs.length})+" · "+(S.fav_open==="menu"?T("dossiers en menu"):T("dossiers en barre")),
-    look:(THEMES[S.theme]||THEMES.volt)[0]+(S.night?" · "+T("mode nuit"):""),priv:S.adblock?T("Bloqueur actif"):T("Bloqueur désactivé"),exts:T("{n} extension|{n} extensions",{n:nExt}),keys:T("{n} raccourcis",{n:KEYS.length})};
+    look:(THEMES[S.theme]||THEMES.volt)[0]+(S.night?" · "+T("mode nuit"):""),priv:S.adblock?T("Bloqueur actif"):T("Bloqueur désactivé"),exts:T("{n} extension|{n} extensions",{n:nExt}),migrate:T("Depuis Chrome, Edge, Opera GX…"),keys:T("{n} raccourcis",{n:KEYS.length})};
   $("#quick").replaceChildren(...QUICK.map(([k,n,d,ic])=>{
     const b=document.createElement("button");b.className="q"+(S[k]?" on":"");b.setAttribute("aria-pressed",!!S[k]);
     b.innerHTML=`<span class="t"><svg viewBox="0 0 24 24">${ic}</svg><span>${S[k]?T("Activé"):T("Désactivé")}</span></span><b>${n}</b><small>${d}</small>`;
@@ -2274,6 +2331,7 @@ function openSection(id){
   if(id==="dl"){drawDls();send({cmd:"dls"})}
   if(id==="priv")send({cmd:"perms"});
   if(id==="cards")send({cmd:"cc_list"});
+  if(id==="migrate"){$("#migratelist").textContent=T("Recherche des navigateurs installés…");send({cmd:"migrate_list"})}
   clearInterval(tkT);tkT=0;
   if(id==="tasks"){$("#tklist").replaceChildren();send({cmd:"tasks"});tkT=setInterval(()=>panel&&cur==="tasks"?send({cmd:"tasks"}):(clearInterval(tkT),tkT=0),2000)}
   updateVigsScroll(); // démarre le défilement sur la page de favoris, l'arrête ailleurs

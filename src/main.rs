@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 mod audio;
 mod cards;
+mod chromium;
+mod migrate;
 mod cmp;
 mod cookies;
 mod defaults;
@@ -2513,6 +2515,56 @@ fn main() {
                                         return;
                                     }
                                 }
+                            }
+                            // page Migration : liste des profils d'autres navigateurs et ce qu'on peut en reprendre
+                            "migrate_list" => {
+                                let _ = ui.evaluate_script(&format!("migrateList({})", migrate::sources()));
+                                return;
+                            }
+                            // reprise depuis un autre navigateur : cookies, favoris, mots de passe, historique (au choix)
+                            "migrate" => {
+                                let id = str_of("id");
+                                let has = |k: &str| v["what"].as_array().is_some_and(|a| a.iter().any(|x| x.as_str() == Some(k)));
+                                let (do_c, do_h, do_p, do_f) = (has("cookies"), has("history"), has("passwords"), has("favorites"));
+                                let data = migrate::read(&id, do_c, do_h, do_p);
+                                let mut counts = serde_json::Map::new();
+                                if do_c {
+                                    counts.insert("cookies".into(), json!(cookies::import(&ui, &data.cookies)));
+                                }
+                                if do_f {
+                                    let n = import::import(&id, &mut s.favs, &mut s.folders).unwrap_or(0);
+                                    save(&s, &cfg_path);
+                                    counts.insert("favorites".into(), json!(n));
+                                }
+                                if do_p {
+                                    let entries: Vec<_> = data
+                                        .logins
+                                        .into_iter()
+                                        .filter_map(|(o, u, p)| vault::origin_of(&o).map(|o| vault::Entry { origin: o, username: u, password: p, note: String::new() }))
+                                        .collect();
+                                    let n = vault::merge(&mut vault, entries);
+                                    vault::save(&vault_path, &vault);
+                                    counts.insert("passwords".into(), json!(n));
+                                }
+                                if do_h {
+                                    let mut h = data.history;
+                                    h.sort_by(|a, b| b.3.total_cmp(&a.3)); // plus récentes d'abord : si le plafond coupe, il garde l'utile
+                                    let mut added = 0;
+                                    for (url, title, _n, at) in h {
+                                        if hist.iter().any(|v| v.url == url) {
+                                            continue;
+                                        }
+                                        hist.push(Visit { url, title, at: at.max(0.0) as u64 });
+                                        added += 1;
+                                    }
+                                    hist.sort_by(|a, b| b.at.cmp(&a.at));
+                                    hist.truncate(HIST_MAX);
+                                    let _ = fs::write(&hist_path, serde_json::to_vec(&hist).unwrap_or_default());
+                                    counts.insert("history".into(), json!(added));
+                                }
+                                dirty = true; // favoris et barre de favoris à rafraîchir
+                                let _ = ui.evaluate_script(&format!("migrateDone({})", json!({"counts": counts, "locked": data.locked, "appbound": data.app_bound})));
+                                return;
                             }
                             // tiroir Historique et cookies : la page se décale (layout), l'historique part une fois
                             "drawer" => {
