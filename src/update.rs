@@ -25,6 +25,19 @@ pub const OLD: &str = "volt.old.exe";
 const MAX: u64 = 100 << 20;
 
 static BUSY: AtomicBool = AtomicBool::new(false);
+// Version déjà installée sur le disque pendant cette session (mise à jour en fond), active au prochain démarrage.
+// L'exe en cours garde `CURRENT` en mémoire ; sans ceci, une nouvelle recherche re-téléchargerait la même version.
+static STAGED: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Version de référence pour les comparaisons : celle posée sur le disque cette session si elle existe, sinon l'actuelle.
+fn base_ver() -> String {
+    STAGED.lock().unwrap().clone().unwrap_or_else(|| CURRENT.to_string())
+}
+
+/// Version prête au prochain démarrage (posée en fond cette session), ou None.
+pub fn staged() -> Option<String> {
+    STAGED.lock().unwrap().clone()
+}
 
 /// (adresse interrogée, préfixe de téléchargement). Substitution pour les essais en debug seulement : absente du release.
 fn urls() -> (String, String) {
@@ -127,7 +140,7 @@ fn latest() -> Result<Option<(Value, String)>, String> {
     let json: Value = b.ok().and_then(|b| serde_json::from_slice(&b).ok()).ok_or_else(|| t("réponse de GitHub illisible"))?;
     let t = tag(&json)?;
     let v = parse_ver(t).ok_or_else(|| crate::lang::t("numéro de version publié illisible"))?;
-    Ok(newer(t, CURRENT).unwrap_or(false).then(|| (json, format!("{}.{}.{}", v[0], v[1], v[2]))))
+    Ok(newer(t, &base_ver()).unwrap_or(false).then(|| (json, format!("{}.{}.{}", v[0], v[1], v[2]))))
 }
 
 /// Une seule recherche ou installation à la fois ; false : déjà en cours.
@@ -167,6 +180,9 @@ pub fn install() -> Result<String, String> {
         Ok(())
     })();
     let _ = fs::remove_file(&new);
+    if r.is_ok() {
+        *STAGED.lock().unwrap() = Some(v.clone());
+    }
     r.map(|_| v)
 }
 

@@ -245,8 +245,10 @@ input[type=text]:focus,select:focus{border-color:var(--a)}
 #upst.new{color:var(--a);font-weight:600}
 #upst.err{color:#ff7a7a}
 .btn:disabled{opacity:.55;filter:none;cursor:default}
-#toast{position:fixed;right:16px;bottom:16px;padding:12px 18px;border-radius:var(--r);background:var(--bg3);border-left:3px solid var(--a);opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
+#toast{position:fixed;right:16px;bottom:16px;z-index:25;padding:12px 18px;border-radius:var(--r);background:var(--bg3);border-left:3px solid var(--a);opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
 #toast.on{opacity:1;transform:none}
+/* vue normale : l'interface n'est que la bande du haut, le message se pose sur la barre d'adresse (sans z-index il restait caché dessous) */
+body:not(.panel):not(.drawer) #toast{bottom:auto;top:40px}
 /* ===== thèmes ===== */
 html[data-theme="verre"]{--a:#7aa2ff;--bg:#0c0e1b;--bg2:rgba(255,255,255,.06);--bg3:rgba(255,255,255,.12);--tx:#eef1ff;--mu:#98a1c4;--r:16px}
 html[data-theme="verre"]{background:#0c0e1b}
@@ -814,11 +816,33 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 #rsico:hover .rck{box-shadow:0 0 0 4px color-mix(in srgb,var(--warn) 30%,transparent)}
 #url:has(+#rsico:not([hidden])){padding-right:40px}
 /* traduction : même place, à gauche de l'icône jaune quand elle est là ; accent si la page est en langue étrangère ou traduite */
+#dlbtn{position:relative}
 #dlbtn.on{color:var(--a)}
-.row.dl>div{flex:1;min-width:0}
-.row.dl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dlbtn.on svg{animation:dlbounce 1.1s ease-in-out infinite} /* la flèche descend doucement pendant le téléchargement */
+@keyframes dlbounce{0%,100%{transform:translateY(-1.5px)}50%{transform:translateY(2px)}}
+/* barre de chargement sous le bouton : avancement cumulé des téléchargements en cours */
+#dlbtn .dlbar{position:absolute;left:4px;right:4px;bottom:1px;height:2px;border-radius:2px;background:#8884;overflow:hidden;opacity:0;transition:opacity .2s}
+#dlbtn.on .dlbar{opacity:1}
+#dlbtn .dlbar::after{content:"";display:block;height:100%;width:var(--p,0%);background:var(--a);border-radius:2px;transition:width .3s}
+#dlbtn .dlbar.ind::after{width:40%;animation:dlslide 1.1s ease-in-out infinite} /* taille inconnue : va-et-vient */
+@keyframes dlslide{0%{margin-left:-45%}100%{margin-left:105%}}
+#toast.dl .x{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;opacity:.6;font-size:18px;line-height:1}
+#toast.dl .x:hover{opacity:1;background:#8883}
+.dl>div{flex:1;min-width:0}
+.dl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row.dl .bs{display:flex;gap:6px;flex:none}
-.row.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),var(--bg3) var(--p))}
+.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),#8884 var(--p))}
+/* petite notif d'un téléchargement : le bandeau des messages, cliquable, avec le fichier, son avancement puis ses boutons */
+/* sur une ligne (elle tient dans la barre d'adresse) ; `body` : passe devant le remplissage que les thèmes donnent au bandeau */
+body #toast.dl{display:flex;align-items:center;gap:10px;max-width:min(600px,100vw - 32px);padding-block:5px;overflow:hidden}
+#toast.on.dl{pointer-events:auto}
+#toast.dl>div{display:flex;align-items:baseline;gap:8px;line-height:28px}
+#toast.dl b{min-width:0;max-width:240px}
+#toast.dl small{flex:none;opacity:.7;white-space:nowrap}
+#toast.dl .bar{position:absolute;left:0;right:0;bottom:0;margin:0}
+#toast.dl .btn{height:28px;padding:0 12px;flex:none}
+#toast.dl .btn.g{background:none;border:1px solid color-mix(in srgb,currentColor 30%,transparent);color:inherit}
+body.drawer #toast.dl,body.drawer #toast.dl>div{max-width:308px;flex-wrap:wrap} /* pas plus large que le tiroir */
 /* cadenas à gauche de l'adresse : connexion chiffrée, ou « Non sécurisé » en http */
 #sec{display:flex;align-items:center;gap:5px;flex:none;margin:0 -2px 0 8px;color:var(--mu);font-size:11.5px;white-space:nowrap}
 #sec[hidden]{display:none}
@@ -919,7 +943,7 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
   <button id="storebtn" hidden></button>
   <div id="exts"><div class="in"></div></div>
   <button class="ib" id="extbtn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
-  <button class="ib" id="dlbtn" title="Téléchargements (Ctrl+J)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
+  <button class="ib" id="dlbtn" title="Téléchargements (Ctrl+J)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><i class="dlbar"></i></button>
   <button class="ib" id="favtoggle" title="Afficher / masquer la barre de favoris"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
   <button class="ib" id="star" title="Ajouter aux favoris (Ctrl+D)"><svg viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
   <button class="ib" id="game" title="Mode Jeu"><svg viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg></button>
@@ -1039,6 +1063,7 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
       <div class="row"><div><b>Traduire automatiquement les pages en langue étrangère</b><small>En français, par Google Traduction, comme l'icône de la barre d'adresse : l'adresse et le contenu de la page sont envoyés à Google. Sur la version traduite, vous n'êtes pas connecté au site et les formulaires sont bloqués ; les applications lourdes (YouTube, Reddit) peuvent ne pas s'afficher. Jamais sur une page de connexion.</small></div><input type="checkbox" class="sw" data-k="translate_auto"></div>
       <div id="ntlist"></div>
       <h2 style="margin-top:22px;font-size:16px">Mises à jour</h2>
+      <div class="row"><div><b>Installer les mises à jour automatiquement</b><small>Comme Chrome : Volt télécharge et installe les nouvelles versions en fond, prêtes au prochain démarrage. Décochez pour ne chercher qu'à la demande.</small></div><input type="checkbox" class="sw" data-k="auto_update"></div>
       <div class="row" id="uprow"><div><b>Version installée : <span id="uver"></span></b><small id="upst">Volt ne cherche que quand vous le demandez.</small><small>Les mises à jour viennent uniquement de la page GitHub du projet (Manasy9999/volt-browser). L'exécutable n'est pas signé : avant de l'installer, Volt vérifie qu'il est identique à celui publié (empreinte SHA-256). Vos onglets reviennent après le redémarrage.</small></div>
         <span style="display:flex;gap:6px;flex:none"><button class="btn g" id="uplink" hidden>Page des versions</button><button class="btn g" id="upcheck">Rechercher une mise à jour</button><button class="btn" id="upgo" hidden>Mettre à jour et redémarrer</button></span></div>
     </section>
@@ -1401,6 +1426,9 @@ function render(st){
   // navigateur par défaut : bloc retiré dès que Volt l'est (relu par Volt quand sa fenêtre reprend le focus)
   setDef(st.def);
   $("#uver").textContent=st.ver||"";$("#lrestart").hidden=!st.lrestart;
+  // état des mises à jour : version posée en fond prête au redémarrage, sinon le dernier état connu, sinon le message au repos (qui suit le réglage auto)
+  if(st.staged&&!UPD)UPD={st:"ready",v:st.staged};
+  upd(UPD||{st:"idle"});
   $("#bweb").placeholder=T("Rechercher sur {e} ou saisir une adresse",{e:ENGINES[S.search]||T("le web")});
   if(panel&&cur==="board")drawBoard();
   // premier rendu : retour aux réglages après un changement de langue (page rechargée) ; sinon bienvenue au tout premier
@@ -1424,19 +1452,25 @@ function renderNt(){
   $("#ntlist").replaceChildren(...(l.length?[Object.assign(h("div","row"),{innerHTML:`<div><b>${T("Sites à ne pas traduire automatiquement")}</b><small>${T("Ajoutés quand vous cliquez « Voir l'original ». Retirez-en un pour qu'il soit de nouveau traduit.")}</small></div>`}),
     ...l.map(x=>{const r=h("div","row");r.append(h("span",null,x),delBtn(()=>save({no_translate:S.no_translate.filter(y=>y!==x)})));r.lastChild.title=T("Retirer {x}",{x});return r})]:[]));
 }
-// appelé par Volt (update.rs) : st = busy (install : téléchargement) | ok | new (v) | done (v) | err (msg)
+// appelé par Volt (update.rs) : st = busy (install : téléchargement) | ok | new (v) | done (v) | ready (v) | err (msg)
+// « ready » : installée en fond, active au prochain démarrage → le bouton devient « Redémarrer maintenant ».
+let UPD=null;
 function upd(o){
   if(hold(upd,o))return;
-  const t=$("#upst"),busy=o.st==="busy";
+  UPD=o;
+  const t=$("#upst"),busy=o.st==="busy",ready=o.st==="ready";
   $("#uprow").classList.toggle("busy",busy);
-  t.className=o.st==="new"||o.st==="err"?o.st:"";
+  t.className=o.st==="new"||o.st==="ready"?"new":o.st==="err"?"err":"";
   t.textContent=busy?(o.install?T("Téléchargement et vérification…"):T("Recherche en cours…")):o.st==="ok"?T("Volt est à jour."):o.st==="new"?T("Version {v} disponible.",o)
-    :o.st==="done"?T("Version {v} installée : redémarrage…",o):T("Échec : {msg}. Volt n'a pas été modifié.",o);
-  $("#upcheck").hidden=o.st==="new"||(busy&&o.install);$("#upgo").hidden=!(o.st==="new"||(busy&&o.install));$("#uplink").hidden=o.st!=="err";
+    :ready?T("Version {v} prête : redémarrez Volt pour l'utiliser.",o):o.st==="done"?T("Version {v} installée : redémarrage…",o)
+    :S.auto_update?T("Volt installe les mises à jour automatiquement.")+" "+T("Prochaine recherche au démarrage."):T("Volt ne cherche que quand vous le demandez.");
+  const go=o.st==="new"||ready||(busy&&o.install);
+  $("#upgo").textContent=ready?T("Redémarrer maintenant"):T("Mettre à jour et redémarrer");
+  $("#upcheck").hidden=go;$("#upgo").hidden=!go;$("#uplink").hidden=o.st!=="err";
   $("#upcheck").disabled=$("#upgo").disabled=busy||o.st==="done";
 }
 $("#upcheck").onclick=()=>send({cmd:"update_check"});
-$("#upgo").onclick=()=>send({cmd:"update_install"});
+$("#upgo").onclick=()=>send({cmd:UPD&&UPD.st==="ready"?"restart":"update_install"});
 $("#uplink").onclick=()=>{setPanel(false);send({cmd:"tab",url:"https://github.com/Manasy9999/volt-browser/releases"})};
 function setDef(d){
   $("#bdef").hidden=$("#hdefbtn").hidden=!!d;$("#hdefok").hidden=!d;
@@ -2263,7 +2297,7 @@ function tasks(l){
     r.append(b);return r}));
 }
 let tt;
-function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
+function toast(m){const t=$("#toast");dlN=0;t.classList.remove("dl");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
 function focusUrl(){const u=$("#url");u.focus();u.select()}
 function save(p){Object.assign(S,p);send({cmd:"save",s:S})}
 function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o});updateVigsScroll()}
@@ -2404,21 +2438,53 @@ $("#dlclear").onclick=()=>send({cmd:"dl_act",a:"clear"});
 let DLS=[],dlT=0;
 const octets=v=>v>=1073741824?T("{x} Go",{x:(v/1073741824).toLocaleString(LOC,{maximumFractionDigits:1})}):v>=1048576?T("{x} Mo",{x:(v/1048576).toLocaleString(LOC,{maximumFractionDigits:1})}):T("{x} Ko",{x:fmt(Math.max(1,Math.round(v/1024)))});
 function dls(l){
-  DLS=l;const act=l.filter(d=>d.state===0).length;
+  DLS=l;const prog=l.filter(d=>d.state===0),act=prog.length;
   $("#dlbtn").classList.toggle("on",!!act);
+  // barre sous le bouton : part cumulée reçue, ou va-et-vient si une taille est inconnue
+  const bar=$("#dlbtn .dlbar");
+  if(act&&prog.every(d=>d.total>0)){const g=prog.reduce((s,d)=>s+d.got,0),t=prog.reduce((s,d)=>s+d.total,0);bar.classList.remove("ind");bar.style.setProperty("--p",Math.min(100,Math.round(g*100/t))+"%")}
+  else if(act)bar.classList.add("ind");
   clearInterval(dlT);dlT=act?setInterval(()=>send({cmd:"dls"}),1000):0;
   if(cur==="dl")drawDls();
+  if(dlN&&!$("#toast").matches(":hover"))dlDraw(); // sous la souris, on ne remplace pas un bouton qu'on s'apprête à cliquer
 }
+// nom du fichier, état et barre d'avancement d'un téléchargement : pour sa ligne de la page et pour sa petite notif
+function dlText(d){
+  const tx=h("div"),pct=d.total>0?Math.min(100,Math.round(d.got*100/d.total)):-1;
+  const st=d.state===2?T("Terminé")+" · "+octets(d.got):d.state===0?(pct<0?octets(d.got):T("{a} sur {b}",{a:octets(d.got),b:octets(d.total)})+" · "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
+  tx.append(h("b",null,d.name||"…"),h("small",null,st+(d.site?" · "+d.site:"")));
+  if(d.state===0&&pct>=0){const p=h("i","bar");p.style.setProperty("--p",pct+"%");tx.append(p)}
+  return tx;
+}
+// ===== petite notif d'un téléchargement, dans le bandeau des messages : Volt l'appelle quand un fichier commence à arriver
+// puis quand il est là ; affichée, elle suit l'avancement, et propose d'ouvrir le fichier une fois terminé =====
+// shortcut: une seule notif à la fois (le dernier fichier remplace le précédent), la page Téléchargements montre tout.
+let dlN=0;
+function dlNote(id){dlN=id;if(!dlDraw())return;$("#toast").classList.add("on","dl")}
+function dlHide(){dlN=0;$("#toast").classList.remove("on")}
+// pendant le téléchargement, la notif reste et porte Pause / Annuler (ou Reprendre) ; terminée, elle propose Ouvrir /
+// Afficher puis s'efface seule ; la croix la referme à tout moment (le bouton de la barre garde l'avancement).
+function dlDraw(){
+  const d=DLS.find(x=>x.id===dlN);if(!d)return false;
+  const it=[dlText(d)];
+  const act=(t,a,c)=>{const b=h("button","btn "+(c||"g"),t);b.onclick=()=>{send({cmd:"dl_act",id:d.id,a});if(a==="open"||a==="show")dlHide()};it.push(b)};
+  if(d.state===2){act(T("Ouvrir"),"open","");act(T("Afficher dans le dossier"),"show")}
+  else if(d.state===0){act(T("Pause"),"pause");act(T("Annuler"),"cancel")}
+  else if(d.resume){act(T("Reprendre"),"resume","");act(T("Annuler"),"cancel")}
+  const x=h("button","x","×");x.title=T("Masquer");x.onclick=dlHide;it.push(x);
+  $("#toast").replaceChildren(...it);
+  clearTimeout(tt);if(d.state===2)tt=setTimeout(dlHide,6000); // seul un téléchargement fini disparaît tout seul
+  return true;
+}
+$("#toast").onmouseenter=()=>clearTimeout(tt); // tant que la souris est dessus, la notif reste
+$("#toast").onmouseleave=()=>{const d=DLS.find(x=>x.id===dlN);if(d&&d.state===2){clearTimeout(tt);tt=setTimeout(dlHide,1500)}};
 function drawDls(){
   const act=DLS.filter(d=>d.state===0).length;
   $("#dlsum").textContent=DLS.length?T("{n} fichier|{n} fichiers",{n:DLS.length})+(act?" · "+T("{n} en cours",{n:act}):""):T("Aucun téléchargement pour l'instant");
   $("#dlwhere").textContent=T("Enregistrés dans : {x}",{x:S.download_dir||T("Le dossier Téléchargements de Windows")});
   $("#dlclear").hidden=!DLS.some(d=>d.state!==0);
   $("#dllist").replaceChildren(...DLS.map(d=>{
-    const r=h("div","row dl"),tx=h("div"),bs=h("span","bs"),pct=d.total>0?Math.min(100,Math.round(d.got*100/d.total)):-1;
-    const st=d.state===2?T("Terminé")+" · "+octets(d.got):d.state===0?(pct<0?octets(d.got):T("{a} sur {b}",{a:octets(d.got),b:octets(d.total)})+" · "+T("{x} %",{x:pct})):d.resume?T("En pause"):T("Interrompu");
-    tx.append(h("b",null,d.name||"…"),h("small",null,st+(d.site?" · "+d.site:"")));
-    if(d.state===0&&pct>=0){const p=h("i","bar");p.style.setProperty("--p",pct+"%");tx.append(p)}
+    const r=h("div","row dl"),tx=dlText(d),bs=h("span","bs");
     const btn=(t,a,cls)=>{const b=h("button","btn "+(cls||"g"),t);b.onclick=()=>send({cmd:"dl_act",id:d.id,a});bs.append(b)};
     if(d.state===2){btn(T("Ouvrir"),"open","");btn(T("Afficher dans le dossier"),"show")}
     if(d.state===0){btn(T("Pause"),"pause");btn(T("Annuler"),"cancel")}

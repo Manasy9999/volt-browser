@@ -225,6 +225,7 @@ struct Settings {
     popup_allow: Vec<String>,  // sites autorisés à ouvrir des fenêtres surgissantes
     download_dir: String,      // dossier des téléchargements ; vide : celui de Windows
     download_ask: bool,        // fenêtre « Enregistrer sous » à chaque téléchargement
+    auto_update: bool,         // cherche et installe les mises à jour en fond ; actives au prochain démarrage (lu au démarrage)
     cmp_auto: bool, // réponse automatique aux bandeaux de cookies (cmp.rs)
     cmp_mode: String, // "refuser" (défaut) ou "accepter"
     cmp_skip: Vec<String>, // sites exclus de la réponse automatique
@@ -267,6 +268,7 @@ impl Default for Settings {
             popup_allow: vec![],
             download_dir: String::new(),
             download_ask: false,
+            auto_update: true,
             cmp_auto: false,
             cmp_mode: "refuser".into(),
             cmp_skip: vec![],
@@ -342,6 +344,7 @@ enum Ev {
     Bg(u32), // Ctrl+clic ou clic molette sur un lien de cet onglet
     Dls,     // la liste des téléchargements a changé (dl.rs)
     DlAsk(u32), // un téléchargement de cet onglet attend qu'on demande où l'enregistrer
+    DlNote(u32, u32), // onglet, téléchargement : il vient de commencer ou de finir, à signaler par la petite notif
     Perms(Value), // autorisations données aux sites, pour la page Confidentialité
     Tasks(Value), // relevé du gestionnaire de tâches
     Sign(Result<Option<(String, String)>, String>), // « Remplir et signer » prêt : (nom, contenu en base64) du PDF à y ouvrir
@@ -367,7 +370,7 @@ impl Ev {
     fn dest(&self, asked: WindowId, front: WindowId) -> Dest {
         match self {
             Ev::Ui(w, _) | Ev::Key(Src::Win(w), _) => Dest::Win(*w),
-            Ev::Key(Src::Tab(t), _) | Ev::Title(t, _) | Ev::Load(t, ..) | Ev::Url(t, _) | Ev::Audio(t, _) | Ev::Icon(t, _) | Ev::Blocked(t, _) | Ev::Zoom(t, _) | Ev::Bg(t) | Ev::DlAsk(t) | Ev::SignReady(t) | Ev::SignSigs(t, _) | Ev::Fullscreen(t, _) | Ev::State(t, _) | Ev::Lang(t, ..) | Ev::PwForm(t) | Ev::PwSave(t, _) | Ev::Card(t, ..) | Ev::CardTarget(t, _) | Ev::Open(Some(t), _) => Dest::Tab(*t),
+            Ev::Key(Src::Tab(t), _) | Ev::Title(t, _) | Ev::Load(t, ..) | Ev::Url(t, _) | Ev::Audio(t, _) | Ev::Icon(t, _) | Ev::Blocked(t, _) | Ev::Zoom(t, _) | Ev::Bg(t) | Ev::DlAsk(t) | Ev::DlNote(t, _) | Ev::SignReady(t) | Ev::SignSigs(t, _) | Ev::Fullscreen(t, _) | Ev::State(t, _) | Ev::Lang(t, ..) | Ev::PwForm(t) | Ev::PwSave(t, _) | Ev::Card(t, ..) | Ev::CardTarget(t, _) | Ev::Open(Some(t), _) => Dest::Tab(*t),
             Ev::Cmd(_) | Ev::Sign(_) | Ev::Perms(_) | Ev::Tasks(_) | Ev::Cookies(_) | Ev::Hello(..) | Ev::Vicon(..) | Ev::Toast(_) | Ev::ExtFolder(_) | Ev::Update(_) => Dest::Win(asked),
             Ev::Open(None, _) | Ev::Raise => Dest::Win(front),
             Ev::Exts(_) | Ev::ExtChanged | Ev::Cpu(_) | Ev::Dls => Dest::Here,
@@ -633,6 +636,22 @@ fn install_ext(p: EventLoopProxy<Ev>, id: String, d: PathBuf) {
                 let _ = p.send_event(Ev::Toast(lang::te("Téléchargement impossible : {e}", e)));
                 let _ = p.send_event(Ev::ExtChanged); // le bouton « Installation… » de l'interface revient
             }
+        }
+    });
+}
+
+/// Au démarrage, en fond (réglage `auto_update`) : installe la dernière version sur le disque sans rien interrompre ;
+/// elle sert au prochain lancement de Volt. L'interface affiche alors « prête, redémarrez » (état « ready »).
+fn auto_update(p: EventLoopProxy<Ev>) {
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(25)); // laisser Volt démarrer avant de prendre de la bande passante
+        if !update::begin() {
+            return;
+        }
+        let r = update::install(); // Err (dont « déjà à jour ») : rien à signaler, l'ancien exe reste en place
+        update::end();
+        if let Ok(v) = r {
+            let _ = p.send_event(Ev::Update(json!({"st": "ready", "v": v})));
         }
     });
 }
@@ -935,11 +954,11 @@ fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: 
         let _ = p9.send_event(Ev::Zoom(id, z));
     });
     let (p10, p11) = (proxy.clone(), proxy.clone());
-    dl::watch(&wv, move |done| {
-        if let Some(n) = done {
-            let _ = p10.send_event(Ev::Toast(lang::t("Téléchargement terminé : {x}").replace("{x}", &n)));
+    dl::watch(&wv, move |note| {
+        let _ = p10.send_event(Ev::Dls); // d'abord la liste à jour, la notif y lit son fichier
+        if let Some(n) = note {
+            let _ = p10.send_event(Ev::DlNote(id, n));
         }
-        let _ = p10.send_event(Ev::Dls);
     }, move || {
         let _ = p11.send_event(Ev::DlAsk(id));
     });
@@ -1131,6 +1150,9 @@ fn main() {
         audio::set_download_dir(&ui, &s.download_dir);
     }
     dl::ASK.store(s.download_ask, std::sync::atomic::Ordering::Relaxed);
+    if s.auto_update {
+        auto_update(proxy.clone());
+    }
     let p = proxy.clone();
     perf::cpu_watch(move |c| {
         let _ = p.send_event(Ev::Cpu(c));
@@ -1684,6 +1706,10 @@ fn main() {
                     }
                     Ev::DlAsk(_) => {
                         dl::ask_waiting(win.hwnd());
+                        return;
+                    }
+                    Ev::DlNote(_, n) => {
+                        let _ = ui.evaluate_script(&format!("dlNote({n})"));
                         return;
                     }
                     Ev::Dls => {
@@ -2705,7 +2731,7 @@ fn main() {
                     // pwfill : un formulaire de connexion est repéré ET le coffre a une entrée pour l'origine EXACTE de l'onglet
                     let has_fill = |t: &Tab| pw_forms.contains(&t.id) && vault::origin_of(&t.url).is_some_and(|o| !vault::for_origin(vault, &o).is_empty());
                     let list: Vec<Value> = tabs.iter().map(|t| json!({"id": t.id, "title": t.title, "url": t.url, "loading": t.loading, "audio": t.audio, "muted": t.muted, "asleep": t.wv.is_none(), "pinned": t.pinned, "foreign": t.foreign, "icon": t.icon, "blocked": t.blocked.len(), "zoom": (t.zoom * 100.0).round(), "tr": translate::can_relay(&t.url), "pwfill": has_fill(t), "ccfill": cc.is_some_and(|c| c.contains(&t.id)), "group": t.group})).collect();
-                    let _ = ui.evaluate_script(&format!("render({})", json!({"tabs": list, "groups": groups, "gedit": gedit, "active": active, "s": s, "max": win.is_maximized(), "private": private, "first": first, "fresh": fresh, "def": defaults::is_default(), "offer": offer, "ver": update::CURRENT, "lrestart": lang::engine(&s.lang, &sys) != elang})));
+                    let _ = ui.evaluate_script(&format!("render({})", json!({"tabs": list, "groups": groups, "gedit": gedit, "active": active, "s": s, "max": win.is_maximized(), "private": private, "first": first, "fresh": fresh, "def": defaults::is_default(), "offer": offer, "ver": update::CURRENT, "staged": update::staged(), "lrestart": lang::engine(&s.lang, &sys) != elang})));
                 };
                     layout(&tabs, active, panel, s.game_mode, minimized_at.is_some());
                     let edit = gedit.filter(|g| g.0 == win.id()).map_or(0, |g| g.1);

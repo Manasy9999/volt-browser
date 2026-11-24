@@ -23,7 +23,7 @@ thread_local! {
     // téléchargements retenus par le moteur le temps de demander où les enregistrer (voir `ask_waiting`)
     static WAITING: RefCell<Vec<Waiting>> = const { RefCell::new(vec![]) };
 }
-type Waiting = (ICoreWebView2DownloadStartingEventArgs, ICoreWebView2Deferral, Box<dyn Fn(Option<String>)>);
+type Waiting = (ICoreWebView2DownloadStartingEventArgs, ICoreWebView2Deferral, Box<dyn Fn(Option<u32>)>);
 
 /// Réglage « demander où enregistrer chaque fichier ».
 pub static ASK: AtomicBool = AtomicBool::new(false);
@@ -58,10 +58,10 @@ fn state(op: &ICoreWebView2DownloadOperation) -> u8 {
     }
 }
 
-/// Suit les téléchargements de cette vue. `changed(Some(nom))` : ce fichier vient d'arriver ; `changed(None)` : la
-/// liste ou un état a changé.
+/// Suit les téléchargements de cette vue. `changed(Some(id))` : ce téléchargement vient de commencer, ou son fichier
+/// vient d'arriver (à signaler par la petite notif) ; `changed(None)` : la liste ou un état a changé.
 /// `ask()` : un téléchargement attend qu'on demande où l'enregistrer ; Volt appelle alors `ask_waiting`.
-pub fn watch(wv: &WebView, changed: impl Fn(Option<String>) + Clone + 'static, ask: impl Fn() + 'static) {
+pub fn watch(wv: &WebView, changed: impl Fn(Option<u32>) + Clone + 'static, ask: impl Fn() + 'static) {
     let Ok(w) = wv.webview().cast::<ICoreWebView2_4>() else { return };
     let h = DownloadStartingEventHandler::create(Box::new(move |_, args| {
         let Some(a) = args else { return Ok(()) };
@@ -81,18 +81,18 @@ pub fn watch(wv: &WebView, changed: impl Fn(Option<String>) + Clone + 'static, a
 }
 
 /// Ajoute le téléchargement à la liste et suit son état.
-fn track(op: ICoreWebView2DownloadOperation, changed: impl Fn(Option<String>) + 'static) {
+fn track(op: ICoreWebView2DownloadOperation, changed: impl Fn(Option<u32>) + 'static) {
+    let id = NEXT.replace(NEXT.get() + 1);
     let c = std::rc::Rc::new(changed);
     let c2 = c.clone();
     let st = StateChangedEventHandler::create(Box::new(move |op, _| {
-        c2(op.as_ref().filter(|o| state(o) == DONE).map(|o| name(&path(o))));
+        c2(op.as_ref().filter(|o| state(o) == DONE).map(|_| id));
         Ok(())
     }));
     let mut token = 0i64;
     let _ = unsafe { op.add_StateChanged(&st, &mut token) };
-    let id = NEXT.replace(NEXT.get() + 1);
     LIST.with_borrow_mut(|l| l.insert(0, (id, op)));
-    c(None);
+    c(Some(id));
 }
 
 /// Extension d'un nom de fichier, sans le point ("" s'il n'en a pas).
