@@ -23,7 +23,7 @@ Volt is a lightweight browser and Chrome alternative for people who want a low R
 
 - One executable of about 1.5 MB, no installer.
 - Needs WebView2, which is already part of Windows 11.
-- Version 0.2.0, developed by one person. The interface is in English or French.
+- Version 0.3.0, developed by one person. The interface is in English or French.
 
 ## Memory usage compared with Chrome, Edge and Opera GX
 

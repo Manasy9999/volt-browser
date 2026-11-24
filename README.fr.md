@@ -23,7 +23,7 @@ Volt est un navigateur léger, une alternative à Chrome pour qui veut un naviga
 
 - Un seul exécutable d'environ 1,5 Mo, sans installation.
 - A besoin de WebView2, déjà présent dans Windows 11.
-- Version 0.2.0, développée par une personne. Interface en français ou en anglais.
+- Version 0.3.0, développée par une personne. Interface en français ou en anglais.
 
 ## Mémoire comparée à Chrome, Edge et Opera GX
 
