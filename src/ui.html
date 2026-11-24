@@ -831,6 +831,15 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 /* traduction : même place, à gauche de l'icône jaune quand elle est là ; accent si la page est en langue étrangère ou traduite */
 #dlbtn{position:relative}
 #dlbtn.on{color:var(--a)}
+/* téléchargement fini : l'icône passe en jaune avec un petit éclat, et le reste jusqu'au clic sur le bouton */
+#dlbtn.done:not(.on){color:#f5c542;filter:drop-shadow(0 0 4px #f5c54266)}
+#dlbtn.done:not(.on) svg{animation:dlpop .7s cubic-bezier(.3,1.7,.5,1) 2}
+#dlbtn.done:not(.on)::before,#dlbtn.done:not(.on)::after{content:"";position:absolute;inset:3px;border-radius:50%;pointer-events:none;opacity:0}
+#dlbtn.done:not(.on)::before{border:2px solid #f5c542;animation:dlring 1.1s ease-out 3}
+#dlbtn.done:not(.on)::after{inset:50%;width:3px;height:3px;margin:-1.5px;background:#f5c542;box-shadow:0 -11px #f5c542,8px -8px #f5c542,11px 0 #f5c542,8px 8px #f5c542,0 11px #f5c542,-8px 8px #f5c542,-11px 0 #f5c542,-8px -8px #f5c542;animation:dlspark .9s ease-out 2}
+@keyframes dlpop{0%,100%{transform:none}35%{transform:scale(1.3) rotate(-10deg)}65%{transform:scale(.92)}}
+@keyframes dlring{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+@keyframes dlspark{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.5);opacity:0}}
 #dlbtn.on svg{animation:dlbounce 1.1s ease-in-out infinite} /* la flèche descend doucement pendant le téléchargement */
 @keyframes dlbounce{0%,100%{transform:translateY(-1.5px)}50%{transform:translateY(2px)}}
 /* barre de chargement sous le bouton : avancement cumulé des téléchargements en cours */
@@ -845,14 +854,17 @@ body.drawer #toast{right:auto;left:16px} /* à droite, il serait sous la page */
 .row.dl .bar{display:block;height:3px;margin-top:6px;border-radius:2px;background:linear-gradient(90deg,var(--a) var(--p),#8884 var(--p))}
 /* petite notif d'un téléchargement (compacte) : icône du fichier, nom, taille • état, barre fine ; une fois fini, un
    bouton dossier pour ouvrir l'emplacement et une croix pour le retirer. `body` : passe devant le fond des thèmes. */
-body #toast.dl{display:flex;align-items:center;gap:11px;max-width:min(400px,100vw - 32px);padding:9px 9px 10px 13px;overflow:hidden;border-radius:12px}
+/* notif de téléchargement : en haut à droite, sous la barre des favoris, par-dessus la page (région, comme les menus) */
+body #toast.dl{display:flex;align-items:center;gap:10px;right:12px;width:300px;max-width:calc(100vw - 24px);padding:8px 6px 10px 12px;overflow:hidden;border-radius:12px;border:1px solid #ffffff14;border-left:1px solid #ffffff14;box-shadow:none}
 #toast.on.dl{pointer-events:auto}
 #toast.dl .dico{flex:none;width:22px;height:22px;color:var(--a)}
 #toast.dl .dico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #toast.dl .dtx{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.3}
 #toast.dl .dtx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}
 #toast.dl .dtx small{opacity:.6;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#toast.dl .dact{flex:none;display:flex;gap:1px}
+#toast.dl .dact{flex:none;display:flex;gap:1px;align-items:center}
+#toast.dl .dact .hd{width:24px;height:24px;margin-left:2px} /* masquer la notif : plus discret que les actions */
+#toast.dl .dact .hd svg{width:14px;height:14px}
 #toast.dl .dact button{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--mu)}
 #toast.dl .dact button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #toast.dl .dact button:hover{color:var(--tx);background:#ffffff14}
@@ -2420,7 +2432,7 @@ function tasks(l){
     r.append(b);return r}));
 }
 let tt;
-function toast(m){const t=$("#toast");dlN=0;t.classList.remove("dl");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
+function toast(m){const t=$("#toast");if(dlN)dlHide();t.style.top="";t.classList.remove("dl");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2600)}
 function focusUrl(){const u=$("#url");u.focus();u.select()}
 function save(p){Object.assign(S,p);send({cmd:"save",s:S})}
 function setPanel(o){panel=o;document.body.classList.toggle("panel",o);$("#gear").classList.toggle("on",o);send({cmd:"panel",open:o});updateVigsScroll()}
@@ -2441,7 +2453,7 @@ $$("[data-c]").forEach(b=>b.onclick=()=>send({cmd:b.dataset.c}));
 // TB : onglets du dernier rendu ; sgTab : la barre d'adresse cherche dans les onglets ouverts (Ctrl+Maj+A, bouton ˅)
 let SG=[],sgK=-1,sgQ="",TB=[],sgTab=false;
 const URL_PH=$("#url").placeholder;
-const anyPop=()=>["#sugg","#urlmenu","#dlpop","#favpop"].some(q=>!$(q).hidden);
+const anyPop=()=>["#sugg","#urlmenu","#dlpop","#favpop"].some(q=>!$(q).hidden)||!!dlN;
 function sgHide(){SG=[];sgK=-1;if(!$("#sugg").hidden){$("#sugg").hidden=true;if(!anyPop())send({cmd:"over",h:0})}}
 function sgMark(){$$("#sugg .sg").forEach((d,i)=>{d.classList.toggle("k",i===sgK);if(i===sgK)d.scrollIntoView({block:"nearest"})});if(!sgTab)$("#url").value=sgK<0?sgQ:SG[sgK][0]}
 // ligne choisie : un onglet ouvert (son id en 4e position) devient l'onglet affiché, sinon l'adresse est ouverte
@@ -2459,7 +2471,7 @@ function sgDraw(l){
     if(id===lastAct)d.append(h("i","st",T("affiché")));
     d.onmousedown=e=>{e.preventDefault();sgGo(i)}; // avant la perte du focus, qui referme la liste
     return d}));
-  box.hidden=false;send({cmd:"over",h:Math.ceil(box.getBoundingClientRect().bottom)});
+  dlHide();box.hidden=false;send({cmd:"over",h:Math.ceil(box.getBoundingClientRect().bottom)});
 }
 // recherche dans les onglets : tous ceux de la fenêtre, puis ceux dont le titre ou l'adresse porte chaque mot tapé
 // shortcut: les onglets des autres fenêtres de Volt n'y sont pas, à ajouter si on travaille souvent à plusieurs fenêtres.
@@ -2489,7 +2501,7 @@ $("#url").oncontextmenu=e=>{
     b.onmousedown=ev=>{ev.preventDefault();doUrlMenu(k);hideUrlMenu()};
     return sep?[b,h("i","usep")]:[b];
   }));
-  m.hidden=false;
+  dlHide();m.hidden=false;
   const bar=$("#bar").getBoundingClientRect();
   m.style.left=Math.min(e.clientX,innerWidth-m.offsetWidth-8)+"px";m.style.top=Math.ceil(bar.bottom+2)+"px";
   overFor(m);
@@ -2609,7 +2621,7 @@ let favPopId=null;
 const favName=f=>f.title||host(f.url);
 function showFavPop(id,el){
   if(favPopId===id)return hideFavPop();
-  sgHide();hideUrlMenu();hideDlPop();
+  sgHide();hideUrlMenu();hideDlPop();dlHide();
   const p=$("#favpop"),list=S.favs.filter(f=>f.folder===id);favPopId=id;
   p.replaceChildren(...(list.length?list.map(f=>{
     const b=h("button","fpi");b.append(fico(f),h("span",null,favName(f)));b.title=(f.title?f.title+"\n":"")+f.url;
@@ -2623,7 +2635,7 @@ function showFavPop(id,el){
 }
 addEventListener("mousedown",e=>{if(!$("#favpop").hidden&&!e.target.closest("#favpop")&&!e.target.closest(".dir,.it"))hideFavPop()});
 function showDlPop(){
-  sgHide();$("#urlmenu").hidden=true;hideFavPop();send({cmd:"dls"}); // liste à jour, historique compris
+  sgHide();$("#urlmenu").hidden=true;hideFavPop();dlHide();send({cmd:"dls"}); // liste à jour, historique compris
   const p=$("#dlpop");renderDlPop();p.hidden=false;
   const r=$("#dlbtn").getBoundingClientRect();
   p.style.right=Math.max(8,Math.round(innerWidth-r.right-2))+"px";p.style.top=Math.ceil($("#bar").getBoundingClientRect().bottom+3)+"px";
@@ -2647,7 +2659,7 @@ function renderDlPop(){
   const foot=h("button","dlpop-f",T("Voir tous les téléchargements"));foot.onclick=()=>{hideDlPop();openSection("dl")};
   $("#dlpop").replaceChildren(head,list,foot);
 }
-$("#dlbtn").onclick=()=>{if(panel&&cur==="dl")return setPanel(false);$("#dlpop").hidden?showDlPop():hideDlPop()};
+$("#dlbtn").onclick=()=>{$("#dlbtn").classList.remove("done");if(panel&&cur==="dl")return setPanel(false);$("#dlpop").hidden?showDlPop():hideDlPop()};
 addEventListener("mousedown",e=>{if(!$("#dlpop").hidden&&!e.target.closest("#dlpop")&&!e.target.closest("#dlbtn"))hideDlPop()});
 $("#dlfolder").onclick=()=>send({cmd:"dl_act",a:"folder"});
 $("#dlclear").onclick=()=>send({cmd:"dl_act",a:"clear"});
@@ -2655,8 +2667,11 @@ $("#dlclear").onclick=()=>send({cmd:"dl_act",a:"clear"});
 // elle est redemandée chaque seconde pour l'avancement =====
 let DLS=[],dlT=0;
 const octets=v=>v>=1073741824?T("{x} Go",{x:(v/1073741824).toLocaleString(LOC,{maximumFractionDigits:1})}):v>=1048576?T("{x} Mo",{x:(v/1048576).toLocaleString(LOC,{maximumFractionDigits:1})}):T("{x} Ko",{x:fmt(Math.max(1,Math.round(v/1024)))});
+let dlRun=new Set(); // téléchargements en cours au dernier relevé : l'un d'eux fini allume le bouton en jaune
 function dls(l){
   DLS=l;const prog=l.filter(d=>d.state===0),act=prog.length;
+  if(l.some(d=>d.state===2&&dlRun.has(d.id)))$("#dlbtn").classList.add("done");
+  dlRun=new Set(prog.map(d=>d.id));
   $("#dlbtn").classList.toggle("on",!!act);
   // barre sous le bouton : part cumulée reçue, ou va-et-vient si une taille est inconnue
   const bar=$("#dlbtn .dlbar");
@@ -2666,6 +2681,7 @@ function dls(l){
   if(cur==="dl")drawDls();
   if(!$("#dlpop").hidden&&!$("#dlpop").matches(":hover")){renderDlPop();overFor($("#dlpop"))} // suit l'avancement, sauf si la souris est sur un bouton
   if(dlN&&!$("#toast").matches(":hover"))dlDraw(); // sous la souris, on ne remplace pas un bouton qu'on s'apprête à cliquer
+  if(dlN)dlOver();
 }
 // nom du fichier, état et barre d'avancement d'un téléchargement : pour sa ligne de la page et pour sa petite notif
 function dlText(d){
@@ -2680,8 +2696,18 @@ function dlText(d){
 // shortcut: une seule notif à la fois (le dernier fichier remplace le précédent), la page Téléchargements montre tout.
 let dlN=0;
 // la notif reste 5 s puis s'efface (le minuteur est posé ici, à l'apparition : les mises à jour d'avancement ne le réarment pas)
-function dlNote(id){dlN=id;if(!dlDraw())return;$("#toast").classList.add("on","dl");clearTimeout(tt);tt=setTimeout(dlHide,5000)}
-function dlHide(){dlN=0;$("#toast").classList.remove("on")}
+// la notif reste 10 s (minuteur posé à l'apparition) ; elle se pose sous la barre des favoris (et le bandeau de reprise)
+function dlNote(id){
+  sgHide();hideUrlMenu();hideDlPop();hideFavPop(); // un seul panneau par-dessus la page à la fois
+  dlN=id;if(!dlDraw())return dlHide();
+  const t=$("#toast");t.style.top=Math.round($("#bar").getBoundingClientRect().bottom+(S.favbar?$("#favbar").offsetHeight:0)+6)+"px";
+  t.classList.add("on","dl");dlOver();setTimeout(dlOver,400);clearTimeout(tt);tt=setTimeout(dlHide,10000);
+}
+// découpe de l'interface sur la notif ; offset* et pas getBoundingClientRect : l'entrée animée la décale de quelques px
+// shortcut: au tout début d'un téléchargement, la première demande se perd côté Rust (cause non trouvée) ; elle est
+// renvoyée peu après et à chaque relevé tant que l'interface n'est pas assez haute
+function dlOver(){if(!dlN)return;const t=$("#toast");if(innerHeight>=t.offsetTop+t.offsetHeight+8&&dlOver.ok)return;dlOver.ok=1;send({cmd:"over",h:Math.ceil(t.offsetTop+t.offsetHeight+8),r:[t.offsetLeft,t.offsetTop,t.offsetWidth,t.offsetHeight,12]})}
+function dlHide(){const was=dlN;dlN=0;dlOver.ok=0;$("#toast").classList.remove("on");if(was&&!anyPop())send({cmd:"over",h:0})}
 // pendant le téléchargement, la notif reste et porte Pause / Annuler (ou Reprendre) ; terminée, elle propose Ouvrir /
 // Afficher puis s'efface seule ; la croix la referme à tout moment (le bouton de la barre garde l'avancement).
 const DLICO='<svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M6 3h8l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>';
@@ -2694,10 +2720,13 @@ function dlDraw(){
   const bar=h("div","dact");
   const ib=(svg,title,fn,cls)=>{const b=h("button",cls);b.innerHTML=`<svg viewBox="0 0 24 24">${svg}</svg>`;b.title=title;b.onclick=fn;bar.append(b)};
   if(d.state===0)ib('<path d="M8 5v14M16 5v14"/>',T("Pause"),()=>send({cmd:"dl_act",id:d.id,a:"pause"}));
+  if(d.state===0)ib('<rect x="6" y="6" width="12" height="12" rx="2"/>',T("Annuler"),()=>{send({cmd:"dl_act",id:d.id,a:"cancel"});dlHide()},"x");
   else if(d.state===1&&d.resume)ib('<path d="M6 4l15 8-15 8z"/>',T("Reprendre"),()=>send({cmd:"dl_act",id:d.id,a:"resume"}));
   // une fois fini : juste le dossier (ouvrir l'emplacement) et la croix (retirer des téléchargements)
   if(d.state===2)ib('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',T("Afficher dans le dossier"),()=>{send({cmd:"dl_act",id:d.id,a:"show"});dlHide()});
-  ib('<path d="M6 6l12 12M18 6 6 18"/>',d.state===2?T("Retirer des téléchargements"):T("Annuler"),()=>{send({cmd:"dl_act",id:d.id,a:d.state===2?"forget":"cancel"});dlHide()},"x");
+  if(d.state===2)ib('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',T("Retirer des téléchargements"),()=>{send({cmd:"dl_act",id:d.id,a:"forget"});dlHide()},"x");
+  if(d.state===1)ib('<path d="M6 6l12 12M18 6 6 18"/>',T("Retirer des téléchargements"),()=>{send({cmd:"dl_act",id:d.id,a:"forget"});dlHide()},"x");
+  ib('<path d="M6 6l12 12M18 6 6 18"/>',T("Masquer la notification"),dlHide,"hd"); // le téléchargement continue, le bouton de la barre le suit
   const kids=[ico,tx,bar];
   if(d.state===0){const p=h("i","bar"+(pct<0?" ind":""));if(pct>=0)p.style.setProperty("--p",pct+"%");kids.push(p)}
   $("#toast").replaceChildren(...kids);

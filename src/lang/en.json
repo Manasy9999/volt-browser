@@ -531,6 +531,7 @@
   "Afficher dans le dossier": "Show in folder",
   "Pause": "Pause",
   "Masquer": "Hide",
+  "Masquer la notification": "Hide notification",
   "Installer les mises à jour automatiquement": "Install updates automatically",
   "Comme Chrome : Volt télécharge et installe les nouvelles versions en fond, prêtes au prochain démarrage. Décochez pour ne chercher qu'à la demande.": "Like Chrome: Volt downloads and installs new versions in the background, ready at the next start. Uncheck to only check on demand.",
   "Version {v} prête : redémarrez Volt pour l'utiliser.": "Version {v} ready: restart Volt to use it.",
