@@ -945,6 +945,8 @@ fn make_tab(win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, id: 
         .with_additional_browser_args(args)
         .with_background_color(bg)
         .with_bounds(content_rect(win))
+        // caché à la naissance : `layout` n'affiche que l'actif, sinon un onglet ouvert en arrière-plan flashe en noir
+        .with_visible(false)
         .with_browser_extensions_enabled(true)
         .with_incognito(private)
         .with_devtools(true)
