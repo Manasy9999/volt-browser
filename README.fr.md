@@ -16,14 +16,14 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/hero.png" width="860" alt="La fenêtre de Volt sur sa page de favoris : favoris en tuiles, rangés en dossiers">
+  <img src="docs/img/hero.png" width="860" alt="La fenêtre de Volt sur sa page de favoris : sites préférés et souvent visités en grandes cartes, puis les dossiers de favoris">
 </p>
 
 Volt est un navigateur léger, une alternative à Chrome pour qui veut un navigateur qui consomme peu de RAM sans renoncer à la compatibilité avec les sites. C'est une petite application Rust (bâtie sur les bibliothèques `tao` et `wry`) autour du moteur Chromium que Microsoft fournit avec Windows, WebView2. Ce n'est pas un nouveau moteur : les pages s'affichent exactement comme dans Chromium. Le gain vient de la façon dont Volt gère les onglets, pas du moteur.
 
 - Un seul exécutable d'environ 1,5 Mo, sans installation.
 - A besoin de WebView2, déjà présent dans Windows 11.
-- Version 0.3.5, développée par une personne. Interface en français ou en anglais.
+- Version 0.3.7, développée par une personne. Interface en français ou en anglais.
 
 ## Mémoire comparée à Chrome, Edge et Opera GX
 
@@ -57,6 +57,7 @@ Autres mesures sur la même machine :
 | Processeur au repos                               | 0,9 % d'un cœur (0,03 % avec les onglets cachés gelés) |
 | Passage à un onglet chargé ou gelé                | 7 à 21 ms                                           |
 | Passage à un onglet déchargé                      | 0,36 à 0,82 s (page moyenne à lourde)               |
+| Idem, souris posée 250 ms sur l'onglet avant     | 0,14 à 0,52 s (page légère à lourde)                |
 | Ouverture de la page de favoris avec 136 favoris  | 5 à 18 ms                                           |
 
 ## Comment fonctionne la mise en veille des onglets
@@ -64,6 +65,8 @@ Autres mesures sur la même machine :
 - **Budget d'onglets chargés.** Par défaut, Volt garde 7 onglets chargés (réglable de 3 à 25, ou illimité). Les autres sont déchargés et se rechargent au clic. L'onglet actif, ceux qui jouent du son, ceux où du texte est en cours de saisie et les onglets épinglés ne sont jamais déchargés.
 - **Gel.** Un onglet caché est gelé après 2 minutes ; le moteur sort alors sa mémoire de la RAM.
 - **Retour sur un onglet déchargé.** Une capture de la page s'affiche d'abord, puis la page rechargée, avec le défilement et la position de la vidéo restaurés.
+- **Préchargement au survol.** Posez la souris sur un onglet déchargé : Volt commence à le recharger, caché, avant le clic. Un seul onglet à la fois, relâché dès que la souris quitte la barre d'onglets : rien de plus en mémoire au repos. Mesuré sur 5 pages de la plus légère à la plus lourde (25 novembre 2026) : 0,14 à 0,52 s au lieu de 0,27 à 1,04 s.
+- **Onglets en pause, en option.** Dans les Réglages, « Onglets gelés gardés en plus » met en pause les onglets au-delà du budget au lieu de les décharger ; ils reviennent en 11 à 55 ms au lieu de 0,33 à 0,94 s. Désactivé par défaut, car il coûte de la mémoire : avec 20 onglets ouverts, +138 Mo de RAM, +386 Mo de mémoire réservée et +118 Mo de mémoire vidéo.
 - **La contrepartie.** Ce qui n'existait que dans la page est perdu au déchargement : une saisie non envoyée ailleurs que dans un champ de texte, l'état d'une application web. Épinglez l'onglet, ou augmentez ou supprimez le budget, pour le garder chargé.
 - **Rien ne tourne au repos.** Les animations permanentes de l'interface sont coupées par défaut.
 

@@ -54,9 +54,10 @@ pub fn page(path: &Path, url: &str) -> Option<String> {
     // URL venue du web : chaîne JSON, et `<` échappé pour qu'un `</script>` ne ferme pas la balise.
     let u = serde_json::to_string(url).ok()?.replace('<', "\\u003c");
     let (r, g, b, _) = bg(path).unwrap_or((46, 46, 51, 255));
-    // replace : pas d'entrée d'historique ; après une image peinte, sinon l'aperçu n'apparaît jamais
+    // replace : pas d'entrée d'historique ; après une image peinte, sinon l'aperçu n'apparaît jamais.
+    // Onglet caché (rechargé au survol) : aucune image ne se peint, on part tout de suite.
     Some(format!(
-        r#"<!doctype html><body style="margin:0;background:rgb({r},{g},{b})"><img src="data:image/jpeg;base64,{}" style="display:block;width:100%"><script>onload=()=>requestAnimationFrame(()=>setTimeout(()=>location.replace({u})))</script>"#,
+        r#"<!doctype html><body style="margin:0;background:rgb({r},{g},{b})"><img src="data:image/jpeg;base64,{}" style="display:block;width:100%"><script>onload=()=>{{const go=()=>location.replace({u});document.hidden?go():requestAnimationFrame(()=>setTimeout(go))}}</script>"#,
         base64(&img)
     ))
 }

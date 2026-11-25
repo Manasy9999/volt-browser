@@ -1118,6 +1118,7 @@ body.drawer #toast.dl{max-width:300px}
       <div class="row"><div><b>Mode Jeu</b><small>Les onglets en arrière-plan passent en mémoire minimale pour laisser la place à vos jeux</small></div><input type="checkbox" class="sw" data-k="game_mode"></div>
       <div class="row"><div><b>Mise en veille des onglets</b><small>Les onglets inutilisés libèrent la RAM et se rechargent au clic</small></div><select data-k="sleep_min" data-num><option value="5">Après 5 min</option><option value="10">Après 10 min</option><option value="20">Après 20 min</option><option value="30">Après 30 min</option><option value="60">Après 1 h</option><option value="0">Jamais</option></select></div>
       <div class="row"><div><b>Onglets gardés en mémoire</b><small>Au-delà, les onglets les plus anciens sont déchargés et se rechargent au clic · 7 ≈ 1 Go pour 100 onglets</small></div><select data-k="keep_loaded" data-num><option value="3">3 onglets</option><option value="5">5 onglets</option><option value="7">7 onglets</option><option value="10">10 onglets</option><option value="15">15 onglets</option><option value="25">25 onglets</option><option value="0">Illimité</option></select></div>
+      <div class="row"><div><b>Onglets gelés gardés en plus</b><small>Au-delà des onglets gardés en mémoire, les suivants sont mis en pause au lieu d'être déchargés : retour quasi immédiat, presque plus de RAM, mais leur mémoire reste réservée</small></div><select data-k="keep_frozen" data-num><option value="0">Aucun</option><option value="5">5 onglets</option><option value="10">10 onglets</option><option value="15">15 onglets</option><option value="25">25 onglets</option></select></div>
       <div class="row"><div><b>Gestionnaire de tâches</b><small>Mémoire et processeur de chaque onglet, pour décharger les plus lourds (Maj + Échap)</small></div><button class="btn" data-go="tasks">Ouvrir</button></div>
       <div class="row"><div><b>Volt réduit = priorité basse</b><small>Automatique : quand vous réduisez Volt, Windows sert votre jeu en premier</small></div></div>
     </section>
@@ -1414,6 +1415,10 @@ $("#list").onmousedown=e=>{
   if(e.button===1){send({cmd:"close",id:+b.dataset.id});e.preventDefault()}
   else if(e.button===0&&!e.target.closest(".x"))pick(+b.dataset.id);
 };
+// souris posée 80 ms sur un onglet endormi : il se recharge déjà, caché (un simple balayage de la barre ne recharge rien)
+let warmT;
+$("#list").onmouseover=e=>{const b=e.target.closest(".tab.zz:not(.on)");clearTimeout(warmT);if(b)warmT=setTimeout(()=>send({cmd:"warm",id:+b.dataset.id}),80)};
+$("#list").onmouseleave=()=>{clearTimeout(warmT);send({cmd:"cool"})}; // souris partie sans cliquer : l'onglet préchargé est relâché
 // pastille de groupe sous la souris (pas pendant la saisie de son nom)
 const chipOf=e=>{const c=e.target.closest(".grp");return c&&!c.classList.contains("ed")?c:null};
 $("#list").onclick=e=>{const b=e.target.closest(".tab"),x=e.target.closest(".x"),c=chipOf(e);if(b&&x)send({cmd:x.classList.contains("m")?"mute":"close",id:+b.dataset.id});if(c)send({cmd:"groupdo",id:+c.dataset.g,action:"toggle"})};
@@ -1478,7 +1483,7 @@ function dropTab(){
 addEventListener("pointerup",dropTab);addEventListener("pointercancel",dropTab);
 function render(st){
   if(hold(render,st))return;
-  S=st.s;S.keep_loaded??=7;S.volty_anim??=false;S.favbar_style??="etageres";S.fav_open??="barre";S.safe_browsing??=true;S.exts_open??=true; // absents tant qu'un ancien exe tourne
+  S=st.s;S.keep_loaded??=7;S.keep_frozen??=0;S.volty_anim??=false;S.favbar_style??="etageres";S.fav_open??="barre";S.safe_browsing??=true;S.exts_open??=true; // absents tant qu'un ancien exe tourne
   $("#logo").classList.toggle("still",!S.volty_anim);
   document.body.classList.toggle("max",!!st.max);
   document.body.classList.toggle("private",!!st.private);$("#priv").hidden=!st.private;

@@ -16,14 +16,14 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/hero.png" width="860" alt="The Volt window showing its bookmarks page: bookmarks laid out as tiles, sorted into folders">
+  <img src="docs/img/hero.png" width="860" alt="The Volt window showing its bookmarks page: favorite and most visited sites as large cards, then bookmark folders">
 </p>
 
 Volt is a lightweight browser and Chrome alternative for people who want a low RAM browser without giving up site compatibility. It is a small Rust application (built on the `tao` and `wry` libraries) around the Chromium engine that Microsoft ships with Windows, WebView2. It is not a new engine: pages render exactly as they do in Chromium. The savings come from how Volt manages tabs, not from the engine.
 
 - One executable of about 1.5 MB, no installer.
 - Needs WebView2, which is already part of Windows 11.
-- Version 0.3.5, developed by one person. The interface is in English or French.
+- Version 0.3.7, developed by one person. The interface is in English or French.
 
 ## Memory usage compared with Chrome, Edge and Opera GX
 
@@ -57,6 +57,7 @@ Other measurements on the same machine:
 | CPU at idle                                       | 0.9 % of one core (0.03 % with hidden tabs frozen) |
 | Switching to a loaded or frozen tab               | 7 to 21 ms                                     |
 | Switching to an unloaded tab                      | 0.36 to 0.82 s (medium to heavy page)          |
+| Same, after resting the mouse on it for 250 ms    | 0.14 to 0.52 s (light to heavy page)           |
 | Opening the bookmarks page with 136 bookmarks     | 5 to 18 ms                                     |
 
 ## How tab suspension works
@@ -64,6 +65,8 @@ Other measurements on the same machine:
 - **Loaded-tab budget.** By default Volt keeps 7 tabs loaded (adjustable from 3 to 25, or unlimited). Other tabs are unloaded and reload when you click them. The active tab, tabs playing audio, tabs where you are typing text and pinned tabs are never unloaded.
 - **Freezing.** A hidden tab is frozen after 2 minutes; the engine then moves its memory out of RAM.
 - **Coming back to an unloaded tab.** A screenshot of the page appears first, then the reloaded page, with scroll position and video position restored.
+- **Preloading on hover.** Rest the mouse on an unloaded tab and Volt starts reloading it, hidden, before you click. One tab at a time, released as soon as the mouse leaves the tab bar, so it costs no memory at rest. Measured on 5 pages from light to heavy (25 November 2026): 0.14 to 0.52 s instead of 0.27 to 1.04 s.
+- **Optional paused tabs.** In Settings, "Extra tabs kept paused" keeps tabs beyond the budget paused instead of unloading them; they come back in 11 to 55 ms instead of 0.33 to 0.94 s. It is off by default because it costs memory: with 20 tabs open, +138 MB of RAM, +386 MB of commit and +118 MB of video memory.
 - **The trade-off.** Anything that existed only inside the page is lost when it unloads: unsent input outside a text field, the state of a web app. Pin a tab, or raise or remove the budget, to keep it loaded.
 - **Nothing runs at idle.** The interface's permanent animations are off by default.
 

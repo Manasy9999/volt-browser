@@ -206,6 +206,7 @@ struct Settings {
     safe_browsing: bool, // alerte sur les sites dangereux (SmartScreen du moteur) ; lu au démarrage seulement
     sleep_min: u32, // 0 = jamais décharger
     keep_loaded: u32, // onglets chargés au plus (~108 Mo chacun) ; 0 = illimité
+    keep_frozen: u32, // au-delà, onglets gelés gardés plutôt que déchargés ; 0 = décharger directement (comme la 0.3.6)
     volty_anim: bool, // lu par l'interface seulement
     session: Vec<String>,
     pinned: u32, // les `pinned` premiers onglets de la session sont épinglés (toujours en tête)
@@ -249,6 +250,7 @@ impl Default for Settings {
             safe_browsing: true,
             sleep_min: 20,
             keep_loaded: 7,
+            keep_frozen: 0, // étage gelé désactivé par défaut : +138 Mo de RAM, +386 Mo réservés pour 20 onglets (mesuré le 2026-11-25)
             volty_anim: false,
             session: vec![],
             pinned: 0,
@@ -914,6 +916,16 @@ fn watch_url(wv: &WebView, f: impl Fn(String) + 'static) {
     let _ = unsafe { wv.webview().add_SourceChanged(&h, &mut token) };
 }
 
+/// Recrée un onglet déchargé (caché : `layout` l'affiche s'il est actif).
+fn revive(t: &mut Tab, win: &Window, ctx: &mut WebContext, proxy: &EventLoopProxy<Ev>, dark: bool, args: &str, cmp: &str, private: bool) {
+    // Capture de la page laissée, affichée tout de suite pendant le rechargement derrière. Sans capture,
+    // rien : une page d'attente a été mesurée, elle ne s'affichait jamais et coûtait 50 ms.
+    let html = t.url.starts_with("http").then(|| preview::page(&preview_of(t.id), &t.url)).flatten().map(|h| (h, preview::bg(&preview_of(t.id)).unwrap_or(LOADING_BG)));
+    let (w, c) = make_tab(win, ctx, proxy, t.id, &t.url, html, dark, args, cmp, private);
+    (t.wv, t.cmp) = (Some(w), c);
+    t.loading = true;
+}
+
 /// Onglets à décharger pour revenir à `keep` chargés (0 = illimité), les moins récemment vus d'abord.
 /// `loaded` : (id, dernière fois vu, protégé) des onglets chargés ; les protégés comptent mais restent.
 fn over_budget(loaded: &[(u32, Instant, bool)], keep: u32) -> Vec<u32> {
@@ -924,9 +936,25 @@ fn over_budget(loaded: &[(u32, Instant, bool)], keep: u32) -> Vec<u32> {
 }
 
 /// Applique le budget ; renvoie true si un onglet a été déchargé.
-fn unload_over_budget(tabs: &mut [Tab], active: u32, keep: u32) -> bool {
-    let view: Vec<_> = tabs.iter().filter(|t| t.wv.is_some()).map(|t| (t.id, t.seen, t.id == active || t.audio || t.loading || t.typed || t.pinned)).collect();
-    let out = over_budget(&view, keep);
+/// `warm` : onglet rechargé au survol ; hors budget 30 s tant qu'il n'a pas été affiché, sinon il serait le premier déchargé.
+/// `keep_frozen` > 0 : au-delà de `keep` onglets actifs (non gelés), les plus anciens sont gelés au lieu d'être déchargés
+/// (retour en 33 ms, presque plus de RAM, mémoire réservée gardée) ; ne sont déchargés que les onglets au-delà de `keep + keep_frozen`.
+fn unload_over_budget(tabs: &mut [Tab], active: u32, keep: u32, keep_frozen: u32, warm: Option<(u32, Instant)>) -> bool {
+    let spare = |t: &Tab| warm.is_some_and(|(id, at)| t.id == id && t.seen < at && at.elapsed() < Duration::from_secs(30));
+    let view = |tabs: &[Tab], frozen: Option<bool>| -> Vec<(u32, Instant, bool)> {
+        tabs.iter().filter(|t| t.wv.is_some() && !spare(t) && frozen.is_none_or(|f| t.frozen == f)).map(|t| (t.id, t.seen, t.id == active || t.audio || t.loading || t.typed || t.pinned)).collect()
+    };
+    if keep_frozen > 0 && keep > 0 {
+        let cold = over_budget(&view(tabs, Some(false)), keep);
+        for t in tabs.iter_mut().filter(|t| cold.contains(&t.id)) {
+            let w = t.wv.as_ref().unwrap();
+            let _ = w.set_visible(false); // l'onglet qu'on vient de quitter est encore affiché : WebView2 refuse de geler un onglet visible
+            perf::suspend(w);
+            t.frozen = true;
+        }
+    }
+    // les onglets gelés tout seuls (cachés depuis 2 min) comptent aussi : on garde `keep + keep_frozen` onglets vivants au plus
+    let out = over_budget(&view(tabs, None), if keep_frozen > 0 && keep > 0 { keep + keep_frozen } else { keep });
     for t in tabs.iter_mut().filter(|t| out.contains(&t.id)) {
         t.wv = None;
         t.frozen = false;
@@ -1215,6 +1243,7 @@ fn main() {
     // lancé par un lien sans session à rouvrir : le lien seul, pas la page d'accueil à côté
     let start = if restored { s.session.clone() } else if url_arg.is_some() { vec![] } else { vec![s.home.clone()] };
     let mut next_id = 0u32;
+    let mut warm: Option<(u32, Instant)> = None; // onglet rechargé au survol, et quand
     let mut tabs: Vec<Tab> = vec![];
     // groupes d'onglets de toutes les fenêtres ; ceux de la session enregistrée reviennent avec elle (tout de suite, ou
     // à la reprise proposée) : gardés à part, car la session enregistrée peut être réécrite entre-temps
@@ -1365,7 +1394,7 @@ fn main() {
                         t.frozen = true;
                     }
                 }
-                changed |= unload_over_budget(&mut tabs, active, s.keep_loaded);
+                changed |= unload_over_budget(&mut tabs, active, s.keep_loaded, s.keep_frozen, warm);
                 // Aperçu pris sur l'onglet affiché : un onglet qu'on vient de cacher ne rend plus d'image à capturer.
                 if minimized_at.is_none()
                     && !panel
@@ -2146,6 +2175,31 @@ fn main() {
                                 open(&h, &mut tabs, &mut active)
                             }
                             "select" => active = v["id"].as_u64().unwrap_or(active as u64) as u32,
+                            // souris posée sur un onglet déchargé : rechargé caché avant le clic (~100-300 ms gagnés).
+                            // Un seul à la fois : le précédent, jamais affiché depuis, est redéchargé ; `cool` (souris sortie
+                            // de la barre sans clic) le redécharge seul.
+                            "warm" | "cool" => {
+                                let id = if v["cmd"] == "cool" { 0 } else { v["id"].as_u64().unwrap_or(0) as u32 };
+                                if warm.is_some_and(|w| w.0 == id) && tabs.iter().any(|t| t.id == id && t.wv.is_some()) {
+                                    return; // déjà en cours (le survol se redéclenche sur les éléments de l'onglet)
+                                }
+                                if let Some((old, at)) = warm.take()
+                                    && old != active
+                                    && let Some(t) = tabs.iter_mut().find(|t| t.id == old && t.seen < at && t.wv.is_some())
+                                {
+                                    t.wv = None;
+                                    t.frozen = false;
+                                    dirty = true; // la barre remontre l'onglet endormi
+                                }
+                                if id != active
+                                    && let Some(t) = tabs.iter_mut().find(|t| t.id == id && t.wv.is_none())
+                                {
+                                    revive(t, &win, &mut ctx, &proxy, s.dark_web, &args, &cmp_js(&s), private);
+                                    warm = Some((id, Instant::now()));
+                                    dirty = true;
+                                }
+                                return;
+                            }
                             // onglet glissé à la souris vers une nouvelle place
                             "tabmove" => {
                                 let id = v["id"].as_u64().unwrap_or(0) as u32;
@@ -2870,12 +2924,7 @@ fn main() {
                 }
                 if let Some(t) = tabs.iter_mut().find(|t| t.id == active) {
                     if t.wv.is_none() {
-                        // Capture de la page laissée, affichée tout de suite pendant le rechargement derrière. Sans capture,
-                        // rien : une page d'attente a été mesurée, elle ne s'affichait jamais et coûtait 50 ms.
-                        let html = t.url.starts_with("http").then(|| preview::page(&preview_of(t.id), &t.url)).flatten().map(|h| (h, preview::bg(&preview_of(t.id)).unwrap_or(LOADING_BG)));
-                        let (w, c) = make_tab(&win, &mut ctx, &proxy, t.id, &t.url, html, s.dark_web, &args, &cmp_js(&s), private);
-                        (t.wv, t.cmp) = (Some(w), c);
-                        t.loading = true;
+                        revive(t, &win, &mut ctx, &proxy, s.dark_web, &args, &cmp_js(&s), private);
                     } else if active != prev {
                         t.saved = None; // resté chargé : rien à restaurer
                     }
@@ -2891,7 +2940,7 @@ fn main() {
                         let _ = p.send_event(Ev::State(prev, r));
                     });
                 }
-                unload_over_budget(&mut tabs, active, s.keep_loaded);
+                unload_over_budget(&mut tabs, active, s.keep_loaded, s.keep_frozen, warm);
                 dirty = true;
             }
             // Un seul rendu de l'interface par vague d'événements (pas un par événement de page).
